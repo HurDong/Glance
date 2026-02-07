@@ -33,6 +33,7 @@ hs_err_pid*
 ### System
 .DS_Store
 Thumbs.db
+COMMIT_MSG.txt
 
 ### Docker
 docker/*/data/
