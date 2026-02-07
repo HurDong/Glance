@@ -33,3 +33,8 @@ hs_err_pid*
 ### System
 .DS_Store
 Thumbs.db
+
+### Docker
+docker/*/data/
+docker/*/logs/
+!docker/**/init/
