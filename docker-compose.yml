@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # MySQL 8.0
+  glance-db:
+    image: mysql:8.0
+    container_name: glance-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: glance
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      TZ: Asia/Seoul
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./docker/mysql/data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    command: 
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+
+  # Redis 7.2
+  glance-redis:
+    image: redis:7.2-alpine
+    container_name: glance-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./docker/redis/data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+
+volumes:
+  mysql_data:
+  redis_data:
