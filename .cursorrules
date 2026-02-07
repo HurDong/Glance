@@ -73,3 +73,13 @@ Redux에서 Recoil로 상태 관리 라이브러리를 교체했습니다.
 - 전역 상태 접근 로직 간소화
 - 기존 컴포넌트들의 의존성 업데이트
 ```
+
+## 4. 🚀 Runtime Verification Rule (Backend)
+> **Mandatory Check**: Before marking a backend task as complete, you MUST verify that the application starts without runtime errors.
+> 
+> **Procedure:**
+> 1. Start the dependent services (MySQL/Redis) using `docker-compose up -d`.
+> 2. Attempt to start the Spring Boot application (or a minimal context test).
+> 3. Check the logs for `ApplicationContext` startup errors or critical exceptions.
+> 4. If an error occurs (e.g., Dependency Injection fail, DB connection fail), FIX IT before proceeding.
+> 5. After verification, shut down the backend application to free up resources.

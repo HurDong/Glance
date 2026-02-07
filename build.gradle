@@ -41,6 +41,8 @@ dependencies {
     annotationProcessor "com.querydsl:querydsl-apt:5.0.0:jakarta"
     annotationProcessor "jakarta.persistence:jakarta.persistence-api"
     annotationProcessor "jakarta.annotation:jakarta.annotation-api"
+    // Fix for Hibernate 6.x & QueryDSL issue (ANTLR missing)
+    implementation 'org.antlr:antlr4-runtime:4.13.0'
 
     // Utils
     compileOnly 'org.projectlombok:lombok'
