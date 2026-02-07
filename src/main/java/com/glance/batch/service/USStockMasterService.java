@@ -15,6 +15,11 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -54,9 +59,15 @@ public class USStockMasterService {
                 return;
             }
 
+            // 1. Load existing symbols into memory for fast lookup
+            Map<String, StockSymbol> existingSymbols = stockSymbolRepository.findAllByMarket(market)
+                    .stream()
+                    .collect(Collectors.toMap(StockSymbol::getSymbol, Function.identity()));
+
+            List<StockSymbol> toSave = new ArrayList<>();
+
             try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(fileBytes));
-                    BufferedReader br = new BufferedReader(new InputStreamReader(zis, "EUC-KR"))) { // CP949
-                                                                                                    // compatibility
+                    BufferedReader br = new BufferedReader(new InputStreamReader(zis, "EUC-KR"))) {
 
                 ZipEntry entry = zis.getNextEntry();
                 while (entry != null) {
@@ -64,27 +75,30 @@ public class USStockMasterService {
                         log.info("Reading file inside zip: {}", entry.getName());
                         String line;
                         while ((line = br.readLine()) != null) {
-                            parseAndUpsert(line, market);
+                            processLine(line, market, existingSymbols, toSave);
                         }
                     }
                     entry = zis.getNextEntry();
                 }
             }
+
+            // 2. Batch Save
+            if (!toSave.isEmpty()) {
+                stockSymbolRepository.saveAll(toSave);
+                log.info("Saved {} symbols for market {}", toSave.size(), market);
+            }
+
         } catch (IOException e) {
             log.error("Error processing market {}", market, e);
         }
     }
 
-    private void parseAndUpsert(String line, Market market) {
+    private void processLine(String line, Market market, Map<String, StockSymbol> existingMap,
+            List<StockSymbol> toSave) {
         // KIS Master File Format (Tab-delimited) Analysis from PoC:
-        // Index 0: National Code (e.g., US)
-        // Index 1: Market ID? (e.g., 22)
-        // Index 2: Market Code (e.g., NAS)
-        // Index 3: Market Name (e.g., 나스닥)
-        // Index 4: Symbol (e.g., AACB) <--- TARGET
-        // Index 5: Full Code (e.g., NASAACB)
-        // Index 6: Name KR (e.g., 아티우스...) <--- TARGET
-        // Index 7: Name EN (e.g., ARTIUS...) <--- TARGET
+        // Index 4: Symbol (e.g., AACB)
+        // Index 6: Name KR
+        // Index 7: Name EN
 
         String[] parts = line.split("\t");
         if (parts.length < 8) {
@@ -95,18 +109,25 @@ public class USStockMasterService {
         String nameKr = parts[6].trim();
         String nameEn = parts[7].trim();
 
-        // Check if symbol is valid
         if (symbol.isEmpty())
             return;
 
-        StockSymbol stockSymbol = stockSymbolRepository.findBySymbolAndMarket(symbol, market)
-                .orElse(StockSymbol.builder()
-                        .symbol(symbol)
-                        .market(market)
-                        .status(StockStatus.ACTIVE)
-                        .build());
-
-        stockSymbol.updateInfo(nameKr, nameEn, StockStatus.ACTIVE);
-        stockSymbolRepository.save(stockSymbol);
+        StockSymbol stockSymbol = existingMap.get(symbol);
+        if (stockSymbol != null) {
+            // Update existing
+            stockSymbol.updateInfo(nameKr, nameEn, StockStatus.ACTIVE);
+            toSave.add(stockSymbol); // Adding managed entity to list for explicit save (optional but safe)
+        } else {
+            // Create new
+            StockSymbol newSymbol = StockSymbol.builder()
+                    .symbol(symbol)
+                    .market(market)
+                    .nameKr(nameKr)
+                    .nameEn(nameEn)
+                    .status(StockStatus.ACTIVE)
+                    .build();
+            toSave.add(newSymbol);
+            existingMap.put(symbol, newSymbol); // Prevent duplicates within same execution
+        }
     }
 }
