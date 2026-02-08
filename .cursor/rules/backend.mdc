@@ -1,0 +1,33 @@
+---
+description: Backend coding standards for Java and Spring Boot. applies to all files under src/main/java.
+globs: src/main/java/**/*
+---
+
+# 1. Spring Boot & Java Standards
+- **Language**: Java 17 (LTS).
+- **Framework**: Spring Boot 3.2.x.
+- **Lombok**: Use `@Getter`, `@RequiredArgsConstructor`, and `@Builder` actively.
+
+# 2. Domain & JPA Rules
+- **Entity Constraints**:
+  - Never use `@Setter` on Entity classes.
+  - Use meaningful business methods for state changes (e.g., `updatePrice()`, `disableMember()`).
+  - All entities must have `@NoArgsConstructor(access = AccessLevel.PROTECTED)`.
+- **QueryDSL**:
+  - Use QueryDSL for complex queries or joins.
+  - Keep logic inside custom repository implementations.
+
+# 3. API & DTO Rules
+- **No Entity Exposure**: Never return Entity objects directly in Controllers.
+- **DTOs**:
+  - Use Java `record` for DTOs (Request/Response) where possible.
+  - Place DTOs in a dedicated `.dto` package under each domain.
+- **Validation**: Use `jakarta.validation.constraints` (e.g., `@NotBlank`, `@Min`) for all Request DTOs.
+
+# 4. Service & Transaction Rules
+- **Read-Only**: Use `@Transactional(readOnly = true)` for query methods to improve performance.
+- **Logic Placement**: Business logic belongs in the Domain/Entity layer; Service layer orchestrates workflow; Controller is thin.
+
+# 5. Exception Handling
+- Use a `GlobalExceptionHandler` with `@RestControllerAdvice`.
+- Define `CustomException` with an `ErrorCode` enum for predictable error responses.
