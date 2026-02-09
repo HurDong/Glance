@@ -1,5 +1,7 @@
 package com.glance.domain.portfolio.service;
 
+import com.glance.domain.member.entity.Member;
+import com.glance.domain.member.service.MemberService;
 import com.glance.domain.portfolio.dto.PortfolioRequest;
 import com.glance.domain.portfolio.dto.PortfolioResponse;
 import com.glance.domain.portfolio.entity.Portfolio;
@@ -10,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
@@ -24,6 +27,9 @@ class PortfolioServiceTest {
     @Mock
     private PortfolioRepository portfolioRepository;
 
+    @Mock
+    private MemberService memberService;
+
     @InjectMocks
     private PortfolioService portfolioService;
 
@@ -32,6 +38,9 @@ class PortfolioServiceTest {
     void createPortfolio_Success() {
         // given
         Long userId = 1L;
+        Member member = Member.builder().email("test@test.com").nickname("tester").build();
+        ReflectionTestUtils.setField(member, "id", userId);
+
         PortfolioRequest request = PortfolioRequest.builder()
                 .name("내 포트폴리오")
                 .description("설명")
@@ -39,12 +48,14 @@ class PortfolioServiceTest {
                 .build();
 
         Portfolio portfolio = Portfolio.builder()
-                .userId(userId)
+                .member(member)
                 .name(request.name())
                 .description(request.description())
                 .isPublic(request.isPublic())
                 .build();
+        ReflectionTestUtils.setField(portfolio, "id", 100L);
 
+        given(memberService.getMember(userId)).willReturn(member);
         given(portfolioRepository.save(any(Portfolio.class))).willReturn(portfolio);
 
         // when
@@ -52,6 +63,7 @@ class PortfolioServiceTest {
 
         // then
         assertThat(response.name()).isEqualTo(request.name());
+        assertThat(response.userId()).isEqualTo(userId);
         verify(portfolioRepository).save(any(Portfolio.class));
     }
 
@@ -60,9 +72,16 @@ class PortfolioServiceTest {
     void getMyPortfolios_Success() {
         // given
         Long userId = 1L;
-        given(portfolioRepository.findAllByUserId(userId)).willReturn(List.of(
-                Portfolio.builder().userId(userId).name("P1").build(),
-                Portfolio.builder().userId(userId).name("P2").build()));
+        Member member = Member.builder().email("test@test.com").nickname("tester").build();
+        ReflectionTestUtils.setField(member, "id", userId);
+
+        Portfolio p1 = Portfolio.builder().member(member).name("P1").build();
+        Portfolio p2 = Portfolio.builder().member(member).name("P2").build();
+        ReflectionTestUtils.setField(p1, "id", 101L);
+        ReflectionTestUtils.setField(p2, "id", 102L);
+
+        given(memberService.getMember(userId)).willReturn(member);
+        given(portfolioRepository.findAllByMember(member)).willReturn(List.of(p1, p2));
 
         // when
         List<PortfolioResponse> responses = portfolioService.getMyPortfolios(userId);

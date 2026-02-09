@@ -16,7 +16,7 @@ public record PortfolioResponse(
     public static PortfolioResponse from(Portfolio portfolio) {
         return PortfolioResponse.builder()
                 .id(portfolio.getId())
-                .userId(portfolio.getUserId())
+                .userId(portfolio.getMember().getId())
                 .name(portfolio.getName())
                 .description(portfolio.getDescription())
                 .isPublic(portfolio.getIsPublic())

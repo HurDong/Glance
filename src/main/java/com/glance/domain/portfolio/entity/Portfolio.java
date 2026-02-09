@@ -1,6 +1,7 @@
 package com.glance.domain.portfolio.entity;
 
 import com.glance.common.entity.BaseTimeEntity;
+import com.glance.domain.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -20,8 +21,9 @@ public class Portfolio extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id", nullable = false)
+    private Member member;
 
     @Column(nullable = false, length = 100)
     private String name;
@@ -36,8 +38,8 @@ public class Portfolio extends BaseTimeEntity {
     private List<PortfolioItem> items = new ArrayList<>();
 
     @Builder
-    public Portfolio(Long userId, String name, String description, Boolean isPublic) {
-        this.userId = userId;
+    public Portfolio(Member member, String name, String description, Boolean isPublic) {
+        this.member = member;
         this.name = name;
         this.description = description;
         this.isPublic = (isPublic != null) ? isPublic : false;

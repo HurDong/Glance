@@ -1,5 +1,7 @@
 package com.glance.domain.portfolio.service;
 
+import com.glance.domain.member.entity.Member;
+import com.glance.domain.member.service.MemberService;
 import com.glance.domain.portfolio.dto.PortfolioRequest;
 import com.glance.domain.portfolio.dto.PortfolioResponse;
 import com.glance.domain.portfolio.entity.Portfolio;
@@ -17,11 +19,14 @@ import java.util.stream.Collectors;
 public class PortfolioService {
 
     private final PortfolioRepository portfolioRepository;
+    private final MemberService memberService;
 
     @Transactional
     public PortfolioResponse createPortfolio(Long userId, PortfolioRequest request) {
+        Member member = memberService.getMember(userId);
+
         Portfolio portfolio = Portfolio.builder()
-                .userId(userId)
+                .member(member)
                 .name(request.name())
                 .description(request.description())
                 .isPublic(request.isPublic())
@@ -32,7 +37,8 @@ public class PortfolioService {
     }
 
     public List<PortfolioResponse> getMyPortfolios(Long userId) {
-        return portfolioRepository.findAllByUserId(userId).stream()
+        Member member = memberService.getMember(userId);
+        return portfolioRepository.findAllByMember(member).stream()
                 .map(PortfolioResponse::from)
                 .collect(Collectors.toList());
     }
