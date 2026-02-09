@@ -25,7 +25,10 @@ globs: src/main/java/**/*
 - **Standard Response**: 모든 API 응답은 일관된 `ApiResponse<T>` 래퍼 클래스를 사용합니다 (Success/Fail/Message/Data 구조).
 - **Package**: DTO는 해당 도메인 패키지 내부의 `dto` 서브 패키지에 관리합니다.
 
-# 5. Testing & Clean Code
+# 5. Testing & Clean Code (Mandatory)
+- **API Development Mandate**: 주요 API 개발 시 반드시 **성공/실패 케이스를 포함한 테스트 코드**를 동시 작성해야 합니다.
+  - Controller: `MockMvc`를 이용한 슬라이스 테스트 또는 통합 테스트.
+  - Service/Domain: JUnit 5와 AssertJ를 활용한 단위 테스트.
 - **JUnit 5 & AssertJ**: 테스트 작성 시 이 라이브러리들을 기본으로 사용하며, `given-when-then` 패턴을 준수합니다.
 - **Mocking**: 외부 서비스나 DB 연산은 `Mockito`를 활용하여 단위 테스트의 독립성을 보장하세요.
 - **Method Length**: 하나의 메서드가 너무 많은 책임(30줄 이상)을 가지지 않게 하세요. 필요하면 private 메서드로 잘게 쪼개세요.
