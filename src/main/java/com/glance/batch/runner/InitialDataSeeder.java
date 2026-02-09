@@ -1,5 +1,7 @@
 package com.glance.batch.runner;
 
+import com.glance.batch.service.KoreaStockMasterService;
+import com.glance.batch.service.USStockMasterService;
 import com.glance.domain.group.entity.PortfolioGroup;
 import com.glance.domain.group.service.PortfolioGroupService;
 import com.glance.domain.member.entity.Member;
