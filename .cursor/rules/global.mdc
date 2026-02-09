@@ -26,15 +26,20 @@ globs: **/*
   - Verify Spring Boot runs without `ApplicationContext` errors.
   - If detailed logs are needed, check `docker logs glance-db` - but try not to flood user chat.
 
-# 3. 🛠 Tech Stack & Decisions
+# 3. 🛠 Tech Stack & Financial Integrity
 - **Java**: 17 (LTS)
 - **Spring Boot**: 3.2.x
-- **Build**: Gradle
-- **DB**: MySQL 8.0 + Redis 7.2
-- **ORM**: JPA (Hibernate 6) + QueryDSL 5.0 (Jakarta)
-- **Frontend**: React (Planned)
+- **Precision (Crucial)**: 
+  - 금액 관련 데이터는 **절대** `double`, `float`을 쓰지 않습니다. 반드시 **`BigDecimal`**을 사용하세요.
+  - 환율, 수익률 등 소수점 계산은 `MathContext.DECIMAL128` 또는 명확한 반올림 정책(RoundingMode)을 명시합니다.
+- **Auditability**:
+  - 모든 엔티티는 생성/수정 시간 및 작성자를 추적할 수 있도록 `BaseEntity`를 상속받습니다.
+- **DB**: MySQL 8.0 (UTF8MB4), Redis 7.2 (Session/Cache)
 
-# 4. 📝 Coding Conventions (Backend)
-- **Entity**: `@Setter` is forbidden. Use meaningful business methods (e.g., `updatePrice()`).
-- **DTO**: Always filter data through DTOs. Never expose Entities directly in API.
-- **Controller**: Keep it thin. Delegate business logic to Service layer.
+# 4. 📝 Knowledge Discovery (Agentic Workflow)
+- **First Step**: 새로운 기능을 구현하거나 버그를 고칠 때, 무작정 코드를 짜지 말고 **반드시 KI(Knowledge Item) 요약본과 이전 Task Log를 먼저 확인**하세요.
+- **Context Awareness**: 관련 있는 엔티티나 서비스의 구조를 먼저 `list_dir`와 `view_file`로 파악한 뒤 설계를 제안하세요.
+
+# 5. 🌐 Naming & Organization
+- **REST API**: URL 경로는 소문자 **kebab-case**를 사용하며, `/api/v1/` 접두사를 붙입니다.
+- **Git**: [Emoji] [Type]: [Title] 형식을 엄격히 준수합니다.

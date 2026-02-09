@@ -1,12 +1,12 @@
 package com.glance.domain.stocks.entity;
 
+import com.glance.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.DynamicUpdate;
-import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Table(indexes = {
         @Index(name = "idx_symbol_market", columnList = "symbol, market", unique = true)
 })
-public class StockSymbol {
+public class StockSymbol extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,8 +36,6 @@ public class StockSymbol {
     @Column(nullable = false)
     private StockStatus status;
 
-    private LocalDateTime updatedAt;
-
     @Builder
     public StockSymbol(String symbol, Market market, String nameKr, String nameEn, StockStatus status) {
         this.symbol = symbol;
@@ -45,18 +43,15 @@ public class StockSymbol {
         this.nameKr = nameKr;
         this.nameEn = nameEn;
         this.status = status;
-        this.updatedAt = LocalDateTime.now();
     }
 
     public void updateInfo(String nameKr, String nameEn, StockStatus status) {
         this.nameKr = nameKr;
         this.nameEn = nameEn;
         this.status = status;
-        this.updatedAt = LocalDateTime.now();
     }
 
     public void markDelisted() {
         this.status = StockStatus.DELISTED;
-        this.updatedAt = LocalDateTime.now();
     }
 }

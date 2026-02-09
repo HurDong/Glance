@@ -1,0 +1,29 @@
+---
+description: Frontend coding standards for React and Vite. applies to all files under src/main/frontend or relevant UI dirs.
+globs: src/main/frontend/**/*, **/*.tsx, **/*.jsx
+---
+
+# 1. React Standards
+- **Framework**: Vite + React.
+- **Components**: Functional components only. Use Hooks (`useState`, `useEffect`, etc.).
+- **TypeScript**: Use TypeScript by default for type safety.
+
+# 2. Styling & UI
+- **CSS**: Vanilla CSS or CSS Modules for flexibility.
+- **Aesthetics**: Follow "Rich Aesthetics" (vibrant colors, glassmorphism, smooth transitions).
+- **Responsive**: Mobile-first responsive design.
+
+# 3. State Management & Data Fetching
+- **Server State**: Use `React Query` (TanStack Query) for API fetching and caching.
+- **Local State**: Use `Zustand` for simple global state if needed.
+
+# 4. API Communication
+- Use `axios` for HTTP requests.
+- All API base URLs must point to `/api/v1`.
+- Error handling must match the backend's `ApiResponse` structure.
+
+# 5. Organization
+- `components/`: Reusable UI atoms and molecules.
+- `pages/`: Page-level components.
+- `hooks/`: Custom react hooks.
+- `services/`: API call logic.
