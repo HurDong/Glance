@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    include: kis
   datasource:
     url: jdbc:mysql://localhost:3306/glance?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&rewriteBatchedStatements=true
     username: user
