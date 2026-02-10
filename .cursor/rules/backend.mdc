@@ -32,3 +32,6 @@ globs: src/main/java/**/*
 - **JUnit 5 & AssertJ**: 테스트 작성 시 이 라이브러리들을 기본으로 사용하며, `given-when-then` 패턴을 준수합니다.
 - **Mocking**: 외부 서비스나 DB 연산은 `Mockito`를 활용하여 단위 테스트의 독립성을 보장하세요.
 - **Method Length**: 하나의 메서드가 너무 많은 책임(30줄 이상)을 가지지 않게 하세요. 필요하면 private 메서드로 잘게 쪼개세요.
+
+# 6. Verification Process (Mandatory)
+- **Automatic Build Check**: 백엔드 코드 수정 시 반드시 `./gradlew clean compileJava` (또는 동등한 명령어)를 실행하여 빌드 성공 여부를 확인한 후 사용자에게 보고해야 합니다. 빌드 실패 시 오류를 수정하고 재검증하세요.
