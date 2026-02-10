@@ -37,3 +37,7 @@ logging:
         type:
           descriptor:
             sql: info
+
+jwt:
+  secret: dGhpc2lzYXZlcnlzZWN1cmVzZWNyZXRrZXlmb3Jqd3R0b2tlZ2VuZXJhdGlvbmFuZHZhbGlkYXRpb24xMjM0NTY3ODkw
+
