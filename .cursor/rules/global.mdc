@@ -18,7 +18,18 @@ globs: **/*
   1. Create `COMMIT_MSG.txt` with UTF-8 encoding.
   2. Execute: `git commit -F COMMIT_MSG.txt`
   3. Delete `COMMIT_MSG.txt` aggressively after commit.
-- **Safety Net**: `COMMIT_MSG.txt` is strictly ignored in `.gitignore`, so it will **NEVER** be pushed to remote, even if deletion fails.
+- **Safety Net**: `COMMIT_MSG.txt` is strictly ignored in `.gitignore`, so it will **NEVER** be pushed to remote.
+
+## 2.2. ✅ Complete Implementation Rule (Feature Commits)
+- **Constraint**: A "Feature" commit (feat) must only be made when the feature is **completely implemented**.
+- **Definition**: "Complete" means **finishing Feature 1 entirely before starting Feature 2**.
+  - All sub-tasks (e.g., UI, Backend, DB, Tests) for the current feature must be done.
+  - You must not move to the next feature until the current one is fully working and committed.
+- **Process**:
+  1. Focus on Feature A (Backend + Frontend + Tests).
+  2. Verify Feature A works completely.
+  3. **Commit Feature A**.
+  4. Only then, start Feature B.
 
 ## 2.2. 🚀 Runtime Verification
 - Before marking a backend task as "Complete":
@@ -40,6 +51,13 @@ globs: **/*
 - **First Step**: 새로운 기능을 구현하거나 버그를 고칠 때, 무작정 코드를 짜지 말고 **반드시 KI(Knowledge Item) 요약본과 이전 Task Log를 먼저 확인**하세요.
 - **Context Awareness**: 관련 있는 엔티티나 서비스의 구조를 먼저 `list_dir`와 `view_file`로 파악한 뒤 설계를 제안하세요.
 
-# 5. 🌐 Naming & Organization
+# 5. 🌐 Frontend & UI Rules
+- **Language**: 모든 메뉴, 버튼, 플레이스홀더 등 사용자에게 노출되는 UI 텍스트는 **한국어**를 원칙으로 합니다.
 - **REST API**: URL 경로는 소문자 **kebab-case**를 사용하며, `/api/v1/` 접두사를 붙입니다.
-- **Git**: [Emoji] [Type]: [Title] 형식을 엄격히 준수합니다.
+- **Git**: Follow the convention `[Emoji] [Type]: [Title]`.
+  - **feat**: ✨ (Sparkles)
+  - **fix**: 🐛 (Bug)
+  - **refactor**: ♻️ (Recycle)
+  - **style**: 🎨 (Art)
+  - **chore**: 🔧 (Wrench)
+  - **docs**: 📝 (Memo)
