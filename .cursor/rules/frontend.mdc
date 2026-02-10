@@ -1,29 +1,44 @@
 ---
-description: Frontend coding standards for React and Vite. applies to all files under src/main/frontend or relevant UI dirs.
-globs: src/main/frontend/**/*, **/*.tsx, **/*.jsx
+description: Frontend project rules for React, Vite, Capacitor, and Tailwind. Applies to all files under 'frontend' directory.
+globs: frontend/**/*
 ---
 
-# 1. React Standards
-- **Framework**: Vite + React.
-- **Components**: Functional components only. Use Hooks (`useState`, `useEffect`, etc.).
-- **TypeScript**: Use TypeScript by default for type safety.
+# 1. 🏗 Architecture & Stack
+- **Framework**: React 18+ with **Vite** as build tool.
+- **Mobile**: **Capacitor** integration for iOS/Android distribution.
+- **Language**: **TypeScript** (Strict mode) for type safety.
+- **State Management**:
+  - **Server State**: `TanStack Query (v5+)` for API fetching and caching.
+  - **Client State**: `Zustand` for light-weight global state (Auth, Theme).
+- **API Communication**: `Axios` with Interceptors for global error/auth handling.
 
-# 2. Styling & UI
-- **CSS**: Vanilla CSS or CSS Modules for flexibility.
-- **Aesthetics**: Follow "Rich Aesthetics" (vibrant colors, glassmorphism, smooth transitions).
-- **Responsive**: Mobile-first responsive design.
+# 2. 🎨 UI & Styling
+- **Styling**: `Tailwind CSS` for utility-first styling.
+- **Components**: `Shadcn/UI` for base primitive components.
+- **Icons**: `Lucide React`.
+- **Theme**: 
+  - Dual support for **Light** (Default) and **Dark** modes.
+  - Theme state must be persistent (LocalStorage) and togglable.
+- **Forms**: `React Hook Form` + `Zod` for validation.
 
-# 3. State Management & Data Fetching
-- **Server State**: Use `React Query` (TanStack Query) for API fetching and caching.
-- **Local State**: Use `Zustand` for simple global state if needed.
+# 3. 📂 Folder & File Conventions
+- **Naming**: 
+  - Components: **PascalCase** (`StockList.tsx`).
+  - Hooks/Utils: **camelCase** (`useAuth.ts`).
+- **Structure (Role-based)**:
+  - `src/components/ui`: Shadcn/UI core components.
+  - `src/components/shared`: Common UI elements (Modals, Layouts).
+  - `src/components/domain`: Specific business components (Portfolio, Stocks).
+  - `src/hooks`: Custom hooks.
+  - `src/services`: API calling logic (Axios instances).
+  - `src/pages`: Route-based page components.
+  - `src/store`: Zustand store definitions.
 
-# 4. API Communication
-- Use `axios` for HTTP requests.
-- All API base URLs must point to `/api/v1`.
-- Error handling must match the backend's `ApiResponse` structure.
+# 4. 🚨 Error & Feedback
+- **Global Error Handling**: Use `React Error Boundary` to catch rendering errors.
+- **User Feedback**: Use **Toast notifications** for all API success/fail responses.
 
-# 5. Organization
-- `components/`: Reusable UI atoms and molecules.
-- `pages/`: Page-level components.
-- `hooks/`: Custom react hooks.
-- `services/`: API call logic.
+# 5. 🛠 Development Workflow
+- **Package Manager**: **pnpm** (STRICTLY REQUIRED).
+- **Linting**: ESLint + Prettier.
+- **Git Commit**: Same convention as backend ([Emoji] [Type]: [Title]).
