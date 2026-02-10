@@ -1,58 +1,104 @@
-import { useState, useEffect } from 'react'
-import { Sun, Moon } from 'lucide-react'
+import { useState } from 'react';
+import { MainLayout } from './components/layout/MainLayout';
+import { StockCard } from './components/stocks/StockCard';
+import { GroupFeed } from './components/groups/GroupFeed';
+import { StockListPage } from './components/stocks/StockListPage';
+import { LoginPage } from './components/auth/LoginPage';
+import { SignupPage } from './components/auth/SignupPage';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 
-function App() {
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('theme') || 'light'
-  })
 
-  useEffect(() => {
-    const root = window.document.documentElement
-    root.classList.remove('light', 'dark')
-    root.classList.add(theme)
-    localStorage.setItem('theme', theme)
-  }, [theme])
+const MainContent = () => {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  
+  const trendingStocks: any[] = [
+    { symbol: 'AAPL', name: 'Apple Inc.', price: 231.42, change: 4.25, changePercent: 1.87, market: 'US' },
+    { symbol: '005930', name: '삼성전자', price: 72500, change: 1200, changePercent: 1.68, market: 'KR' },
+    { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 145.28, change: 12.45, changePercent: 9.38, market: 'US' },
+    { symbol: '035720', name: '카카오', price: 48200, change: -500, changePercent: -1.03, market: 'KR' },
+  ];
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light')
-  }
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return (
+          <div className="space-y-8">
+            {/* Fast Market Overview */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">관심 종목 퀵뷰</h2>
+                <button className="text-sm font-medium text-primary hover:underline">목록 편집</button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {trendingStocks.map((stock) => (
+                  <StockCard key={stock.symbol} {...stock} />
+                ))}
+              </div>
+            </section>
+
+            {/* Main Dashboard Content */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2">
+                <GroupFeed />
+              </div>
+
+              <aside className="space-y-6">
+                <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
+                  <h3 className="font-bold border-b border-border pb-3 mb-4">빠른 종목 통계</h3>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    증권사 앱보다 3배 빠른 조회. <br/>
+                    관심 종목을 등록하고 즉시 시세를 확인하세요.
+                  </p>
+                  <div className="space-y-2">
+                    {['삼성전자', 'SK하이닉스', '마이크로소프트', '구글'].map(name => (
+                      <div key={name} className="flex justify-between items-center p-2 hover:bg-muted rounded-lg cursor-pointer transition-colors">
+                        <span className="text-sm font-medium">{name}</span>
+                        <span className="text-[10px] text-muted-foreground">간편 조회</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-primary to-orange-600 rounded-xl p-6 text-primary-foreground shadow-lg">
+                  <h3 className="text-lg font-bold mb-2">Group Portfolio</h3>
+                  <p className="text-sm text-primary-foreground/80 mb-4">
+                    그룹 멤버들과 수익률 노출 없이 <br/>
+                    섹터 비중과 전략을 조용히 공유하세요.
+                  </p>
+                  <button className="w-full py-2 bg-white text-primary font-bold rounded-lg text-sm hover:bg-opacity-90 transition-opacity">
+                    내 그룹 관리하기
+                  </button>
+                </div>
+              </aside>
+            </div>
+          </div>
+        );
+      case 'stocks':
+        return <StockListPage />;
+      default:
+        return (
+          <div className="flex items-center justify-center h-[60vh] text-muted-foreground">
+            준비 중인 기능입니다.
+          </div>
+        );
+    }
+  };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <header className="w-full max-w-2xl flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-primary">Glance</h1>
-        <button 
-          onClick={toggleTheme}
-          className="p-2 rounded-full bg-secondary text-secondary-foreground hover:opacity-80 transition-opacity"
-        >
-          {theme === 'light' ? <Moon size={24} /> : <Sun size={24} />}
-        </button>
-      </header>
+    <MainLayout activeTab={activeTab} onTabChange={setActiveTab}>
+      {renderContent()}
+    </MainLayout>
+  );
+};
 
-      <main className="w-full max-w-2xl bg-card text-card-foreground rounded-lg border shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">금융 소셜 포트폴리오 플랫폼</h2>
-        <p className="text-muted-foreground mb-6">
-          Vite + React + Tailwind + Capacitor 환경이 성공적으로 구축되었습니다.
-          이제 실시간 주식 데이터를 시각화하고 친구들과 공유할 수 있습니다.
-        </p>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 rounded-md border bg-muted/50">
-            <h3 className="font-medium mb-1">실시간 시세 연동</h3>
-            <p className="text-sm text-muted-foreground">백엔드 KIS WebSocket 엔진과 연동 준비 완료</p>
-          </div>
-          <div className="p-4 rounded-md border bg-muted/50">
-            <h3 className="font-medium mb-1">멀티 플랫폼 지원</h3>
-            <p className="text-sm text-muted-foreground">Capacitor를 통한 iOS/Android 어플 출시 가능</p>
-          </div>
-        </div>
-      </main>
-
-      <footer className="mt-auto py-8 text-sm text-muted-foreground">
-        © 2026 Glance. All rights reserved.
-      </footer>
-    </div>
-  )
+function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/*" element={<MainContent />} />
+    </Routes>
+  );
 }
 
-export default App
+export default App;
