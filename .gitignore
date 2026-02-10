@@ -23,6 +23,8 @@ out/
 ### Gradle
 .gradle
 build/
+backend/.gradle/
+backend/build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
@@ -34,7 +36,7 @@ hs_err_pid*
 .DS_Store
 Thumbs.db
 COMMIT_MSG.txt
-src/main/resources/application-kis.yml
+backend/src/main/resources/application-kis.yml
 
 ### Docker
 docker/*/data/
