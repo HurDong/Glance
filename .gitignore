@@ -31,6 +31,7 @@ backend/build/
 
 ### Spring Boot
 hs_err_pid*
+boot_log*.txt
 
 ### System
 .DS_Store

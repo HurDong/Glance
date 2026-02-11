@@ -21,6 +21,7 @@ public class InitialDataSeeder implements ApplicationRunner {
     private final KoreaStockMasterService koreaStockMasterService;
     private final MemberService memberService;
     private final PortfolioGroupService groupService;
+    private final com.glance.domain.stocks.repository.StockSymbolRepository stockSymbolRepository;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
@@ -51,6 +52,10 @@ public class InitialDataSeeder implements ApplicationRunner {
         } catch (Exception e) {
             log.warn("Failed to create initial dummy data", e);
         }
+
+        // 3. Verify Stock Data
+        long stockCount = stockSymbolRepository.count();
+        log.info("📊 Total Stocks in DB: {}", stockCount);
 
         log.info("✅ Initial Data Seeding Completed.");
     }

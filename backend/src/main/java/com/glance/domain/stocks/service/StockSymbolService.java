@@ -24,6 +24,7 @@ public class StockSymbolService {
         Page<StockSymbol> stockPage;
 
         if (query == null || query.trim().isEmpty()) {
+
             stockPage = stockSymbolRepository.findAll(pageable);
         } else {
             String searchTerm = query.trim();
@@ -31,5 +32,38 @@ public class StockSymbolService {
         }
 
         return stockPage.map(StockResponse::from);
+    }
+
+    @Transactional
+    public void upsertStockSymbols(List<StockSymbol> newSymbols) {
+        // 1. Load all existing symbols for the given markets (or all) to minimize DB
+        // hits
+        // Assuming we process one market at a time or just load all.
+        // For safety, let's just load all by symbols if list is small, OR load ALL
+        // active.
+        // KOSPI+KOSDAQ is ~3000. Loading all is fine.
+        List<StockSymbol> existingList = stockSymbolRepository.findAll();
+        var existingMap = existingList.stream()
+                .collect(Collectors.toMap(
+                        s -> s.getSymbol() + "-" + s.getMarket(),
+                        s -> s,
+                        (existing, replacement) -> existing // Keep existing if duplicate in DB
+                ));
+
+        List<StockSymbol> toSave = newSymbols.stream()
+                .map(newSymbol -> {
+                    String key = newSymbol.getSymbol() + "-" + newSymbol.getMarket();
+                    StockSymbol existing = existingMap.get(key);
+                    if (existing != null) {
+                        // Update if changed
+                        existing.updateInfo(newSymbol.getNameKr(), newSymbol.getNameEn(), newSymbol.getStatus());
+                        return existing;
+                    } else {
+                        return newSymbol;
+                    }
+                })
+                .collect(Collectors.toList());
+
+        stockSymbolRepository.saveAll(toSave);
     }
 }

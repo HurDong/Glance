@@ -17,4 +17,8 @@ public class KisProperties {
     private String mode; // VIRTUAL or PROD
     private String url;
     private String wsUrl;
+
+    // Master File Download URLs (Public)
+    private String kospiMasterUrl = "https://new.real.download.dws.co.kr/common/master/kospi_code.mst.zip";
+    private String kosdaqMasterUrl = "https://new.real.download.dws.co.kr/common/master/kosdaq_code.mst.zip";
 }

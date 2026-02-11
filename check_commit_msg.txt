@@ -1,0 +1,2 @@
+🔧 chore: update project configuration and gitignore
+
