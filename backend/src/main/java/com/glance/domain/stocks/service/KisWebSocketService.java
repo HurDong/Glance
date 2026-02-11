@@ -70,14 +70,20 @@ public class KisWebSocketService extends TextWebSocketHandler {
         try {
             // Data format: Encrypted/Plain | TR_ID | Count | Data (Pipe separated)
             String[] parts = payload.split("\\|");
-            if (parts.length < 4)
+            if (parts.length < 4) {
+                log.warn("KIS WS Message too short: {}", payload);
                 return;
+            }
 
             String trId = parts[1];
+            log.info("KIS WS TR_ID: {}", trId); // Debugging line
+
             if ("H0STCNT0".equals(trId)) { // 국내주식 실시간 체결
                 parseAndBroadcastKorea(parts[3]);
-            } else if ("HDFSASP0".equals(trId)) { // 해외주식 실시간 체결
+            } else if ("HDFSASP0".equals(trId) || "HDFSCNT0".equals(trId)) { // 해외주식 실시간 호가 or 체결
                 parseAndBroadcastUS(parts[3]);
+            } else {
+                log.warn("Unknown TR_ID: {}", trId);
             }
         } catch (Exception e) {
             log.error("Failed to parse KIS message", e);
@@ -105,12 +111,28 @@ public class KisWebSocketService extends TextWebSocketHandler {
             return;
 
         String symbol = fields[0];
-        String price = fields[11];
-        String change = fields[24];
-        String changeRate = fields[25];
-        String time = fields[1];
+        // Remove market prefix (DNAS, DNYS, DAMS)
+        if (symbol.length() > 4) {
+            symbol = symbol.substring(4);
+        }
 
-        broadcast(symbol, price, change, changeRate, time);
+        try {
+            String price = fields[11];
+            String sign = fields[12];
+            String change = fields[13];
+            String changeRate = fields[14];
+            String time = fields[1];
+
+            // Apply direction to change value based on sign (1:Upper, 2:Up, 3:Steady,
+            // 4:Down, 5:Lower)
+            if ("4".equals(sign) || "5".equals(sign)) {
+                change = "-" + change;
+            }
+
+            broadcast(symbol, price, change, changeRate, time);
+        } catch (Exception e) {
+            log.error("Failed to parse pricing data for {}", symbol);
+        }
     }
 
     private void broadcast(String symbol, String price, String change, String changeRate, String time) {
@@ -137,7 +159,10 @@ public class KisWebSocketService extends TextWebSocketHandler {
 
     private void sendSubscribeRequest(String symbol) {
         boolean isUS = symbol.matches("^[a-zA-Z].*");
-        String trId = isUS ? "HDFSASP0" : "H0STCNT0";
+        // Use HDFSCNT0 (Execution) instead of HDFSASP0 (Quote) for US stocks to get
+        // correct Change/Rate
+        String trId = isUS ? "HDFSCNT0" : "H0STCNT0";
+
         // KIS 미국 주식 규격: DNAS (주간/나스닥), DNYS (주간/뉴욕), DAMS (주간/아멕스)
         // 일단 DNAS가 신호를 주므로 DNAS로 고정
         String trKey = isUS ? "DNAS" + symbol : symbol;
@@ -154,7 +179,7 @@ public class KisWebSocketService extends TextWebSocketHandler {
                                     "tr_id", trId,
                                     "tr_key", trKey)));
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(request)));
-            log.info("📤 Requested {} subscription for: {}", isUS ? "US" : "KR", symbol);
+            log.info("📤 Requested {} subscription for: {} (TR_ID: {})", isUS ? "US" : "KR", symbol, trId);
         } catch (Exception e) {
             log.error("Failed to send subscription request", e);
         }

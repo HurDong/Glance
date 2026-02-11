@@ -34,14 +34,17 @@ export const StockIcon: React.FC<StockIconProps> = ({
     };
   };
 
-  const colors = getColors(symbol);
-  const firstChar = name.charAt(0).toUpperCase();
+  const safeSymbol = symbol || '';
+  const safeName = name || safeSymbol || '?';
+
+  const colors = getColors(safeSymbol);
+  const firstChar = safeName.charAt(0).toUpperCase();
 
   // 로고 URL 생성 로직
   // 1. KR 주식: 토스 증권 패턴 시도 (6자리 종목코드)
   // 2. US 주식: 주요 종목 매핑 시도 후 TradingView 대체
   const getLogoUrl = () => {
-    const s = symbol.toUpperCase();
+    const s = safeSymbol.toUpperCase();
     if (market === 'KR') {
       return `https://static.toss.im/png-icons/securities/icn-sec-fill-${symbol}.png`;
     }

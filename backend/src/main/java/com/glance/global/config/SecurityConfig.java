@@ -36,7 +36,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/stocks/**").permitAll() // Public access to stocks for now
-                        .requestMatchers("/ws/**").permitAll() // Allow WebSocket connection
+                        .requestMatchers("/ws-glance/**").permitAll() // Allow WebSocket connection
+                        .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
                         UsernamePasswordAuthenticationFilter.class);
