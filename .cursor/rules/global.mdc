@@ -54,10 +54,16 @@ globs: **/*
 # 5. 🌐 Frontend & UI Rules
 - **Language**: 모든 메뉴, 버튼, 플레이스홀더 등 사용자에게 노출되는 UI 텍스트는 **한국어**를 원칙으로 합니다.
 - **REST API**: URL 경로는 소문자 **kebab-case**를 사용하며, `/api/v1/` 접두사를 붙입니다.
-- **Git**: Follow the convention `[Emoji] [Type]: [Title]`.
-  - **feat**: ✨ (Sparkles)
-  - **fix**: 🐛 (Bug)
-  - **refactor**: ♻️ (Recycle)
-  - **style**: 🎨 (Art)
-  - **chore**: 🔧 (Wrench)
-  - **docs**: 📝 (Memo)
+
+# 6. 📝 Git Commit Convention
+- **Format**: `[Emoji] [Type]: [Title]`
+  - **Title**: 영어로 작성 (예: "Add user authentication")
+  - **Description**: 한글로 작성 (상세 내역)
+- **Types**:
+  - **feat**: ✨ (Sparkles) - 새로운 기능
+  - **fix**: 🐛 (Bug) - 버그 수정
+  - **refactor**: ♻️ (Recycle) - 리팩토링
+  - **style**: 🎨 (Art) - 코드 스타일 변경
+  - **chore**: 🔧 (Wrench) - 기타 작업
+  - **docs**: 📝 (Memo) - 문서 작업
+
