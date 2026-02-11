@@ -12,7 +12,9 @@ public record PortfolioResponse(
         String name,
         String description,
         Boolean isPublic,
-        LocalDateTime createdAt) {
+        LocalDateTime createdAt,
+        java.util.List<PortfolioItemResponse> items) {
+
     public static PortfolioResponse from(Portfolio portfolio) {
         return PortfolioResponse.builder()
                 .id(portfolio.getId())
@@ -21,6 +23,9 @@ public record PortfolioResponse(
                 .description(portfolio.getDescription())
                 .isPublic(portfolio.getIsPublic())
                 .createdAt(portfolio.getCreatedAt())
+                .items(portfolio.getItems().stream()
+                        .map(PortfolioItemResponse::from)
+                        .toList())
                 .build();
     }
 }

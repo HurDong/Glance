@@ -41,6 +41,12 @@ public class PortfolioItem extends BaseTimeEntity {
         this.portfolio = portfolio;
     }
 
+    public void update(BigDecimal quantity, BigDecimal averagePrice, String currency) {
+        this.quantity = quantity;
+        this.averagePrice = averagePrice;
+        this.currency = currency;
+    }
+
     @Builder
     public PortfolioItem(StockSymbol stockSymbol, BigDecimal quantity, BigDecimal averagePrice, String currency) {
         this.stockSymbol = stockSymbol;

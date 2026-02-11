@@ -49,4 +49,15 @@ public class Portfolio extends BaseTimeEntity {
         items.add(item);
         item.setPortfolio(this);
     }
+
+    public void removeItem(PortfolioItem item) {
+        items.remove(item);
+        item.setPortfolio(null);
+    }
+
+    public void update(String name, String description, Boolean isPublic) {
+        this.name = name;
+        this.description = description;
+        this.isPublic = isPublic;
+    }
 }

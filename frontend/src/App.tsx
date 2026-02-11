@@ -3,6 +3,8 @@ import { MainLayout } from './components/layout/MainLayout';
 import { StockCard } from './components/stocks/StockCard';
 import { GroupFeed } from './components/groups/GroupFeed';
 import { StockListPage } from './components/stocks/StockListPage';
+import { PortfolioList } from './components/portfolio/PortfolioList';
+import { PortfolioDetail } from './components/portfolio/PortfolioDetail';
 import { LoginPage } from './components/auth/LoginPage';
 import { SignupPage } from './components/auth/SignupPage';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
@@ -75,6 +77,10 @@ const MainContent = () => {
         );
       case 'stocks':
         return <StockListPage />;
+      case 'portfolio':
+        return <PortfolioList />;
+      case 'group':
+        return <GroupFeed />;
       default:
         return (
           <div className="flex items-center justify-center h-[60vh] text-muted-foreground">
@@ -96,6 +102,16 @@ function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/portfolio/:id" element={
+        <MainLayout activeTab="portfolio" onTabChange={() => {}}>
+          <PortfolioDetail />
+        </MainLayout>
+      } />
+      <Route path="/portfolio" element={
+        <MainLayout activeTab="portfolio" onTabChange={() => {}}>
+          <PortfolioList />
+        </MainLayout>
+      } />
       <Route path="/*" element={<MainContent />} />
     </Routes>
   );
