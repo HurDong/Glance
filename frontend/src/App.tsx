@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { MainLayout } from './components/layout/MainLayout';
 import { StockCard } from './components/stocks/StockCard';
-import { GroupFeed } from './components/groups/GroupFeed';
+// import { GroupFeed } from './components/groups/GroupFeed'; // Deprecated
+import { GroupPortfolioDashboard } from './components/groups/GroupPortfolioDashboard';
 import { StockListPage } from './components/stocks/StockListPage';
 import { PortfolioList } from './components/portfolio/PortfolioList';
 import { PortfolioDetail } from './components/portfolio/PortfolioDetail';
 import { LoginPage } from './components/auth/LoginPage';
 import { SignupPage } from './components/auth/SignupPage';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { StockTicker } from './components/stocks/StockTicker';
 
 
-const MainContent = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  
+const MainContent = ({ activeTab, onTabChange }: { activeTab: string, onTabChange: (tab: string) => void }) => {
   const trendingStocks: any[] = [
     { symbol: 'AAPL', name: 'Apple Inc.', price: 231.42, change: 4.25, changePercent: 1.87, market: 'US' },
     { symbol: '005930', name: '삼성전자', price: 72500, change: 1200, changePercent: 1.68, market: 'KR' },
@@ -25,6 +25,7 @@ const MainContent = () => {
       case 'dashboard':
         return (
           <div className="space-y-8">
+            <StockTicker />
             {/* Fast Market Overview */}
             <section>
               <div className="flex items-center justify-between mb-4">
@@ -41,7 +42,7 @@ const MainContent = () => {
             {/* Main Dashboard Content */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2">
-                <GroupFeed />
+                <GroupPortfolioDashboard />
               </div>
 
               <aside className="space-y-6">
@@ -80,7 +81,7 @@ const MainContent = () => {
       case 'portfolio':
         return <PortfolioList />;
       case 'group':
-        return <GroupFeed />;
+        return <GroupPortfolioDashboard />;
       default:
         return (
           <div className="flex items-center justify-center h-[60vh] text-muted-foreground">
@@ -91,28 +92,36 @@ const MainContent = () => {
   };
 
   return (
-    <MainLayout activeTab={activeTab} onTabChange={setActiveTab}>
+    <MainLayout activeTab={activeTab} onTabChange={onTabChange}>
       {renderContent()}
     </MainLayout>
   );
 };
 
 function App() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const navigate = useNavigate();
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    navigate('/');
+  };
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/portfolio/:id" element={
-        <MainLayout activeTab="portfolio" onTabChange={() => {}}>
+        <MainLayout activeTab="portfolio" onTabChange={handleTabChange}>
           <PortfolioDetail />
         </MainLayout>
       } />
       <Route path="/portfolio" element={
-        <MainLayout activeTab="portfolio" onTabChange={() => {}}>
+        <MainLayout activeTab="portfolio" onTabChange={handleTabChange}>
           <PortfolioList />
         </MainLayout>
       } />
-      <Route path="/*" element={<MainContent />} />
+      <Route path="/*" element={<MainContent activeTab={activeTab} onTabChange={handleTabChange} />} />
     </Routes>
   );
 }

@@ -74,3 +74,21 @@
     @apply bg-background text-foreground;
   }
 }
+@layer utilities {
+  .animate-ticker {
+    animation: ticker 40s linear infinite;
+  }
+  
+  .pause-on-hover:hover {
+    animation-play-state: paused;
+  }
+
+  @keyframes ticker {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+}
