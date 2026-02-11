@@ -5,6 +5,7 @@ import com.glance.common.exception.ErrorCode;
 import com.glance.domain.group.dto.PortfolioGroupResponse;
 import com.glance.domain.group.entity.PortfolioGroup;
 import com.glance.domain.group.entity.PortfolioGroupMember;
+import com.glance.domain.group.entity.GroupMemberStatus;
 import com.glance.domain.group.repository.PortfolioGroupMemberRepository;
 import com.glance.domain.group.repository.PortfolioGroupRepository;
 import com.glance.domain.member.entity.Member;
@@ -41,29 +42,96 @@ public class PortfolioGroupService {
 
                 PortfolioGroup savedGroup = groupRepository.save(group);
 
-                // Owner automatically becomes a member
+                // Owner automatically becomes a member and is ACCEPTED
                 groupMemberRepository.save(PortfolioGroupMember.builder()
                                 .group(savedGroup)
                                 .member(owner)
+                                .status(GroupMemberStatus.ACCEPTED)
                                 .build());
 
                 return savedGroup;
         }
 
         @Transactional
-        public void addMember(Long groupId, Long memberId) {
+        public void joinGroup(Long groupId, Long memberId) {
                 PortfolioGroup group = groupRepository.findById(groupId)
                                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
                 Member member = memberService.getMember(memberId);
 
                 if (groupMemberRepository.findByGroupAndMember(group, member).isPresent()) {
-                        throw new BusinessException("이미 그룹에 가입된 멤버입니다.", ErrorCode.INVALID_INPUT_VALUE);
+                        throw new BusinessException("이미 그룹에 가입된 멤버이거나 요청 중입니다.", ErrorCode.INVALID_INPUT_VALUE);
                 }
 
                 groupMemberRepository.save(PortfolioGroupMember.builder()
                                 .group(group)
                                 .member(member)
+                                .status(GroupMemberStatus.PENDING)
                                 .build());
+        }
+
+        @Transactional
+        public void inviteMember(Long groupId, Long ownerId, Long targetMemberId) {
+                PortfolioGroup group = groupRepository.findById(groupId)
+                                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+                if (!group.getOwner().getId().equals(ownerId)) {
+                        throw new BusinessException("그룹장만 초대할 수 있습니다.", ErrorCode.HANDLE_ACCESS_DENIED);
+                }
+
+                Member member = memberService.getMember(targetMemberId);
+
+                if (groupMemberRepository.findByGroupAndMember(group, member).isPresent()) {
+                        throw new BusinessException("이미 그룹에 가입된 멤버이거나 요청 중입니다.", ErrorCode.INVALID_INPUT_VALUE);
+                }
+
+                groupMemberRepository.save(PortfolioGroupMember.builder()
+                                .group(group)
+                                .member(member)
+                                .status(GroupMemberStatus.INVITED)
+                                .build());
+        }
+
+        @Transactional
+        public void handleJoinRequest(Long groupId, Long ownerId, Long membershipId, boolean accept) {
+                PortfolioGroup group = groupRepository.findById(groupId)
+                                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+                if (!group.getOwner().getId().equals(ownerId)) {
+                        throw new BusinessException("그룹장만 승인/거절할 수 있습니다.", ErrorCode.HANDLE_ACCESS_DENIED);
+                }
+
+                PortfolioGroupMember membership = groupMemberRepository.findById(membershipId)
+                                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+                if (membership.getStatus() != GroupMemberStatus.PENDING) {
+                        throw new BusinessException("대기 중인 가입 신청이 아닙니다.", ErrorCode.INVALID_INPUT_VALUE);
+                }
+
+                if (accept) {
+                        membership.accept();
+                } else {
+                        membership.reject();
+                }
+        }
+
+        @Transactional
+        public void handleInvitation(Long membershipId, Long memberId, boolean accept) {
+                PortfolioGroupMember membership = groupMemberRepository.findById(membershipId)
+                                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+                if (membership.getStatus() != GroupMemberStatus.INVITED) {
+                        throw new BusinessException("대기 중인 초대가 아닙니다.", ErrorCode.INVALID_INPUT_VALUE);
+                }
+
+                if (!membership.getMember().getId().equals(memberId)) {
+                        throw new BusinessException("본인만 초대 응답을 할 수 있습니다.", ErrorCode.HANDLE_ACCESS_DENIED);
+                }
+
+                if (accept) {
+                        membership.accept();
+                } else {
+                        membership.reject();
+                }
         }
 
         @Transactional

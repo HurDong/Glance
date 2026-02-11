@@ -30,20 +30,44 @@ public class PortfolioGroupController {
         return ApiResponse.success("그룹이 생성되었습니다.", group.getId());
     }
 
-    @PostMapping("/{groupId}/members")
-    public ApiResponse<Void> addMember(
+    @PostMapping("/{groupId}/join")
+    public ApiResponse<Void> joinGroup(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long groupId) {
+        Long userId = Long.parseLong(userDetails.getUsername());
+        groupService.joinGroup(groupId, userId);
+        return ApiResponse.success("그룹 가입 신청이 완료되었습니다.");
+    }
+
+    @PostMapping("/{groupId}/invite")
+    public ApiResponse<Void> inviteMember(
+            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long groupId,
             @RequestParam Long memberId) {
-        // TODO: Only owner can add members? Service logic check needed?
-        // Current requirement doesn't specify auth check for adding member, but usually
-        // owner does it.
-        // Keeping as is for now, but in real app, we should check if requester is
-        // owner.
-        // For now, just keeping the endpoint as is, but maybe adding auth to know who
-        // is adding.
-        // The original code didn't take X-User-Id for addMember.
-        groupService.addMember(groupId, memberId);
-        return ApiResponse.success("멤버가 추가되었습니다.");
+        Long ownerId = Long.parseLong(userDetails.getUsername());
+        groupService.inviteMember(groupId, ownerId, memberId);
+        return ApiResponse.success("그룹 초대가 완료되었습니다.");
+    }
+
+    @PostMapping("/{groupId}/requests/{membershipId}")
+    public ApiResponse<Void> handleJoinRequest(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long groupId,
+            @PathVariable Long membershipId,
+            @RequestParam boolean accept) {
+        Long ownerId = Long.parseLong(userDetails.getUsername());
+        groupService.handleJoinRequest(groupId, ownerId, membershipId, accept);
+        return ApiResponse.success(accept ? "가입 신청을 승인했습니다." : "가입 신청을 거절했습니다.");
+    }
+
+    @PostMapping("/invitations/{membershipId}")
+    public ApiResponse<Void> handleInvitation(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long membershipId,
+            @RequestParam boolean accept) {
+        Long userId = Long.parseLong(userDetails.getUsername());
+        groupService.handleInvitation(membershipId, userId, accept);
+        return ApiResponse.success(accept ? "초대를 수락했습니다." : "초대를 거절했습니다.");
     }
 
     @PostMapping("/{groupId}/share")

@@ -31,11 +31,25 @@ public class PortfolioGroupMember extends BaseTimeEntity {
     @JoinColumn(name = "shared_portfolio_id")
     private Portfolio sharedPortfolio;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private GroupMemberStatus status;
+
     @Builder
-    public PortfolioGroupMember(PortfolioGroup group, Member member, Portfolio sharedPortfolio) {
+    public PortfolioGroupMember(PortfolioGroup group, Member member, Portfolio sharedPortfolio,
+            GroupMemberStatus status) {
         this.group = group;
         this.member = member;
         this.sharedPortfolio = sharedPortfolio;
+        this.status = (status != null) ? status : GroupMemberStatus.PENDING;
+    }
+
+    public void accept() {
+        this.status = GroupMemberStatus.ACCEPTED;
+    }
+
+    public void reject() {
+        this.status = GroupMemberStatus.REJECTED;
     }
 
     public void sharePortfolio(Portfolio portfolio) {

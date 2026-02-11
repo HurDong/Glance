@@ -26,7 +26,6 @@ export interface Group {
   name: string;
   description: string;
   owner: {
-    id: number;
     nickname: string;
     email: string;
   };
@@ -37,16 +36,25 @@ export interface Group {
 export interface GroupMember {
   id: number;
   member: {
-    id: number;
     nickname: string;
     email: string;
   };
-  sharedPortfolio?: {
-    id: number;
-    name: string;
-    items: any[];
-  };
+  sharedPortfolioId?: number;
+  sharedPortfolioName?: string;
+  sharedPortfolioItems?: SharedPortfolioItem[];
+  status: 'PENDING' | 'INVITED' | 'ACCEPTED' | 'REJECTED';
   joinedAt: string;
+}
+
+export interface SharedPortfolioItem {
+  id: number;
+  symbol: string;
+  nameKr: string;
+  nameEn: string;
+  market: string;
+  quantity: number;
+  averagePrice: number;
+  currency: string;
 }
 
 export interface CreateGroupRequest {
@@ -73,7 +81,19 @@ export const groupApi = {
     await apiClient.post(`/groups/${groupId}/share`, { portfolioId });
   },
 
-  addMember: async (groupId: number, memberId: number): Promise<void> => {
-    await apiClient.post(`/groups/${groupId}/members?memberId=${memberId}`);
+  joinGroup: async (groupId: number): Promise<void> => {
+    await apiClient.post(`/groups/${groupId}/join`);
+  },
+
+  inviteMember: async (groupId: number, memberId: number): Promise<void> => {
+    await apiClient.post(`/groups/${groupId}/invite?memberId=${memberId}`);
+  },
+
+  handleJoinRequest: async (groupId: number, membershipId: number, accept: boolean): Promise<void> => {
+    await apiClient.post(`/groups/${groupId}/requests/${membershipId}?accept=${accept}`);
+  },
+
+  handleInvitation: async (membershipId: number, accept: boolean): Promise<void> => {
+    await apiClient.post(`/groups/invitations/${membershipId}?accept=${accept}`);
   }
 };
