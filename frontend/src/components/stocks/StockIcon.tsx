@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -10,6 +10,7 @@ interface StockIconProps {
   symbol: string;
   name: string;
   market?: 'US' | 'KR';
+  securityType?: string;
   className?: string;
 }
 
@@ -17,9 +18,14 @@ export const StockIcon: React.FC<StockIconProps> = ({
   symbol, 
   name, 
   market = 'US',
+  securityType,
   className 
 }) => {
-  const [error, setError] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const [sourceIndex, setSourceIndex] = useState(0);
+
+  const safeSymbol = symbol || '';
+  const safeName = name || safeSymbol || '?';
 
   // 로고 색상 추출을 위한 간단한 해시 함수
   const getColors = (str: string) => {
@@ -34,23 +40,24 @@ export const StockIcon: React.FC<StockIconProps> = ({
     };
   };
 
-  const safeSymbol = symbol || '';
-  const safeName = name || safeSymbol || '?';
-
   const colors = getColors(safeSymbol);
   const firstChar = safeName.charAt(0).toUpperCase();
 
-  // 로고 URL 생성 로직
-  // 1. KR 주식: 토스 증권 패턴 시도 (6자리 종목코드)
-  // 2. US 주식: 주요 종목 매핑 시도 후 TradingView 대체
-  const getLogoUrl = () => {
+  // Logo Sources Definition
+  const getLogoSources = () => {
     const s = safeSymbol.toUpperCase();
-    if (market === 'KR') {
-      return `https://static.toss.im/png-icons/securities/icn-sec-fill-${symbol}.png`;
-    }
     
-    // 주요 US 종목 매핑 (토스 증권 ID 패턴)
-    const usMapping: Record<string, string> = {
+    // KR Sources
+    if (market === 'KR') {
+        return [
+            `https://file.alphasquare.co.kr/media/images/stock_logo/kr/${s}.png`, // AlphaSquare (Good coverage)
+            `https://static.toss.im/png-icons/securities/icn-sec-fill-${s}.png`, // Toss (Direct code mapping often works)
+        ];
+    }
+
+    // US Sources
+    // 1. Toss Securities High-Quality Hardcoded (Preserve existing if possible)
+    const tossId = {
       'AAPL': 'NAS000C7F-E0',
       'NVDA': 'NAS00208X-E0',
       'TSLA': 'NAS00150X-E0',
@@ -58,42 +65,154 @@ export const StockIcon: React.FC<StockIconProps> = ({
       'AMZN': 'NAS00143X-E0',
       'GOOGL': 'NAS00216X-E0',
       'META': 'NAS00241X-E0',
-    };
+    }[s];
 
-    if (usMapping[s]) {
-      return `https://static.toss.im/png-icons/securities/icn-sec-fill-${usMapping[s]}.png`;
+    const defaults = [
+        `https://assets.parqet.com/logos/symbol/${s}?format=png`, // Parqet (Very reliable for US)
+        `https://financialmodelingprep.com/image-stock/${s}.png`, // FMP
+        `https://logo.clearbit.com/${s}.com`, // Clearbit (Domain guess)
+        `https://s3-symbol-logo.tradingview.com/${s.toLowerCase()}.svg` // TradingView (Last resort)
+    ];
+
+    if (tossId) {
+        return [`https://static.toss.im/png-icons/securities/icn-sec-fill-${tossId}.png`, ...defaults];
     }
-    
-    return `https://s3-symbol-logo.tradingview.com/${symbol.toLowerCase()}.svg`;
+    return defaults;
   };
 
-  const logoUrl = getLogoUrl();
+  const sources = getLogoSources();
 
-  if (logoUrl && !error) {
+  // Reset error state when symbol changes
+  useEffect(() => {
+    setImgError(false);
+    setSourceIndex(0);
+  }, [symbol, market]);
+
+  const handleError = () => {
+    if (sourceIndex < sources.length - 1) {
+        setSourceIndex(prev => prev + 1);
+    } else {
+        setImgError(true);
+    }
+  };
+
+  if (!imgError && sources.length > 0) {
     return (
       <div className={cn(
-        "w-10 h-10 rounded-full bg-white overflow-hidden border border-border flex items-center justify-center shadow-sm", 
+        "w-10 h-10 rounded-full bg-white overflow-hidden border border-border flex items-center justify-center shadow-sm relative", 
         className
       )}>
         <img 
-          src={logoUrl} 
+          key={`${symbol}-${sourceIndex}`} // Key change forces reload on source switch
+          src={sources[sourceIndex]} 
           alt={symbol} 
-          className="w-full h-full object-cover" // object-cover로 더 꽉 차게 변경
-          onError={() => setError(true)}
+          className="w-full h-full object-cover" 
+          onError={handleError}
+          loading="lazy"
         />
       </div>
     );
   }
 
-  return (
-    <div 
-      className={cn(
-        "w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shadow-inner overflow-hidden",
+  // Badge Logic for ETFs
+  const getLeverageInfo = (name: string, symbol: string) => {
+    const n = name.toUpperCase();
+    const s = symbol.toUpperCase();
+    
+    // Known Inverse/Leveraged tickers if name parsing fails
+    if (s === 'SQQQ') return { multi: '3x', type: 'inverse' };
+    if (s === 'TQQQ') return { multi: '3x', type: 'bull' };
+    if (s === 'SOXL') return { multi: '3x', type: 'bull' };
+    if (s === 'SOXS') return { multi: '3x', type: 'inverse' };
+
+
+
+    let multi = '';
+    let type = 'bull'; // default
+
+    // Detect Multiplier
+    if (n.includes('2X')) multi = '2x';
+    else if (n.includes('3X')) multi = '3x';
+    else if (n.includes('1.5X')) multi = '1.5x';
+    else if (n.includes('ULTRA')) multi = '2x'; // ProShares Ultra usually 2x
+
+    // Detect Inverse
+    if (n.includes('INVERSE') || n.includes('SHORT') || n.includes('BEAR')) {
+        type = 'inverse';
+    }
+
+    if (multi) {
+        return { multi, type };
+    }
+    return null;
+  };
+
+
+  const leverage = (securityType === 'ETF' || !securityType) ? getLeverageInfo(safeName, safeSymbol) : null;
+
+  if (leverage) {
+      // User requested explicit style: Red circle with text.
+      // Image 1: "2x" (Red circle)
+      // Image 2: "인버스 2x" (Red circle)
+      // We will use a consistent red badge for both as per screenshot, 
+      // but maybe distinguish if we want (e.g. Blue for Bull).
+      // However, user specifically showed Red for both 2x and Inverse 2x in the prompt?
+      // Actually image 1 is likely "Bull 2x" but user showed red. Let's stick to Red for badges to match the "Hot/Active" feel or just generic leverage warning.
+      // But typically: Bull=Red (in Korea) / Green (US), Bear=Blue (Korea) / Red (US).
+      // Let's use a distinct color or just Red as requested.
+      
+      const badgeText = leverage.type === 'inverse' ? `인버스\n${leverage.multi}` : leverage.multi;
+      const textSize = leverage.type === 'inverse' ? 'text-[10px] leading-3' : 'text-sm';
+
+      return (
+        <div className={cn("relative w-10 h-10", className)}>
+            {/* Base Icon (Small Flag or Logo) - User wants the BADGE to be the main visual? 
+               Looking at image, there is a small flag at bottom right. 
+               The main circle IS the text. 
+            */}
+            <div className={cn(
+                "w-full h-full rounded-full flex items-center justify-center font-bold text-white shadow-sm overflow-hidden whitespace-pre-line text-center bg-[#FF4500]", // OrangeRed
+                textSize
+            )}>
+                {badgeText}
+            </div>
+        </div>
+      );
+  }
+
+  if (!imgError && sources.length > 0) {
+    return (
+      <div className={cn(
+        "w-10 h-10 rounded-full bg-white overflow-hidden border border-border flex items-center justify-center shadow-sm relative", 
         className
-      )}
-      style={{ backgroundColor: colors.bg, color: colors.text }}
-    >
-      {firstChar}
+      )}>
+        <img 
+          key={`${symbol}-${sourceIndex}`} 
+          src={sources[sourceIndex]} 
+          alt={symbol} 
+          className="w-full h-full object-cover" 
+          onError={handleError}
+          loading="lazy"
+        />
+      </div>
+    );
+  }
+
+  // Fallback Avatar with Flag
+  return (
+    <div className="relative">
+        <div 
+        className={cn(
+            "w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shadow-inner overflow-hidden",
+            className
+        )}
+        style={{ backgroundColor: colors.bg, color: colors.text }}
+        >
+        {firstChar}
+        </div>
+         {/* Market Flag Badge for consistency if needed, but maybe overkill for default avatar? 
+             User image showed flag on the badge. Let's add it only for Leverage Badge for now as requested.
+         */}
     </div>
   );
 };
