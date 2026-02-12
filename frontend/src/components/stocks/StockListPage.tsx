@@ -49,7 +49,7 @@ export const StockListPage: React.FC = () => {
       const result = await response.json();
       
       if (result.success) {
-        const newStocks = result.data.content;
+        const newStocks: Stock[] = result.data.content;
         const isLast = result.data.last;
         
         setStocks(prev => {

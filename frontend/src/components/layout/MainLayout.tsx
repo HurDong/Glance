@@ -27,14 +27,14 @@ interface MainLayoutProps {
   onTabChange: (tab: string) => void;
 }
 
-import { useNavigate } from 'react-router-dom';
+
 import { useAuthStore } from '../../stores/authStore';
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, onTabChange }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const { user } = useAuthStore();
-  const navigate = useNavigate();
+
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 

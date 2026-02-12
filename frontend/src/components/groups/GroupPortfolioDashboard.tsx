@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Users, PieChart, Plus, UserPlus, Check, X, Search, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Users, Plus, Share2 } from 'lucide-react';
 import { groupApi } from '../../api/group';
 import type { Group } from '../../api/group';
 import { portfolioApi } from '../../api/portfolio';
 import type { Portfolio } from '../../api/portfolio';
 import { useAuthStore } from '../../stores/authStore';
-import { Share2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { StockIcon } from '../stocks/StockIcon';
 import { useStockStore } from '../../stores/useStockStore';
 import { useStockWebSocket } from '../../hooks/useStockWebSocket';
 
-const PortfolioItemPrice = ({ symbol, market }: { symbol: string, market: string }) => {
+const PortfolioItemPrice = ({ symbol, market: _market }: { symbol: string, market: string }) => {
     const { getPrice } = useStockStore();
     const { subscribe } = useStockWebSocket();
 
@@ -46,7 +45,7 @@ export const GroupPortfolioDashboard: React.FC = () => {
     const [selectedPortfolioId, setSelectedPortfolioId] = useState<number | null>(null);
     const { token, user } = useAuthStore();
 
-    const handleAction = async (action: () => Promise<void>, successMsg: string) => {
+    const handleAction = async (action: () => Promise<void>, _successMsg: string) => {
         try {
             await action();
             // alert(successMsg); // Removed alert for smoother UX
@@ -196,7 +195,7 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                             {member.sharedPortfolioItems?.slice(0, 5).map(item => (
                                                 <div key={item.id} className="flex items-center justify-between p-2 bg-muted/20 rounded-lg hover:bg-muted/40 transition-colors">
                                                     <div className="flex items-center gap-2">
-                                                        <StockIcon symbol={item.symbol} market={item.market as 'US'|'KR'} className="w-6 h-6" />
+                                                        <StockIcon symbol={item.symbol} name={item.symbol} market={item.market as 'US'|'KR'} className="w-6 h-6" />
                                                         <div>
                                                             <div className="text-xs font-bold">{item.symbol}</div>
                                                             <div className="text-[10px] text-muted-foreground">{item.quantity} shares</div>

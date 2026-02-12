@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { User, Mail, Bell, Shield, LogOut } from 'lucide-react';
+import { User, LogOut } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useAuthStore } from '../../stores/authStore';
