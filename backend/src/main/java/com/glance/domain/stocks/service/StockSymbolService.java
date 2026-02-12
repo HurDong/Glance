@@ -56,7 +56,8 @@ public class StockSymbolService {
                     StockSymbol existing = existingMap.get(key);
                     if (existing != null) {
                         // Update if changed
-                        existing.updateInfo(newSymbol.getNameKr(), newSymbol.getNameEn(), newSymbol.getStatus());
+                        existing.updateInfo(newSymbol.getNameKr(), newSymbol.getNameEn(), newSymbol.getStatus(),
+                                newSymbol.getSecurityType());
                         return existing;
                     } else {
                         return newSymbol;

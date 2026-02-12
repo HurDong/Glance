@@ -36,19 +36,28 @@ public class StockSymbol extends BaseTimeEntity {
     @Column(nullable = false)
     private StockStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'STOCK'")
+    private SecurityType securityType;
+
     @Builder
-    public StockSymbol(String symbol, Market market, String nameKr, String nameEn, StockStatus status) {
+    public StockSymbol(String symbol, Market market, String nameKr, String nameEn, StockStatus status,
+            SecurityType securityType) {
         this.symbol = symbol;
         this.market = market;
         this.nameKr = nameKr;
         this.nameEn = nameEn;
         this.status = status;
+        this.securityType = securityType != null ? securityType : SecurityType.STOCK;
     }
 
-    public void updateInfo(String nameKr, String nameEn, StockStatus status) {
+    public void updateInfo(String nameKr, String nameEn, StockStatus status, SecurityType securityType) {
         this.nameKr = nameKr;
         this.nameEn = nameEn;
         this.status = status;
+        if (securityType != null) {
+            this.securityType = securityType;
+        }
     }
 
     public void markDelisted() {

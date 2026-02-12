@@ -2,6 +2,7 @@ package com.glance.batch.service;
 
 import com.glance.domain.stocks.config.KisProperties;
 import com.glance.domain.stocks.entity.Market;
+import com.glance.domain.stocks.entity.SecurityType;
 import com.glance.domain.stocks.entity.StockStatus;
 import com.glance.domain.stocks.entity.StockSymbol;
 import com.glance.domain.stocks.repository.StockSymbolRepository;
@@ -127,7 +128,7 @@ public class KoreaStockMasterService {
             if (stockSymbol != null) {
                 // Update if name changed (rare) or duplicate processing
                 if (!stockSymbol.getNameKr().equals(nameKr)) {
-                    stockSymbol.updateInfo(nameKr, null, StockStatus.ACTIVE);
+                    stockSymbol.updateInfo(nameKr, null, StockStatus.ACTIVE, SecurityType.STOCK);
                     toSave.add(stockSymbol); // Add to save list for batch update
                 }
             } else {

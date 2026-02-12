@@ -1,6 +1,7 @@
 package com.glance.batch.service;
 
 import com.glance.domain.stocks.entity.Market;
+import com.glance.domain.stocks.entity.SecurityType;
 import com.glance.domain.stocks.entity.StockStatus;
 import com.glance.domain.stocks.entity.StockSymbol;
 import com.glance.domain.stocks.repository.StockSymbolRepository;
@@ -101,6 +102,7 @@ public class USStockMasterService {
         // Index 7: Name EN
 
         String[] parts = line.split("\t");
+
         if (parts.length < 8) {
             return;
         }
@@ -112,10 +114,14 @@ public class USStockMasterService {
         if (symbol.isEmpty())
             return;
 
+        // Index 8: Security Group Code (2: Stock, 3: ETF, etc.)
+        String securityGroupCode = parts.length > 8 ? parts[8].trim() : "2";
+        SecurityType securityType = parseSecurityType(securityGroupCode);
+
         StockSymbol stockSymbol = existingMap.get(symbol);
         if (stockSymbol != null) {
             // Update existing
-            stockSymbol.updateInfo(nameKr, nameEn, StockStatus.ACTIVE);
+            stockSymbol.updateInfo(nameKr, nameEn, StockStatus.ACTIVE, securityType);
             toSave.add(stockSymbol); // Adding managed entity to list for explicit save (optional but safe)
         } else {
             // Create new
@@ -125,9 +131,19 @@ public class USStockMasterService {
                     .nameKr(nameKr)
                     .nameEn(nameEn)
                     .status(StockStatus.ACTIVE)
+                    .securityType(securityType)
                     .build();
             toSave.add(newSymbol);
             existingMap.put(symbol, newSymbol); // Prevent duplicates within same execution
         }
+    }
+
+    private SecurityType parseSecurityType(String code) {
+        if ("3".equals(code))
+            return SecurityType.ETF;
+        if ("2".equals(code))
+            return SecurityType.STOCK;
+        // Add more mappings if discovered
+        return SecurityType.STOCK; // Default
     }
 }
