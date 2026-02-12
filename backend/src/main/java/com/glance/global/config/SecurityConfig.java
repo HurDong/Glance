@@ -35,7 +35,8 @@ public class SecurityConfig {
                         sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/api/v1/stocks/**").permitAll() // Public access to stocks for now
+                        .requestMatchers("/api/v1/stocks/interest/**").authenticated() // Interest stocks require auth
+                        .requestMatchers("/api/v1/stocks/**").permitAll() // Public access to other stock info
                         .requestMatchers("/ws-glance/**").permitAll() // Allow WebSocket connection
                         .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated())

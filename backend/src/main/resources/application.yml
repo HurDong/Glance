@@ -29,6 +29,12 @@ spring:
     jdbc:
       initialize-schema: always
 
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+
 logging:
   level:
     org:

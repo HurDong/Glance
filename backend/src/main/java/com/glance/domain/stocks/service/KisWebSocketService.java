@@ -3,6 +3,7 @@ package com.glance.domain.stocks.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.glance.domain.stocks.config.KisProperties;
 import com.glance.domain.stocks.dto.StockPriceMessage;
+import com.glance.domain.stocks.repository.StockSymbolRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -27,6 +28,8 @@ public class KisWebSocketService extends TextWebSocketHandler {
     private final KisProperties kisProperties;
     private final KisAccessTokenService tokenService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final RedisStockService redisStockService; // Use Redis service instead of DB repo
+    private final StockSymbolRepository stockSymbolRepository; // Look up market info
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private WebSocketSession session;
@@ -46,8 +49,9 @@ public class KisWebSocketService extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) {
         this.session = session;
         log.info("🚀 Connected to KIS WebSocket");
-        // Re-subscribe if needed
-        subscribedSymbols.forEach(this::sendSubscribeRequest);
+
+        // Re-subscribe any already in memory (redundant but safe)
+        subscribedSymbols.forEach(s -> sendSubscribeRequest(s, true));
     }
 
     @Override
@@ -63,7 +67,7 @@ public class KisWebSocketService extends TextWebSocketHandler {
         log.debug("RAW KIS MSG: {}", payload);
 
         if (payload.startsWith("{")) {
-            log.info("KIS WS Response: {}", payload);
+            log.debug("KIS WS Response: {}", payload);
             return;
         }
 
@@ -76,7 +80,7 @@ public class KisWebSocketService extends TextWebSocketHandler {
             }
 
             String trId = parts[1];
-            log.info("KIS WS TR_ID: {}", trId); // Debugging line
+            // log.info("KIS WS TR_ID: {}", trId); // Debugging line
 
             if ("H0STCNT0".equals(trId)) { // 국내주식 실시간 체결
                 parseAndBroadcastKorea(parts[3]);
@@ -145,7 +149,7 @@ public class KisWebSocketService extends TextWebSocketHandler {
                 .build();
 
         messagingTemplate.convertAndSend("/api/v1/sub/stocks/" + symbol, msg);
-        log.info("📡 Broadcasted: {} - {} ({}%)", symbol, price, changeRate);
+        log.debug("📡 Broadcasted: {} - {} ({}%)", symbol, price, changeRate);
     }
 
     public synchronized void subscribe(String symbol) {
@@ -153,33 +157,61 @@ public class KisWebSocketService extends TextWebSocketHandler {
             return;
         subscribedSymbols.add(symbol);
         if (session != null && session.isOpen()) {
-            sendSubscribeRequest(symbol);
+            sendSubscribeRequest(symbol, true);
         }
     }
 
-    private void sendSubscribeRequest(String symbol) {
-        boolean isUS = symbol.matches("^[a-zA-Z].*");
-        // Use HDFSCNT0 (Execution) instead of HDFSASP0 (Quote) for US stocks to get
-        // correct Change/Rate
-        String trId = isUS ? "HDFSCNT0" : "H0STCNT0";
+    public synchronized void unsubscribe(String symbol) {
+        if (!subscribedSymbols.contains(symbol))
+            return;
+        subscribedSymbols.remove(symbol);
+        if (session != null && session.isOpen()) {
+            sendSubscribeRequest(symbol, false);
+        }
+    }
 
-        // KIS 미국 주식 규격: DNAS (주간/나스닥), DNYS (주간/뉴욕), DAMS (주간/아멕스)
-        // 일단 DNAS가 신호를 주므로 DNAS로 고정
-        String trKey = isUS ? "DNAS" + symbol : symbol;
+    private void sendSubscribeRequest(String symbol, boolean subscribe) {
+        boolean isUS = symbol.matches("^[a-zA-Z].*");
+        String trId = isUS ? "HDFSCNT0" : "H0STCNT0";
+        String trKey = symbol;
+
+        if (isUS) {
+            String marketCode = "DNAS"; // Default to NASDAQ
+            try {
+                var stockSymbol = stockSymbolRepository.findBySymbol(symbol);
+                if (stockSymbol.isPresent()) {
+                    switch (stockSymbol.get().getMarket()) {
+                        case NYSE:
+                            marketCode = "DNYS";
+                            break;
+                        case AMEX:
+                            marketCode = "DAMS";
+                            break;
+                        default:
+                            marketCode = "DNAS";
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to lookup market for symbol: {}, using default DNAS", symbol);
+            }
+            trKey = marketCode + symbol;
+        }
 
         try {
             Map<String, Object> request = Map.of(
                     "header", Map.of(
                             "approval_key", tokenService.getApprovalKey(),
                             "custtype", "P",
-                            "tr_type", "1", // 1: Subscribe, 2: Unsubscribe
+                            "tr_type", subscribe ? "1" : "2", // 1: Subscribe, 2: Unsubscribe
                             "content-type", "utf-8"),
                     "body", Map.of(
                             "input", Map.of(
                                     "tr_id", trId,
                                     "tr_key", trKey)));
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(request)));
-            log.info("📤 Requested {} subscription for: {} (TR_ID: {})", isUS ? "US" : "KR", symbol, trId);
+            log.info("{} Requested {} subscription for: {} (TR_ID: {}, TR_KEY: {})",
+                    subscribe ? "📤" : "🗑️",
+                    isUS ? "US" : "KR", symbol, trId, trKey);
         } catch (Exception e) {
             log.error("Failed to send subscription request", e);
         }
