@@ -15,6 +15,8 @@ public interface StockSymbolRepository extends JpaRepository<StockSymbol, Long> 
 
         List<StockSymbol> findAllByMarket(Market market);
 
+        List<StockSymbol> findAllBySymbolIn(List<String> symbols);
+
         @org.springframework.data.jpa.repository.Query("SELECT s FROM StockSymbol s WHERE " +
                         "LOWER(s.symbol) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
                         "LOWER(s.nameKr) LIKE LOWER(CONCAT('%', :query, '%')) OR " +

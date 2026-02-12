@@ -67,11 +67,9 @@ export const StockIcon: React.FC<StockIconProps> = ({
       'META': 'NAS00241X-E0',
     }[s];
 
+
     const defaults = [
         `https://assets.parqet.com/logos/symbol/${s}?format=png`, // Parqet (Very reliable for US)
-        `https://financialmodelingprep.com/image-stock/${s}.png`, // FMP
-        `https://logo.clearbit.com/${s}.com`, // Clearbit (Domain guess)
-        `https://s3-symbol-logo.tradingview.com/${s.toLowerCase()}.svg` // TradingView (Last resort)
     ];
 
     if (tossId) {
@@ -96,24 +94,6 @@ export const StockIcon: React.FC<StockIconProps> = ({
     }
   };
 
-  if (!imgError && sources.length > 0) {
-    return (
-      <div className={cn(
-        "w-10 h-10 rounded-full bg-white overflow-hidden border border-border flex items-center justify-center shadow-sm relative", 
-        className
-      )}>
-        <img 
-          key={`${symbol}-${sourceIndex}`} // Key change forces reload on source switch
-          src={sources[sourceIndex]} 
-          alt={symbol} 
-          className="w-full h-full object-cover" 
-          onError={handleError}
-          loading="lazy"
-        />
-      </div>
-    );
-  }
-
   // Badge Logic for ETFs
   const getLeverageInfo = (name: string, symbol: string) => {
     const n = name.toUpperCase();
@@ -124,7 +104,6 @@ export const StockIcon: React.FC<StockIconProps> = ({
     if (s === 'TQQQ') return { multi: '3x', type: 'bull' };
     if (s === 'SOXL') return { multi: '3x', type: 'bull' };
     if (s === 'SOXS') return { multi: '3x', type: 'inverse' };
-
 
 
     let multi = '';
@@ -150,31 +129,29 @@ export const StockIcon: React.FC<StockIconProps> = ({
 
   const leverage = (securityType === 'ETF' || !securityType) ? getLeverageInfo(safeName, safeSymbol) : null;
 
+  // Render Badge if Leverage Detected OR Generic ETF Badge
   if (leverage) {
-      // User requested explicit style: Red circle with text.
-      // Image 1: "2x" (Red circle)
-      // Image 2: "인버스 2x" (Red circle)
-      // We will use a consistent red badge for both as per screenshot, 
-      // but maybe distinguish if we want (e.g. Blue for Bull).
-      // However, user specifically showed Red for both 2x and Inverse 2x in the prompt?
-      // Actually image 1 is likely "Bull 2x" but user showed red. Let's stick to Red for badges to match the "Hot/Active" feel or just generic leverage warning.
-      // But typically: Bull=Red (in Korea) / Green (US), Bear=Blue (Korea) / Red (US).
-      // Let's use a distinct color or just Red as requested.
-      
       const badgeText = leverage.type === 'inverse' ? `인버스\n${leverage.multi}` : leverage.multi;
       const textSize = leverage.type === 'inverse' ? 'text-[10px] leading-3' : 'text-sm';
 
       return (
         <div className={cn("relative w-10 h-10", className)}>
-            {/* Base Icon (Small Flag or Logo) - User wants the BADGE to be the main visual? 
-               Looking at image, there is a small flag at bottom right. 
-               The main circle IS the text. 
-            */}
             <div className={cn(
-                "w-full h-full rounded-full flex items-center justify-center font-bold text-white shadow-sm overflow-hidden whitespace-pre-line text-center bg-[#FF4500]", // OrangeRed
+                "w-full h-full rounded-full flex items-center justify-center font-bold text-white shadow-sm overflow-hidden whitespace-pre-line text-center bg-[#FF4500]", // OrangeRed for Leverage
                 textSize
             )}>
                 {badgeText}
+            </div>
+        </div>
+      );
+  } else if (securityType === 'ETF') {
+      // Default ETF Badge (Blue/Grey) - prevents image 404s for ETFs
+      return (
+        <div className={cn("relative w-10 h-10", className)}>
+            <div className={cn(
+                "w-full h-full rounded-full flex items-center justify-center font-bold text-white shadow-sm overflow-hidden text-sm bg-slate-500", // Generic Slate
+            )}>
+                ETF
             </div>
         </div>
       );

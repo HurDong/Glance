@@ -1,18 +1,22 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
+// @ts-ignore
 import SockJS from 'sockjs-client';
 import { useStockStore } from '../stores/useStockStore';
+import { useAuthStore } from '../stores/authStore';
 
 const SOCKET_URL = 'http://localhost:8080/ws-glance';
 
 export const useStockWebSocket = () => {
     const clientRef = useRef<Client | null>(null);
     const { setPrice } = useStockStore();
+    const { token } = useAuthStore();
     const subscriptionsRef = useRef<Set<string>>(new Set());
     const isConnectedRef = useRef<boolean>(false);
 
     const subscribeToSymbol = useCallback((client: Client, symbol: string) => {
-        console.log(`Subscribing to ${symbol}`);
+        // ... (same as before)
+        // console.log(`Subscribing to ${symbol}`);
         client.subscribe(`/api/v1/sub/stocks/${symbol}`, (message) => {
             try {
                 const body = JSON.parse(message.body);
@@ -25,9 +29,10 @@ export const useStockWebSocket = () => {
         // Send a subscription request to the backend to start receiving data for this symbol
         client.publish({
             destination: `/api/v1/pub/stocks/subscribe/${symbol}`,
-            body: JSON.stringify({})
+            body: JSON.stringify({}),
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
-    }, [setPrice]);
+    }, [setPrice, token]);
 
     const subscribe = useCallback((symbol: string) => {
         if (subscriptionsRef.current.has(symbol)) return;
@@ -37,23 +42,29 @@ export const useStockWebSocket = () => {
         if (clientRef.current && isConnectedRef.current) {
             subscribeToSymbol(clientRef.current, symbol);
         } else {
-            console.log(`Queueing subscription for ${symbol}`);
+            // console.log(`Queueing subscription for ${symbol}`);
         }
     }, [subscribeToSymbol]);
 
     const connect = useCallback(() => {
+        if (!token) return; // Don't connect if no token
         if (clientRef.current?.active) return;
+
+        // console.log('Connecting with token:', token.substring(0, 10) + '...');
 
         const client = new Client({
             webSocketFactory: () => new SockJS(SOCKET_URL),
-            debug: (str) => {
+            connectHeaders: {
+                Authorization: `Bearer ${token}`
+            },
+            debug: (_str) => {
                 // console.log('STOMP: ' + str);
             },
             reconnectDelay: 5000,
             heartbeatIncoming: 4000,
             heartbeatOutgoing: 4000,
             onConnect: () => {
-                console.log('Connected to WebSocket');
+                // console.log('Connected to WebSocket');
                 isConnectedRef.current = true;
                 
                 // Process queued subscriptions
@@ -67,16 +78,17 @@ export const useStockWebSocket = () => {
             },
             onWebSocketClose: () => {
                 isConnectedRef.current = false;
-                console.log('WebSocket Closed');
+                // console.log('WebSocket Closed');
             }
         });
 
         client.activate();
         clientRef.current = client;
-    }, [subscribeToSymbol]);
+    }, [subscribeToSymbol, token]);
 
     const disconnect = useCallback(() => {
         if (clientRef.current) {
+            // console.log('Disconnecting WebSocket...');
             clientRef.current.deactivate();
             clientRef.current = null;
             isConnectedRef.current = false;
@@ -84,9 +96,13 @@ export const useStockWebSocket = () => {
     }, []);
 
     useEffect(() => {
-        connect();
+        if (token) {
+            connect();
+        } else {
+            disconnect();
+        }
         return () => disconnect();
-    }, [connect, disconnect]);
+    }, [connect, disconnect, token]);
 
     return { subscribe };
 };
