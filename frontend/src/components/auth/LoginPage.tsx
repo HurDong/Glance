@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
@@ -21,7 +21,7 @@ export const LoginPage = () => {
     setLoginError('');
     try {
       const response = await axios.post(`${API_BASE_URL}/login`, data);
-      const { accessToken, grantType } = response.data;
+      const { accessToken } = response.data;
       
       // For now, we decode email/nickname from token or just mock it since backend returns token only currently
       // Note: Backend login endpoint returns TokenDto. To get user info, we might need another endpoint or decode JWT.

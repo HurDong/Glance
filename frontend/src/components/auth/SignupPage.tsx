@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
@@ -13,7 +13,7 @@ export const SignupPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
-  const password = watch("password");
+
 
   const onSubmit = async (data: any) => {
     setIsLoading(true);
@@ -111,8 +111,8 @@ export const SignupPage = () => {
                 className="w-full bg-muted border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary outline-none"
                  {...register("confirmPassword", { 
                     required: "비밀번호 확인을 입력해주세요",
-                    validate: (val: string) => {
-                        if (watch('password') != val) {
+                    validate: (_password: string) => {
+                        if (watch('password') != _password) {
                             return "비밀번호가 일치하지 않습니다";
                         }
                     }

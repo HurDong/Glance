@@ -20,19 +20,21 @@ interface StockSearchDropdownProps {
   onSelect: (stock: Stock) => void;
   placeholder?: string;
   initialResults?: number; // Number of results to show initially (default 5)
+  autoFocus?: boolean;
 }
 
 export const StockSearchDropdown: React.FC<StockSearchDropdownProps> = ({ 
   onSelect, 
   placeholder = "종목명 또는 티커 검색...",
-  initialResults = 5 
+  initialResults = 5,
+  autoFocus = false
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
-  const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
+  const [_selectedStock, setSelectedStock] = useState<Stock | null>(null);
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -93,12 +95,12 @@ export const StockSearchDropdown: React.FC<StockSearchDropdownProps> = ({
     }
   };
 
-  const handleSelectStock = (stock: Stock) => {
-    setSelectedStock(stock);
-    setSearchQuery(stock.nameKr);
+  const handleSelect = (_selectedStock: Stock) => {
+    setSelectedStock(_selectedStock);
+    setSearchQuery(_selectedStock.nameKr);
     setIsOpen(false);
     setShowAll(false);
-    onSelect(stock);
+    onSelect(_selectedStock);
   };
 
   const displayedStocks = showAll ? stocks : stocks.slice(0, initialResults);
@@ -115,6 +117,7 @@ export const StockSearchDropdown: React.FC<StockSearchDropdownProps> = ({
           onFocus={() => searchQuery && setIsOpen(true)}
           placeholder={placeholder}
           className="w-full px-3 py-2 pl-10 bg-muted rounded-lg border border-transparent focus:border-primary outline-none"
+          autoFocus={autoFocus}
         />
         {loading && (
           <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground" size={18} />
@@ -126,7 +129,7 @@ export const StockSearchDropdown: React.FC<StockSearchDropdownProps> = ({
           {displayedStocks.map((stock) => (
             <button
               key={`${stock.market}-${stock.symbol}`}
-              onClick={() => handleSelectStock(stock)}
+              onClick={() => handleSelect(stock)}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors text-left border-b border-border last:border-0"
             >
               <StockIcon 
