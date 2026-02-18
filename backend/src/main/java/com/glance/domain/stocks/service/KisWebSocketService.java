@@ -35,6 +35,22 @@ public class KisWebSocketService extends TextWebSocketHandler {
     private WebSocketSession session;
     private final Set<String> subscribedSymbols = ConcurrentHashMap.newKeySet();
 
+    // Add heartbeat scheduler
+    // Note: Requires @EnableScheduling in the application configuration
+    @org.springframework.scheduling.annotation.Scheduled(fixedRate = 60000) // Send Ping every 60 seconds
+    public void sendHeartbeat() {
+        if (session != null && session.isOpen()) {
+            try {
+                // KIS often keeps alive with simple traffic.
+                // Try sending text "PING" which is sometimes more checks compatible
+                session.sendMessage(new TextMessage("PING"));
+                log.debug("💓 Sent KIS Heartbeat (Text PING)");
+            } catch (Exception e) {
+                log.warn("Failed to send heartbeat to KIS", e);
+            }
+        }
+    }
+
     @EventListener(ApplicationReadyEvent.class)
     public void connect() {
         try {
@@ -45,12 +61,19 @@ public class KisWebSocketService extends TextWebSocketHandler {
         }
     }
 
+    // Allow external services to trigger re-subscription logic if needed
+    public synchronized void resubscribeAll() {
+        subscribedSymbols.forEach(s -> sendSubscribeRequest(s, true));
+    }
+
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         this.session = session;
         log.info("🚀 Connected to KIS WebSocket");
 
         // Re-subscribe any already in memory (redundant but safe)
+        int count = subscribedSymbols.size();
+        log.info("🔄 Re-subscribing to {} symbols...", count);
         subscribedSymbols.forEach(s -> sendSubscribeRequest(s, true));
     }
 
@@ -148,8 +171,8 @@ public class KisWebSocketService extends TextWebSocketHandler {
                 .time(time)
                 .build();
 
-        messagingTemplate.convertAndSend("/api/v1/sub/stocks/" + symbol, msg);
-        log.debug("📡 Broadcasted: {} - {} ({}%)", symbol, price, changeRate);
+        redisStockService.publish(symbol, msg);
+        log.debug("📡 Published to Redis: {} - {} ({}%)", symbol, price, changeRate);
     }
 
     public synchronized void subscribe(String symbol) {
@@ -170,7 +193,7 @@ public class KisWebSocketService extends TextWebSocketHandler {
         }
     }
 
-    private void sendSubscribeRequest(String symbol, boolean subscribe) {
+    private synchronized void sendSubscribeRequest(String symbol, boolean subscribe) {
         boolean isUS = symbol.matches("^[a-zA-Z].*");
         String trId = isUS ? "HDFSCNT0" : "H0STCNT0";
         String trKey = symbol;

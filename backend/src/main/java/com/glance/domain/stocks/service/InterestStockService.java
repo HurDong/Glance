@@ -54,6 +54,9 @@ public class InterestStockService {
             Set<String> sessions = redisStockService.getUserSessions(memberIdStr);
             for (String sessionId : sessions) {
                 redisStockService.addSessionSubscription(sessionId, upperSymbol);
+                // Subscribe to Redis Channel (Local Instance)
+                redisStockService.subscribeToChannel(upperSymbol);
+
                 // Increment global refcount (once per session adding it)
                 if (redisStockService.subscribe(upperSymbol)) {
                     kisWebSocketService.subscribe(upperSymbol);
@@ -76,6 +79,10 @@ public class InterestStockService {
         Set<String> sessions = redisStockService.getUserSessions(memberIdStr);
         for (String sessionId : sessions) {
             redisStockService.removeSessionSubscription(sessionId, symbol);
+
+            // Unsubscribe from Redis Channel (Local Instance)
+            redisStockService.unsubscribeFromChannel(symbol);
+
             // Decrement global refcount
             if (redisStockService.unsubscribe(symbol)) {
                 kisWebSocketService.unsubscribe(symbol);

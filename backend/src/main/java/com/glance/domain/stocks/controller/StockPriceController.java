@@ -16,10 +16,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class StockPriceController {
 
     private final KisWebSocketService kisWebSocketService;
+    private final com.glance.domain.stocks.service.RedisStockService redisStockService;
 
     @MessageMapping("/stocks/subscribe/{symbol}")
     public void handleSubscribe(@DestinationVariable String symbol) {
-        kisWebSocketService.subscribe(symbol);
+        // 1. Subscribe to Redis Channel (Local Instance) so we can broadcast to this
+        // user
+        redisStockService.subscribeToChannel(symbol);
+
+        // 2. Subscribe to KIS (Global) if needed
+        // Note: handleSubscribe is called by useStockWebSocket.ts
+        // KIS subscription is ref-counted, so this is safe.
+        // We also need to increment the Redis Reference Count for this symbol
+        if (redisStockService.subscribe(symbol)) {
+            kisWebSocketService.subscribe(symbol);
+        }
     }
 
     @PostMapping("/{symbol}/subscribe")
