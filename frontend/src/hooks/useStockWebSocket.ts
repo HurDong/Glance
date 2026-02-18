@@ -27,11 +27,14 @@ export const useStockWebSocket = () => {
         });
         
         // Send a subscription request to the backend to start receiving data for this symbol
-        client.publish({
-            destination: `/api/v1/pub/stocks/subscribe/${symbol}`,
-            body: JSON.stringify({}),
-            headers: token ? { Authorization: `Bearer ${token}` } : {}
-        });
+        // Only if logged in (for tracking interest), otherwise rely on global/public stream
+        if (token) {
+            client.publish({
+                destination: `/api/v1/pub/stocks/subscribe/${symbol}`,
+                body: JSON.stringify({}),
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        }
     }, [setPrice, token]);
 
     const subscribe = useCallback((symbol: string) => {
@@ -47,16 +50,16 @@ export const useStockWebSocket = () => {
     }, [subscribeToSymbol]);
 
     const connect = useCallback(() => {
-        if (!token) return; // Don't connect if no token
+        // if (!token) return; // Removed token requirement
         if (clientRef.current?.active) return;
-
-        // console.log('Connecting with token:', token.substring(0, 10) + '...');
+        
+        // console.log('Connecting ' + (token ? 'with token' : 'as guest'));
 
         const client = new Client({
             webSocketFactory: () => new SockJS(SOCKET_URL),
-            connectHeaders: {
+            connectHeaders: token ? {
                 Authorization: `Bearer ${token}`
-            },
+            } : {},
             debug: (_str) => {
                 // console.log('STOMP: ' + str);
             },
@@ -96,11 +99,8 @@ export const useStockWebSocket = () => {
     }, []);
 
     useEffect(() => {
-        if (token) {
-            connect();
-        } else {
-            disconnect();
-        }
+        // Updated: Connect regardless of token (allow Public Ticker)
+        connect();
         return () => disconnect();
     }, [connect, disconnect, token]);
 
