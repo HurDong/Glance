@@ -13,7 +13,16 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         // 클라이언트에서 구독할 경로의 접두사
-        config.enableSimpleBroker("/api/v1/sub");
+        // Create a TaskScheduler for heatbeats
+        org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler taskScheduler = new org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler();
+        taskScheduler.setPoolSize(1);
+        taskScheduler.setThreadNamePrefix("wss-heartbeat-");
+        taskScheduler.initialize();
+
+        // 클라이언트에서 구독할 경로의 접두사
+        config.enableSimpleBroker("/api/v1/sub")
+                .setTaskScheduler(taskScheduler)
+                .setHeartbeatValue(new long[] { 10000, 10000 }); // Server sends heartbeat every 10s, expects every 10s
         // 클라이언트에서 메시지를 보낼 때 사용할 접두사
         config.setApplicationDestinationPrefixes("/api/v1/pub");
     }

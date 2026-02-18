@@ -57,7 +57,12 @@ public class WebSocketEventListener {
                 // Track that this session is watching this symbol
                 redisStockService.addSessionSubscription(sessionId, symbol);
 
-                // Increment global refcount
+                // 1. Subscribe to Redis Channel (Local Instance)
+                // IMPORTANT: This was missing! Without this, we don't listen to Redis for this
+                // symbol.
+                redisStockService.subscribeToChannel(symbol);
+
+                // 2. Increment global refcount & KIS Subscription
                 if (redisStockService.subscribe(symbol)) {
                     // First subscriber -> Connect to KIS WS
                     kisWebSocketService.subscribe(symbol);
