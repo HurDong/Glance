@@ -12,7 +12,7 @@ interface Stock {
   symbol: string;
   nameKr: string;
   nameEn: string;
-  market: 'US' | 'KR';
+  market: string;
   status: string;
 }
 
@@ -188,9 +188,9 @@ export const StockListPage: React.FC = () => {
                     <td className="px-6 py-4 text-right">
                       <span className={cn(
                         "text-[10px] font-bold px-2 py-1 rounded-full",
-                        stock.market === 'KR' ? "bg-blue-500/10 text-blue-500" : "bg-orange-500/10 text-orange-500"
+                        (stock.market === 'KR' || stock.market === 'KOSPI' || stock.market === 'KOSDAQ') ? "bg-blue-500/10 text-blue-500" : "bg-orange-500/10 text-orange-500"
                       )}>
-                        {stock.market === 'KR' ? '국내' : '해외'}
+                        {(stock.market === 'KR' || stock.market === 'KOSPI' || stock.market === 'KOSDAQ') ? '국내' : '해외'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">

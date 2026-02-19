@@ -6,13 +6,12 @@ import { TrendingUp, TrendingDown, Star, Plus, Minus } from 'lucide-react';
 import { useStockStore } from '../../stores/useStockStore';
 import { useStockWebSocket } from '../../hooks/useStockWebSocket';
 import { clsx } from 'clsx';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom'; // keeping commented out or just removing lines completely
 import { StockSearchDropdown } from './StockSearchDropdown';
 
-const StockPriceCard = ({ stock, onDelete }: { stock: InterestStockResponse, onDelete: (symbol: string) => void }) => {
+const StockPriceCard = ({ stock, onDelete, onSelect }: { stock: InterestStockResponse, onDelete: (symbol: string) => void, onSelect: (symbol: string) => void }) => {
     const { getPrice } = useStockStore();
     const { subscribe } = useStockWebSocket();
-    const navigate = useNavigate();
 
     useEffect(() => {
         subscribe(stock.symbol);
@@ -24,7 +23,7 @@ const StockPriceCard = ({ stock, onDelete }: { stock: InterestStockResponse, onD
     return (
         <div 
             className="bg-card p-4 rounded-xl border border-border hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
-            onClick={() => navigate(`/stocks/${stock.symbol}`)}
+            onClick={() => onSelect(stock.symbol)}
         >
             <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                  <button 
@@ -40,10 +39,15 @@ const StockPriceCard = ({ stock, onDelete }: { stock: InterestStockResponse, onD
 
             <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center space-x-3">
-                    <StockIcon symbol={stock.symbol} name={stock.nameEn || stock.nameKr || stock.symbol} market={stock.market as 'US' | 'KR'} securityType={stock.securityType} className="w-10 h-10 text-base" />
+                    <StockIcon symbol={stock.symbol} name={stock.nameEn || stock.nameKr || stock.symbol} market={stock.market} securityType={stock.securityType} className="w-10 h-10 text-base" />
                     <div>
-                        <h3 className="font-bold text-lg leading-tight">{stock.symbol}</h3>
-                        <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded">{stock.market}</span>
+                        <h3 className="font-bold text-lg leading-tight">
+                            {(stock.market === 'KR' || stock.market === 'KOSPI' || stock.market === 'KOSDAQ') ? (stock.nameKr || stock.symbol) : stock.symbol}
+                        </h3>
+                        <div className="flex items-center gap-1">
+                             <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded">{stock.market}</span>
+                             {(stock.market === 'KR' || stock.market === 'KOSPI' || stock.market === 'KOSDAQ') && <span className="text-xs text-muted-foreground">{stock.symbol}</span>}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -71,7 +75,11 @@ const StockPriceCard = ({ stock, onDelete }: { stock: InterestStockResponse, onD
     );
 };
 
-export const QuickViewDashboard: React.FC = () => {
+interface QuickViewDashboardProps {
+    onSelect: (symbol: string) => void;
+}
+
+export const QuickViewDashboard: React.FC<QuickViewDashboardProps> = ({ onSelect }) => {
     const [interestStocks, setInterestStocks] = useState<InterestStockResponse[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { token } = useAuthStore();
@@ -82,6 +90,9 @@ export const QuickViewDashboard: React.FC = () => {
             setIsLoading(true);
             const data = await interestApi.getInterestStocks();
             setInterestStocks(data);
+             // Auto-select the first stock if available and none selected? 
+             // Logic can be added here or in parent.
+             // For now, let user select.
         } catch (error) {
             console.error('Failed to fetch interest stocks:', error);
         } finally {
@@ -129,55 +140,55 @@ export const QuickViewDashboard: React.FC = () => {
     }
 
     return (
-        <section className="space-y-4">
-            <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                    <Star className="text-yellow-500 fill-yellow-500" size={20} />
-                    <span>관심 종목 퀵뷰</span>
+        <section className="bg-card rounded-xl border border-border shadow-sm p-4 h-full flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                    <Star className="text-yellow-500 fill-yellow-500" size={18} />
+                    <span>관심 종목</span>
                 </h2>
                 <div className="flex items-center gap-2 relative">
                      {isAddMode ? (
-                        <div className="absolute right-0 top-0 z-50 w-72">
+                        <div className="absolute right-0 top-0 z-50 w-72 bg-card border border-border rounded-lg shadow-xl p-2">
                              <StockSearchDropdown 
                                 onSelect={handleSelectStock} 
-                                placeholder="종목 검색 (예: Samsung, AAPL)"
+                                placeholder="종목 검색 (예: 삼성전자, AAPL)..."
                                 autoFocus={true}
                              />
                              <button 
                                 onClick={() => setIsAddMode(false)}
-                                className="absolute -top-6 right-0 text-xs text-muted-foreground hover:text-foreground"
+                                className="w-full mt-2 text-xs text-center py-1 bg-muted hover:bg-muted/80 rounded"
                             >
-                                Cancel
+                                취소
                             </button>
                         </div>
                     ) : (
                         <button 
                             onClick={() => setIsAddMode(true)}
-                            className="text-sm font-medium text-primary hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                            className="text-xs font-bold text-primary hover:bg-primary/10 px-2 py-1 rounded transition-colors flex items-center gap-1"
                         >
-                            <Plus size={16} /> 종목 추가
+                            <Plus size={14} /> 추가
                         </button>
                     )}
                 </div>
             </div>
             
             {isLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[1, 2, 3, 4].map(i => (
-                        <div key={i} className="h-32 bg-muted/50 rounded-xl animate-pulse"></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {[1, 2].map(i => (
+                        <div key={i} className="h-24 bg-muted/50 rounded-xl animate-pulse"></div>
                     ))}
                 </div>
             ) : interestStocks.length === 0 ? (
-                 <div className="p-12 text-center border border-dashed border-border rounded-xl bg-card/50">
-                    <p className="text-muted-foreground mb-4">등록된 관심 종목이 없습니다.</p>
-                    <button onClick={() => setIsAddMode(true)} className="text-primary font-bold hover:underline">
-                        첫 번째 종목 추가하기
+                 <div className="flex flex-col items-center justify-center flex-1 text-center border border-dashed border-border rounded-xl bg-card/50 min-h-[120px]">
+                    <p className="text-muted-foreground text-sm mb-2">등록된 종목이 없습니다.</p>
+                    <button onClick={() => setIsAddMode(true)} className="text-primary text-xs font-bold hover:underline">
+                        + 첫 종목 추가하기
                     </button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 overflow-y-auto overflow-x-hidden custom-scrollbar pr-1 flex-1">
                     {interestStocks.map((stock) => (
-                        <StockPriceCard key={stock.symbol} stock={stock} onDelete={handleDeleteStock} />
+                        <StockPriceCard key={stock.symbol} stock={stock} onDelete={handleDeleteStock} onSelect={onSelect} />
                     ))}
                 </div>
             )}

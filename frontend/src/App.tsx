@@ -11,83 +11,47 @@ import { SignupPage } from './components/auth/SignupPage';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { StockTicker } from './components/stocks/StockTicker';
 import { QuickViewDashboard } from './components/stocks/QuickViewDashboard';
+import { MarketIndicesWidget } from './components/stocks/MarketIndicesWidget';
+import { StockChart } from './components/stocks/StockChart';
+import { GroupPortfolioWidget } from './components/groups/GroupPortfolioWidget';
 
 
 const MainContent = ({ activeTab, onTabChange }: { activeTab: string, onTabChange: (tab: string) => void }) => {
-  // const trendingStocks: any[] = ... // Unused
+  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
         return (
-          <div className="space-y-8">
-            <StockTicker />
-            {/* Fast Market Overview - Now Quick View Dashboard */}
-            <QuickViewDashboard />
-
-            {/* Main Dashboard Content */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2">
-                 {/*  GroupPortfolioDashboard Removed from here. 
-                      Ideally we can place other widgets here, or expand QuickView.
-                      For now, leaving it empty or adding a placeholder/chart if needed. 
-                      But since the prompt asked to *increase* space for QuickView, 
-                      QuickView is already taking full width above. 
-                      So I will just leave the layout structure but maybe remove the column split if not needed, 
-                      or keep it for future widgets. 
-                      Let's actually MAKE QuickView taking MORE space by not confining it? 
-                      It is already in a full-width section above. 
-                      
-                      Let's just put some market news or summary here instead of empty space? 
-                      Or maybe just remove the grid if it's empty.
-                      
-                      Wait, the prompt said "Group Portfolio lookup is better managed in Group Feed than Main Page".
-                      So I removed GroupPortfolioDashboard. 
-                      The "Quick View" is now the main star.
-                  */}
-                 <div className="bg-card rounded-xl border border-border p-6 shadow-sm min-h-[300px] flex items-center justify-center text-muted-foreground">
-                    <div className="text-center">
-                        <p className="text-lg font-medium mb-2">Market Overview & News</p>
-                        <p className="text-sm">준비 중인 기능입니다.</p>
+          <div className="flex flex-col h-[calc(100vh-100px)] space-y-4">
+            {/* Top Section: Ticker + QuickView + Hot */}
+            <div>
+                 <StockTicker />
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0">
+                {/* Left Column (Main) */}
+                <div className="lg:col-span-9 flex flex-col gap-6 h-full min-h-0">
+                    {/* Top Row: Interest Stocks & Hot Stocks */}
+                    <div className="grid grid-cols-1 md:grid-cols-7 gap-6 min-h-[300px]">
+                        <div className="md:col-span-4 h-full">
+                            <QuickViewDashboard onSelect={setSelectedSymbol} />
+                        </div>
+                        <div className="md:col-span-3 h-full">
+                            <MarketIndicesWidget onSelect={setSelectedSymbol} />
+                        </div>
                     </div>
-                 </div>
-              </div>
 
-              <aside className="space-y-6">
-                <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
-                  <h3 className="font-bold border-b border-border pb-3 mb-4">빠른 종목 통계</h3>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    증권사 앱보다 3배 빠른 조회. <br/>
-                    관심 종목을 등록하고 즉시 시세를 확인하세요.
-                  </p>
-                  <div className="space-y-2">
-                    {['삼성전자', 'SK하이닉스', '마이크로소프트', '구글'].map(name => (
-                      <div key={name} className="flex justify-between items-center p-2 hover:bg-muted rounded-lg cursor-pointer transition-colors">
-                        <span className="text-sm font-medium">{name}</span>
-                        <span className="text-[10px] text-muted-foreground">간편 조회</span>
-                      </div>
-                    ))}
-                  </div>
+                    {/* Bottom Row: Chart */}
+                    <div className="flex-1 min-h-[400px]">
+                        <StockChart symbol={selectedSymbol} />
+                    </div>
                 </div>
 
-                {/* Group Portfolio Promotion Widget - Keeping it but pointing to Group Tab? Or removing?
-                    "Group Portfolio management... better in Group Feed".
-                    I'll keep a small link/promo card but not the dashboard itself.
-                */}
-                <div className="bg-gradient-to-br from-primary to-orange-600 rounded-xl p-6 text-primary-foreground shadow-lg">
-                  <h3 className="text-lg font-bold mb-2">Group Portfolio</h3>
-                  <p className="text-sm text-primary-foreground/80 mb-4">
-                    친구들과 함께하는 투자. <br/>
-                    그룹 탭에서 확인하세요.
-                  </p>
-                  <button 
-                    onClick={() => onTabChange('group')}
-                    className="w-full py-2 bg-white text-primary font-bold rounded-lg text-sm hover:bg-opacity-90 transition-opacity"
-                  >
-                    그룹으로 이동
-                  </button>
+                {/* Right Column (Sidebar) */}
+                <div className="lg:col-span-3 h-full min-h-0">
+                    <GroupPortfolioWidget />
                 </div>
-              </aside>
             </div>
           </div>
         );

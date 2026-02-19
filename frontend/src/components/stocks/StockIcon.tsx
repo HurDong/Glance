@@ -9,7 +9,7 @@ function cn(...inputs: ClassValue[]) {
 interface StockIconProps {
   symbol: string;
   name: string;
-  market?: 'US' | 'KR';
+  market?: string;
   securityType?: string;
   className?: string;
 }
@@ -48,10 +48,10 @@ export const StockIcon: React.FC<StockIconProps> = ({
     const s = safeSymbol.toUpperCase();
     
     // KR Sources
-    if (market === 'KR') {
+    if (market === 'KR' || market === 'KOSPI' || market === 'KOSDAQ') {
         return [
-            `https://file.alphasquare.co.kr/media/images/stock_logo/kr/${s}.png`, // AlphaSquare (Good coverage)
-            `https://static.toss.im/png-icons/securities/icn-sec-fill-${s}.png`, // Toss (Direct code mapping often works)
+            `https://static.toss.im/png-icons/securities/icn-sec-fill-${s}.png`, // Toss (User Preferred)
+            `https://file.alphasquare.co.kr/media/images/stock_logo/kr/${s}.png`, // AlphaSquare (Backup)
         ];
     }
 
@@ -70,6 +70,8 @@ export const StockIcon: React.FC<StockIconProps> = ({
 
     const defaults = [
         `https://assets.parqet.com/logos/symbol/${s}?format=png`, // Parqet (Very reliable for US)
+        `https://financialmodelingprep.com/image-stock/${s}.png`, // FMP (Backup)
+        `https://eodhistoricaldata.com/img/logos/US/${s}.png`, // EOD (Backup)
     ];
 
     if (tossId) {

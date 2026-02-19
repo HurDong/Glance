@@ -28,13 +28,15 @@ export const useStockWebSocket = () => {
         
         // Send a subscription request to the backend to start receiving data for this symbol
         // Only if logged in (for tracking interest), otherwise rely on global/public stream
-        if (token) {
-            client.publish({
-                destination: `/api/v1/pub/stocks/subscribe/${symbol}`,
-                body: JSON.stringify({}),
-                headers: { Authorization: `Bearer ${token}` }
-            });
-        }
+        // Always send subscription request (both for auth and anonymous users)
+        // Subscription count is managed globally by Redis service
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        
+        client.publish({
+            destination: `/api/v1/pub/stocks/subscribe/${symbol}`,
+            body: JSON.stringify({}),
+            headers
+        });
     }, [setPrice, token]);
 
     const subscribe = useCallback((symbol: string) => {

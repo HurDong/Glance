@@ -12,7 +12,7 @@ interface Stock {
   symbol: string;
   nameKr: string;
   nameEn: string;
-  market: 'US' | 'KR';
+  market: string;
   status: string;
 }
 
@@ -143,9 +143,9 @@ export const StockSearchDropdown: React.FC<StockSearchDropdownProps> = ({
                   <span className="font-bold truncate">{stock.nameKr}</span>
                   <span className={cn(
                     "text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0",
-                    stock.market === 'KR' ? "bg-blue-500/10 text-blue-500" : "bg-orange-500/10 text-orange-500"
+                    (stock.market === 'KR' || stock.market === 'KOSPI' || stock.market === 'KOSDAQ') ? "bg-blue-500/10 text-blue-500" : "bg-orange-500/10 text-orange-500"
                   )}>
-                    {stock.market === 'KR' ? '국내' : '해외'}
+                    {(stock.market === 'KR' || stock.market === 'KOSPI' || stock.market === 'KOSDAQ') ? '국내' : '해외'}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
