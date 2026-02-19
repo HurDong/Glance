@@ -109,12 +109,12 @@ export const PortfolioDetail: React.FC = () => {
         }
     };
 
-    const handleStockSelect = (stock: { symbol: string; nameKr: string; nameEn: string; market: 'US' | 'KR' }) => {
+    const handleStockSelect = (stock: { symbol: string; nameKr: string; nameEn: string; market: string }) => {
         setSelectedStock(stock);
         setNewItem(prev => ({ 
             ...prev, 
             symbol: stock.symbol,
-            currency: stock.market === 'KR' ? 'KRW' : 'USD'
+            currency: (stock.market === 'KR' || stock.market === 'KOSPI' || stock.market === 'KOSDAQ') ? 'KRW' : 'USD'
         }));
     };
 
@@ -292,9 +292,9 @@ export const PortfolioDetail: React.FC = () => {
                                                 <div className="text-xs text-muted-foreground font-mono">{selectedStock.symbol}</div>
                                             </div>
                                             <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
-                                                selectedStock.market === 'KR' ? 'bg-blue-500/10 text-blue-500' : 'bg-orange-500/10 text-orange-500'
+                                                (selectedStock.market === 'KR' || selectedStock.market === 'KOSPI' || selectedStock.market === 'KOSDAQ') ? 'bg-blue-500/10 text-blue-500' : 'bg-orange-500/10 text-orange-500'
                                             }`}>
-                                                {selectedStock.market === 'KR' ? '국내' : '해외'}
+                                                {(selectedStock.market === 'KR' || selectedStock.market === 'KOSPI' || selectedStock.market === 'KOSDAQ') ? '국내' : '해외'}
                                             </span>
                                         </div>
                                     </div>
