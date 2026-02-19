@@ -37,6 +37,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/stocks/interest/**").authenticated() // Interest stocks require auth
                         .requestMatchers("/api/v1/stocks/**").permitAll() // Public access to other stock info
+                        .requestMatchers("/api/v1/market/**").permitAll() // Public access to market indices
                         .requestMatchers("/ws-glance/**").permitAll() // Allow WebSocket connection
                         .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated())

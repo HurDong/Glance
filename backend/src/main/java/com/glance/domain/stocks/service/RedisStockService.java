@@ -147,6 +147,20 @@ public class RedisStockService {
 
     // --- Monitoring & Management ---
 
+    /**
+     * Resets all subscription counts to 0.
+     * Should be called on application startup to ensure consistency.
+     */
+    public void resetSubscriptionCounts() {
+        Set<String> keys = redisTemplate.keys(KEY_PREFIX_COUNT + "*");
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+            log.info("🧹 Cleared {} stale subscription counts from Redis.", keys.size());
+        } else {
+            log.info("🧹 No stale subscription counts found.");
+        }
+    }
+
     public Map<String, Integer> getLocalSubscriptionCounts() {
         return localSubscriptionCounts.entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get()));

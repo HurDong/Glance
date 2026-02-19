@@ -24,17 +24,20 @@ public class StockPriceController {
         // user
         redisStockService.subscribeToChannel(symbol);
 
-        // 2. Subscribe to KIS (Global) if needed
-        // Note: handleSubscribe is called by useStockWebSocket.ts
-        // KIS subscription is ref-counted, so this is safe.
-        // We also need to increment the Redis Reference Count for this symbol
-        if (redisStockService.subscribe(symbol)) {
-            kisWebSocketService.subscribe(symbol);
-        }
+        // 2. Increment Redis Reference Count
+        redisStockService.subscribe(symbol);
+
+        // 3. Always attempt to subscribe to KIS (Global)
+        // Even if Redis count was > 0, our local KIS WebSocket might not be subscribed
+        // yet (e.g. server restart)
+        // KisWebSocketService.subscribe() has internal deduplication, so this is
+        // safe/idempotent.
+        kisWebSocketService.subscribe(symbol);
     }
 
     @PostMapping("/{symbol}/subscribe")
     public ApiResponse<Void> subscribe(@PathVariable String symbol) {
+        redisStockService.subscribe(symbol);
         kisWebSocketService.subscribe(symbol);
         return ApiResponse.success(symbol + " 시세 구독이 요청되었습니다. WebSocket(/api/v1/sub/stocks/" + symbol + ")을 통해 수신됩니다.");
     }

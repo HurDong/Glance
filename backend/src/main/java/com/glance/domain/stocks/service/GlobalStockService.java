@@ -25,17 +25,22 @@ public class GlobalStockService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void initGlobalSubscriptions() {
+        // Reset Redis Subscription Counts to 0 on startup
+        // This prevents "stale" counts (e.g. count=5 but no active websocket) from
+        // blocking re-subscriptions
+        redisStockService.resetSubscriptionCounts();
+
         log.info("🌍 Initializing Global Stock Subscriptions for Public Ticker...");
 
         for (String symbol : POPULAR_STOCKS) {
             // 1. Subscribe to Redis Channel (Local Instance)
             redisStockService.subscribeToChannel(symbol);
 
-            // 2. Increment Global RefCount & Subscribe to KIS
-            // We treat this as a "system" subscription that persists
-            if (redisStockService.subscribe(symbol)) {
-                kisWebSocketService.subscribe(symbol);
-            }
+            // 2. Increment Global RefCount but ALWAYS subscribe to KIS
+            // This ensures "System Subscriptions" are always active even if Redis count is
+            // messed up
+            redisStockService.subscribe(symbol);
+            kisWebSocketService.subscribe(symbol);
         }
 
         log.info("✅ Subscribed to {} global stocks", POPULAR_STOCKS.size());

@@ -63,7 +63,11 @@ dependencies {
     // 5. Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.batch:spring-batch-test'
+    testImplementation 'org.springframework.batch:spring-batch-test'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    
+    // 6. External APIs
+    implementation 'com.yahoofinance-api:YahooFinanceAPI:3.17.0'
 }
 
 tasks.named('test') {

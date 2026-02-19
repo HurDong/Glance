@@ -47,3 +47,7 @@ logging:
 jwt:
   secret: dGhpc2lzYXZlcnlzZWN1cmVzZWNyZXRrZXlmb3Jqd3R0b2tlZ2VuZXJhdGlvbmFuZHZhbGlkYXRpb24xMjM0NTY3ODkw
 
+external:
+  finnhub:
+    api-key: d6b4no9r01qnr27jm53gd6b4no9r01qnr27jm540
+
