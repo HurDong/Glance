@@ -5,10 +5,13 @@ import com.glance.domain.stocks.service.KisWebSocketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.glance.domain.stocks.dto.StockPriceMessage;
+import com.glance.domain.stocks.service.KisService;
 
 @RestController
 @RequestMapping("/api/v1/stocks")
@@ -17,6 +20,16 @@ public class StockPriceController {
 
     private final KisWebSocketService kisWebSocketService;
     private final com.glance.domain.stocks.service.RedisStockService redisStockService;
+    private final KisService kisService;
+
+    @GetMapping("/{symbol}/price")
+    public ApiResponse<?> getCurrentPrice(@PathVariable String symbol) {
+        StockPriceMessage message = kisService.getCurrentPrice(symbol);
+        if (message != null) {
+            return ApiResponse.success(message);
+        }
+        return ApiResponse.fail("Failed to fetch current price for " + symbol);
+    }
 
     @MessageMapping("/stocks/subscribe/{symbol}")
     public void handleSubscribe(@DestinationVariable String symbol) {

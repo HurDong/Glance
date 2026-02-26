@@ -4,6 +4,7 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { useStockStore } from '../stores/useStockStore';
 import { useAuthStore } from '../stores/authStore';
+import { apiClient as api } from '../api/axios';
 
 const SOCKET_URL = 'http://localhost:8080/ws-glance';
 
@@ -32,6 +33,14 @@ export const useStockWebSocket = () => {
         // Subscription count is managed globally by Redis service
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         
+        // Fetch initial price immediately (useful when market is closed and no real-time data is streaming)
+        api.get(`/stocks/${symbol}/price`).then(response => {
+            if (response.data && response.data.data) {
+                // If we haven't received a WS message yet, or just to sync the latest known price
+                setPrice(symbol, response.data.data);
+            }
+        }).catch(err => console.error(`Failed to fetch initial price for ${symbol}`, err));
+
         client.publish({
             destination: `/api/v1/pub/stocks/subscribe/${symbol}`,
             body: JSON.stringify({}),
@@ -66,8 +75,8 @@ export const useStockWebSocket = () => {
                 // console.log('STOMP: ' + str);
             },
             reconnectDelay: 5000,
-            heartbeatIncoming: 4000,
-            heartbeatOutgoing: 4000,
+            heartbeatIncoming: 10000,
+            heartbeatOutgoing: 10000,
             onConnect: () => {
                 // console.log('Connected to WebSocket');
                 isConnectedRef.current = true;

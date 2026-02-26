@@ -69,9 +69,9 @@ export const StockTicker: React.FC<StockTickerProps> = ({ symbols: propSymbols }
     const tickerSymbols = [...displaySymbols, ...displaySymbols, ...displaySymbols, ...displaySymbols];
 
     return (
-        <div className="w-full bg-card border-b border-border overflow-hidden relative group"> {/* added group for hover pause */}
+        <div className="w-full bg-card/40 backdrop-blur-md border-b border-white/5 overflow-hidden relative group"> {/* added group for hover pause */}
             {/* Header Overlay */}
-            <div className="absolute left-0 top-0 bottom-0 z-20 flex items-center bg-card pr-4 pl-4 border-r border-border shadow-sm">
+            <div className="absolute left-0 top-0 bottom-0 z-20 flex items-center bg-card/80 backdrop-blur-md pr-4 pl-5 border-r border-white/5 shadow-[4px_0_12px_rgba(0,0,0,0.1)]">
                 <div className="text-xs font-bold text-primary whitespace-nowrap flex items-center gap-1">
                     <span className="relative flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -89,8 +89,8 @@ export const StockTicker: React.FC<StockTickerProps> = ({ symbols: propSymbols }
                     const name = STOCK_NAMES[symbol] || symbol;
 
                     if (!data) return (
-                        <div key={key} className="flex-shrink-0 flex items-center space-x-2 px-6 border-r border-border/50 last:border-0">
-                             <span className="font-bold text-sm text-foreground/80">{name}</span>
+                        <div key={key} className="flex-shrink-0 flex items-center space-x-2 px-6 border-r border-white/5 last:border-0">
+                             <span className="font-semibold text-sm text-foreground/80">{name}</span>
                              <span className="text-xs text-muted-foreground animate-pulse">Waiting...</span>
                         </div>
                     );
@@ -100,25 +100,32 @@ export const StockTicker: React.FC<StockTickerProps> = ({ symbols: propSymbols }
                     const isDown = changeVal < 0;
                     const isSame = changeVal === 0;
 
+                    const isUS = /^[a-zA-Z]+$/.test(symbol);
+                    const currencyPrefix = isUS ? '$' : '₩';
+                    const formattedPrice = Number(data.price).toLocaleString(undefined, { 
+                        minimumFractionDigits: 0, 
+                        maximumFractionDigits: 2 
+                    });
+
                     return (
-                        <div key={key} className="flex-shrink-0 flex items-center space-x-3 px-6 border-r border-border/50 last:border-0 hover:bg-muted/50 transition-colors cursor-default">
-                            <span className="font-bold text-sm text-foreground/90">{name}</span>
+                        <div key={key} className="flex-shrink-0 flex items-center space-x-3 px-6 border-r border-white/5 last:border-0 hover:bg-white/5 transition-colors cursor-default">
+                            <span className="font-semibold text-[15px] text-foreground/90">{name}</span>
                             
                             <div className="flex items-center space-x-2">
                                 <span className={clsx(
-                                    "font-mono text-sm font-medium",
-                                    isUp && "text-red-500",
-                                    isDown && "text-blue-500",
+                                    "font-mono text-sm font-semibold tracking-tight",
+                                    isUp && "text-[#ff4d4f]",
+                                    isDown && "text-[#3b82f6]",
                                     isSame && "text-foreground"
                                 )}>
-                                    {parseInt(data.price).toLocaleString()} {/* Format price with commas */}
+                                    {currencyPrefix}{formattedPrice}
                                 </span>
                                 
                                 <div className={clsx(
-                                    "flex items-center text-xs font-medium px-1.5 py-0.5 rounded",
-                                    isUp && "bg-red-500/10 text-red-500",
-                                    isDown && "bg-blue-500/10 text-blue-500",
-                                    isSame && "bg-gray-100 text-gray-500 dark:bg-gray-800"
+                                    "flex items-center text-xs font-bold px-1.5 py-0.5 rounded-md shadow-sm",
+                                    isUp && "bg-[#ff4d4f]/15 text-[#ff4d4f]",
+                                    isDown && "bg-[#3b82f6]/15 text-[#3b82f6]",
+                                    isSame && "bg-white/10 text-muted-foreground"
                                 )}>
                                     {isUp && <TrendingUp size={12} className="mr-1" />}
                                     {isDown && <TrendingDown size={12} className="mr-1" />}
