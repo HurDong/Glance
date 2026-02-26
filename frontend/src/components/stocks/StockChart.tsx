@@ -21,41 +21,102 @@ const STOCK_NAMES: { [key: string]: string } = {
     'AMD': 'AMD'
 };
 
-// Mock data generator for demonstration
-const generateData = (days: number) => {
-  const data = [];
-  let price = 150000; // Starting price
-  for (let i = 0; i < days; i++) {
-    const change = (Math.random() - 0.48) * 5000; // Random fluctuation
-    price += change;
-    data.push({
-      date: `Day ${i + 1}`,
-      price: Math.round(price),
-      volume: Math.floor(Math.random() * 10000)
-    });
-  }
-  return data;
-};
+import { apiClient as api } from '../../api/axios';
+import { useStockStore } from '../../stores/useStockStore';
 
-const dataWeek = generateData(7);
-const dataMonth = generateData(30);
-const dataYear = generateData(365);
+interface ChartPoint {
+    date: string;
+    price: number;
+    volume: number;
+}
 
 interface StockChartProps {
     symbol: string | null;
 }
 
 export const StockChart: React.FC<StockChartProps> = ({ symbol }) => {
-    const [timeRange, setTimeRange] = useState<'1W' | '1M' | '1Y'>('1M');
+    const [timeRange, setTimeRange] = useState<'1m' | '5m' | '15m' | '1h' | '1d' | '1w' | '1M' | '1Y'>('1d');
+    const [chartData, setChartData] = useState<ChartPoint[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    
+    const { getPrice } = useStockStore();
+    const currentPriceData = symbol ? getPrice(symbol) : null;
 
-    // Select data based on range
-    const data = timeRange === '1W' ? dataWeek : timeRange === '1M' ? dataMonth : dataYear;
+    // Fetch historical data
+    React.useEffect(() => {
+        if (!symbol) return;
+        
+        const fetchChartData = async () => {
+            setIsLoading(true);
+            setErrorMsg(null);
+            try {
+                const response = await api.get(`/stocks/${symbol}/chart`, {
+                    params: { range: timeRange }
+                });
+                if (response.data && response.data.success && response.data.data) {
+                    const points = response.data.data.data.map((p: any) => ({
+                        date: p.date,
+                        price: p.price,
+                        volume: p.volume
+                    }));
+                    if (points.length === 0) {
+                        setErrorMsg("조회된 차트 데이터가 없습니다.");
+                    } else {
+                        setChartData(points);
+                    }
+                } else if (response.data && !response.data.success) {
+                    setErrorMsg(response.data.message || "차트 데이터를 불러오는데 실패했습니다.");
+                }
+            } catch (error: any) {
+                console.error("Failed to fetch chart data", error);
+                setErrorMsg(error.response?.data?.message || "서버 통신 중 오류가 발생했습니다.");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchChartData();
+    }, [symbol, timeRange]);
+
+    // Real-time update logic
+    React.useEffect(() => {
+        if (!currentPriceData || chartData.length === 0) return;
+
+        setChartData(prev => {
+            if (prev.length === 0) return prev;
+            const newData = [...prev];
+            const currentPrice = Number(currentPriceData.price);
+            
+            // Check if the last point is today
+            const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            const lastPoint = newData[newData.length - 1];
+            
+            // Intraday points have 'yyyyMMddHHmmss', Periodic have 'yyyyMMdd'
+            // We just match the prefix to see if it's today
+            if (lastPoint.date && lastPoint.date.startsWith(todayStr)) {
+                // Update today's last price point
+                newData[newData.length - 1] = { ...lastPoint, price: currentPrice };
+            } else {
+                // Add a new point for today
+                newData.push({
+                    date: todayStr,
+                    price: currentPrice,
+                    volume: 0
+                });
+            }
+            
+            return newData;
+        });
+    }, [currentPriceData]);
+
+    const displayData = chartData;
     
     // Calculate simple stats for display
-    const startPrice = data[0].price;
-    const endPrice = data[data.length - 1].price;
+    const startPrice = displayData.length > 0 ? displayData[0].price : 0;
+    const endPrice = displayData.length > 0 ? displayData[displayData.length - 1].price : 0;
     const change = endPrice - startPrice;
-    const changePercent = ((change / startPrice) * 100).toFixed(2);
+    const changePercent = startPrice > 0 ? ((change / startPrice) * 100).toFixed(2) : '0.00';
     const isPositive = change >= 0;
 
     if (!symbol) {
@@ -98,21 +159,24 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol }) => {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <div className="flex bg-white/5 p-1 rounded-xl glass-panel">
-                        {(['1주', '1달', '1년'] as const).map((range) => (
-                            <button
-                                key={range}
-                                onClick={() => setTimeRange(range === '1주' ? '1W' : range === '1달' ? '1M' : '1Y')}
-                                className={clsx(
-                                    "px-4 py-1.5 text-sm font-bold rounded-lg transition-all duration-300",
-                                    (timeRange === '1W' && range === '1주') || (timeRange === '1M' && range === '1달') || (timeRange === '1Y' && range === '1년')
-                                        ? "bg-white/10 shadow-md text-foreground" 
-                                        : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                                )}
-                            >
-                                {range}
-                            </button>
-                        ))}
+                    <div className="flex bg-white/5 p-1 rounded-xl glass-panel overflow-x-auto gap-1">
+                        {(['1분', '5분', '15분', '1시간', '1일', '1주', '1달', '1년'] as const).map((range) => {
+                            const rangeKey = range === '1분' ? '1m' : range === '5분' ? '5m' : range === '15분' ? '15m' : range === '1시간' ? '1h' : range === '1일' ? '1d' : range === '1주' ? '1w' : range === '1달' ? '1M' : '1Y';
+                            return (
+                                <button
+                                    key={range}
+                                    onClick={() => setTimeRange(rangeKey as any)}
+                                    className={clsx(
+                                        "px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 whitespace-nowrap",
+                                        timeRange === rangeKey
+                                            ? "bg-white/10 shadow-md text-foreground" 
+                                            : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                    )}
+                                >
+                                    {range}
+                                </button>
+                            );
+                        })}
                     </div>
                     <button className="p-2 hover:bg-white/10 rounded-xl text-muted-foreground transition-all duration-300 hover:rotate-90">
                         <MoreHorizontal size={20} />
@@ -124,8 +188,19 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol }) => {
             {/* Chart Body: Relative container for absolute positioning of chart to prevent size issues */}
             <div className="flex-1 min-h-[300px] w-full p-4 relative min-w-0">
                  <div className="absolute inset-4 min-w-0">
-                     <ResponsiveContainer width="99%" height="100%" minWidth={0}>
-                    <AreaChart data={data}>
+                    {isLoading ? (
+                        <div className="w-full h-full flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                        </div>
+                    ) : errorMsg ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground bg-white/5 rounded-xl border border-dashed border-white/10 p-6 text-center">
+                            <span className="text-destructive mb-2">데이터 로드 실패</span>
+                            <span className="text-sm font-medium">{errorMsg}</span>
+                        </div>
+                    ) : displayData.length > 0 ? (
+                        <ResponsiveContainer width="99%" height="100%" minWidth={0}>
+                            {/* ... chart ... */}
+                            <AreaChart data={displayData}>
                         <defs>
                             <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor={isPositive ? "#ff4d4f" : "#3b82f6"} stopOpacity={0.5}/>
@@ -139,13 +214,29 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol }) => {
                             tickLine={false}
                             tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12}}
                             minTickGap={30}
+                            tickFormatter={(val: string) => {
+                                if (!val) return val;
+                                // Intraday format (yyyyMMddHHmm) -> HH:mm
+                                if (val.length === 12 || val.length === 14) {
+                                    return `${val.substring(8, 10)}:${val.substring(10, 12)}`;
+                                }
+                                // Daily format (yyyyMMdd) -> MM/DD
+                                if (val.length === 8) {
+                                    return `${val.substring(4, 6)}/${val.substring(6, 8)}`;
+                                }
+                                return val;
+                            }}
                         />
                         <YAxis 
                             axisLine={false}
                             tickLine={false}
                             tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12}}
-                            domain={['auto', 'auto']}
-                            tickFormatter={(value: any) => isUS ? `$${value}` : `₩${(value/10000).toFixed(0)}만`}
+                            domain={[
+                                (dataMin: number) => dataMin * 0.95,
+                                (dataMax: number) => dataMax * 1.05
+                            ]}
+                            tickFormatter={(value: any) => isUS ? `$${value?.toFixed(1) || value}` : `₩${(value/10000).toFixed(0)}만`}
+                            width={55}
                         />
                         <Tooltip 
                             contentStyle={{ 
@@ -158,6 +249,16 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol }) => {
                             }}
                             itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold' }}
                             formatter={(value: any) => [`${currencyPrefix}${value.toLocaleString()}`, '가격']}
+                            labelFormatter={(label: string) => {
+                                if (!label) return label;
+                                if (label.length === 12 || label.length === 14) {
+                                    return `${label.substring(0, 4)}-${label.substring(4, 6)}-${label.substring(6, 8)} ${label.substring(8, 10)}:${label.substring(10, 12)}`;
+                                }
+                                if (label.length === 8) {
+                                    return `${label.substring(0, 4)}-${label.substring(4, 6)}-${label.substring(6, 8)}`;
+                                }
+                                return label;
+                            }}
                         />
                         <Area 
                             type="monotone" 
@@ -169,6 +270,7 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol }) => {
                         />
                     </AreaChart>
                 </ResponsiveContainer>
+                    ) : null}
                  </div>
             </div>
         </div>
