@@ -173,11 +173,11 @@ export const PortfolioDetail: React.FC = () => {
                     <ArrowLeft size={24} />
                 </button>
                 <div className="flex-1">
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
+                    <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
                         {portfolio.name}
-                        {!portfolio.isPublic && <span className="text-xs bg-muted px-2 py-1 rounded text-muted-foreground">비공개</span>}
+                        {!portfolio.isPublic && <span className="text-xs bg-white/10 px-2.5 py-1 rounded-full text-muted-foreground font-bold">비공개</span>}
                     </h1>
-                    <p className="text-muted-foreground text-sm">{portfolio.description}</p>
+                    <p className="text-muted-foreground text-sm mt-1">{portfolio.description}</p>
                 </div>
                 <div className="flex gap-2">
                     <button 
@@ -201,28 +201,28 @@ export const PortfolioDetail: React.FC = () => {
             </div>
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-card border border-border p-4 rounded-xl">
-                    <span className="text-sm text-muted-foreground">총 매수 금액</span>
-                    <div className="text-2xl font-bold mt-1">
+                <div className="bg-card/40 backdrop-blur-xl border border-white/5 p-6 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.1)] transition-transform hover:scale-[1.02] duration-300 group">
+                    <span className="text-sm text-muted-foreground font-medium">총 매수 금액</span>
+                    <div className="text-3xl font-black mt-2 tracking-tight group-hover:text-primary transition-colors">
                         {hideDetails ? '••••••' : `₩${totalValue.toLocaleString()}`}
                     </div>
                 </div>
-                 <div className="bg-card border border-border p-4 rounded-xl">
-                    <span className="text-sm text-muted-foreground">보유 종목 수</span>
-                    <div className="text-2xl font-bold mt-1">
+                 <div className="bg-card/40 backdrop-blur-xl border border-white/5 p-6 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.1)] transition-transform hover:scale-[1.02] duration-300 group">
+                    <span className="text-sm text-muted-foreground font-medium">보유 종목 수</span>
+                    <div className="text-3xl font-black mt-2 tracking-tight group-hover:text-indigo-400 transition-colors">
                         {portfolio.items?.length || 0}개
                     </div>
                 </div>
             </div>
 
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-                <div className="p-4 border-b border-border flex justify-between items-center">
-                    <h3 className="font-bold">보유 종목 목록</h3>
+            <div className="bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.1)] overflow-hidden">
+                <div className="p-5 border-b border-white/5 flex justify-between items-center">
+                    <h3 className="font-bold text-lg">보유 종목 목록</h3>
                     <button 
                         onClick={() => setIsAddModalOpen(true)}
-                        className="flex items-center space-x-1 text-sm bg-primary text-primary-foreground px-3 py-1.5 rounded-lg hover:opacity-90"
+                        className="flex items-center space-x-1.5 text-sm bg-gradient-to-r from-primary to-indigo-500 text-white px-4 py-2 rounded-xl hover:shadow-[0_0_15px_rgba(36,99,235,0.4)] hover:scale-105 transition-all duration-300 font-bold"
                     >
-                        <Plus size={16} />
+                        <Plus size={18} />
                         <span>종목 추가</span>
                     </button>
                 </div>
@@ -234,38 +234,38 @@ export const PortfolioDetail: React.FC = () => {
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                            <thead className="bg-muted/50">
+                            <thead className="bg-white/5 backdrop-blur-md">
                                 <tr>
-                                    <th className="px-4 py-3 text-left">종목명</th>
-                                    <th className="px-4 py-3 text-right">수량</th>
-                                    <th className="px-4 py-3 text-right">평단가</th>
-                                    <th className="px-4 py-3 text-right">매수금액</th>
-                                    <th className="px-4 py-3 text-center">관리</th>
+                                    <th className="px-5 py-4 text-left font-semibold text-muted-foreground">종목명</th>
+                                    <th className="px-5 py-4 text-right font-semibold text-muted-foreground">수량</th>
+                                    <th className="px-5 py-4 text-right font-semibold text-muted-foreground">평단가</th>
+                                    <th className="px-5 py-4 text-right font-semibold text-muted-foreground">매수금액</th>
+                                    <th className="px-5 py-4 text-center font-semibold text-muted-foreground">관리</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {portfolio.items?.map((item) => (
-                                    <tr key={item.id} className="border-b border-border hover:bg-accent/50 transition-colors">
-                                        <td className="px-4 py-3">
+                                    <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-all duration-300 group">
+                                        <td className="px-5 py-4">
                                             <div className="font-medium">{item.nameKr}</div>
                                             <div className="text-xs text-muted-foreground">{item.symbol}</div>
                                         </td>
-                                        <td className="px-4 py-3 text-right">
+                                        <td className="px-5 py-4 text-right font-medium">
                                             {hideDetails ? '•••' : item.quantity.toLocaleString()}
                                         </td>
-                                        <td className="px-4 py-3 text-right">
+                                        <td className="px-5 py-4 text-right font-mono font-medium">
                                             {hideDetails ? '••••••' : `${item.currency === 'KRW' ? '₩' : '$'}${item.averagePrice.toLocaleString()}`}
                                         </td>
-                                        <td className="px-4 py-3 text-right font-medium">
+                                        <td className="px-5 py-4 text-right font-mono font-bold tracking-tight">
                                             {hideDetails ? '••••••' : `${item.currency === 'KRW' ? '₩' : '$'}${(item.quantity * item.averagePrice).toLocaleString()}`}
                                         </td>
-                                        <td className="px-4 py-3 text-center">
+                                        <td className="px-5 py-4 text-center">
                                             <button 
                                                 onClick={() => handleDeleteItem(item.id)}
-                                                className="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
+                                                className="p-2 text-red-500/70 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all duration-300 opacity-0 group-hover:opacity-100"
                                                 title="삭제"
                                             >
-                                                <Trash2 size={16} />
+                                                <Trash2 size={18} />
                                             </button>
                                         </td>
                                     </tr>

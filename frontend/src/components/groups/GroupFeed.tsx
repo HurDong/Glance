@@ -132,17 +132,17 @@ export const GroupFeed: React.FC = () => {
                             value={joinGroupId}
                             onChange={(e) => setJoinGroupId(e.target.value)}
                             placeholder="그룹 ID로 참가 신청..."
-                            className="w-full bg-card hover:bg-accent/50 focus:bg-card border border-border focus:border-primary rounded-xl py-2.5 pl-10 pr-4 text-sm shadow-sm transition-all outline-none"
+                            className="w-full bg-card/40 backdrop-blur-xl border border-white/10 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl py-3 pl-11 pr-4 text-sm shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-all outline-none"
                         />
                     </div>
-                    <button type="submit" className="px-5 py-2.5 bg-accent hover:bg-accent/80 text-accent-foreground rounded-xl text-sm font-semibold shadow-sm transition-all">
+                    <button type="submit" className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-foreground rounded-xl text-sm font-bold shadow-sm transition-all hover:shadow-[0_4px_16px_rgba(255,255,255,0.1)]">
                         참가 신청
                     </button>
                 </form>
                 
                 <button
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="flex items-center justify-center space-x-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl hover:shadow-lg hover:shadow-primary/20 transition-all duration-300 text-sm font-bold"
+                    className="flex items-center justify-center space-x-2 px-7 py-3 bg-gradient-to-r from-primary to-indigo-500 text-white rounded-xl hover:shadow-[0_0_20px_rgba(36,99,235,0.4)] hover:scale-105 transition-all duration-300 text-sm font-bold"
                 >
                     <Plus size={18} />
                     <span>새 그룹 만들기</span>
@@ -160,10 +160,10 @@ export const GroupFeed: React.FC = () => {
                         {invitedGroups.map(group => {
                             const myMembership = group.members.find(m => m.member.email === user?.email);
                             return (
-                                <div key={group.id} className="bg-card border-2 border-primary/20 rounded-xl p-4 flex items-center justify-between">
+                                <div key={group.id} className="bg-primary/5 backdrop-blur-xl border-2 border-primary/30 rounded-2xl p-5 flex items-center justify-between shadow-[0_4px_20px_rgba(36,99,235,0.1)]">
                                     <div>
-                                        <div className="font-bold">{group.name}</div>
-                                        <div className="text-xs text-muted-foreground">{group.owner.nickname}님의 초대</div>
+                                        <div className="font-bold text-lg">{group.name}</div>
+                                        <div className="text-xs text-muted-foreground mt-0.5">{group.owner.nickname}님의 초대</div>
                                     </div>
                                     <div className="flex gap-2">
                                         <button 
@@ -205,12 +205,12 @@ export const GroupFeed: React.FC = () => {
                     </button>
                 </div>
             ) : (
-                <div className="space-y-4">
+                <div className="space-y-6">
                     {activeGroups.map((group) => (
-                        <div key={group.id} className="bg-card rounded-xl border border-border p-5 shadow-sm hover:border-primary/30 transition-colors">
-                            <div className="flex items-start justify-between mb-4">
+                        <div key={group.id} className="bg-card/40 backdrop-blur-2xl rounded-3xl border border-white/5 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.1)] hover:border-primary/40 transition-all duration-500">
+                            <div className="flex items-start justify-between mb-5">
                                 <div>
-                                    <h3 className="text-lg font-bold mb-1">{group.name}</h3>
+                                    <h3 className="text-2xl font-black mb-1 tracking-tight">{group.name}</h3>
                                     <p className="text-sm text-muted-foreground">{group.description}</p>
                                 </div>
                                 <div className="flex flex-col items-end gap-2">
@@ -265,42 +265,42 @@ export const GroupFeed: React.FC = () => {
                                         {group.members
                                             .filter(member => member.status === 'ACCEPTED' && member.sharedPortfolioId)
                                             .map((member) => (
-                                                <div key={member.id} className="group/card relative overflow-hidden bg-card rounded-xl border border-border hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-md">
+                                                <div key={member.id} className="group/card relative overflow-hidden bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 hover:border-primary/50 transition-all duration-500 shadow-sm hover:shadow-[0_8px_30px_rgba(36,99,235,0.15)] hover:-translate-y-1">
                                                     {/* Decorative Background Gradient */}
-                                                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300" />
+                                                    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-500" />
                                                     
-                                                    <div className="relative p-5">
-                                                        <div className="flex items-start justify-between mb-4">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold shadow-inner">
+                                                    <div className="relative p-6">
+                                                        <div className="flex items-start justify-between mb-5">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-primary shadow-[0_0_15px_rgba(36,99,235,0.4)] flex items-center justify-center text-white font-black text-xl">
                                                                     {member.member.nickname.charAt(0)}
                                                                 </div>
                                                                 <div>
-                                                                    <div className="font-bold text-lg leading-tight">{member.sharedPortfolioName}</div>
-                                                                    <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                                    <div className="font-black text-xl leading-tight">{member.sharedPortfolioName}</div>
+                                                                    <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                                                                         <span>by</span>
-                                                                        <span className="font-medium text-foreground">{member.member.nickname}</span>
+                                                                        <span className="font-bold text-foreground">{member.member.nickname}</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            <div className="px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-semibold text-primary">
+                                                            <div className="px-3 py-1.5 rounded-full bg-primary/20 border border-primary/30 text-[10px] font-black text-primary uppercase tracking-wider">
                                                                 수익률 공개 예정
                                                             </div>
                                                         </div>
                                                         
                                                         {member.sharedPortfolioItems && member.sharedPortfolioItems.length > 0 ? (
-                                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                                                                 {member.sharedPortfolioItems.map(item => (
-                                                                    <div key={item.id} className="flex items-center gap-2.5 p-2 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors border border-transparent hover:border-border">
+                                                                    <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-transparent hover:border-white/10">
                                                                         <StockIcon 
                                                                             symbol={item.symbol} 
                                                                             name={item.nameKr} 
                                                                             market={item.market as 'US' | 'KR'} 
-                                                                            className="w-8 h-8 shadow-sm"
+                                                                            className="w-10 h-10 shadow-sm"
                                                                         />
                                                                         <div className="min-w-0 flex-1">
-                                                                            <div className="text-xs font-semibold truncate text-foreground">{item.nameKr}</div>
-                                                                            <div className="text-[10px] text-muted-foreground flex items-center justify-between">
+                                                                            <div className="text-sm font-bold truncate text-foreground">{item.nameKr}</div>
+                                                                            <div className="text-[11px] text-muted-foreground flex items-center justify-between mt-0.5">
                                                                                 <span>{item.symbol}</span>
                                                                                 <span className="font-medium bg-background px-1.5 rounded text-foreground">{item.quantity}주</span>
                                                                             </div>
@@ -326,12 +326,12 @@ export const GroupFeed: React.FC = () => {
                             )}
 
                             {/* Share Button (Only for Accepted Members) */}
-                            <div className="mt-6 pt-4 border-t border-border flex justify-end">
+                            <div className="mt-8 pt-6 border-t border-white/10 flex justify-end">
                                 <button
                                     onClick={() => handleOpenShareModal(group.id)}
-                                    className="group/btn flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl hover:shadow-lg hover:shadow-primary/20 transition-all duration-300 text-sm font-bold"
+                                    className="group/btn flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-indigo-500 text-white rounded-xl hover:shadow-[0_0_20px_rgba(36,99,235,0.4)] transition-all duration-300 text-sm font-bold hover:-translate-y-0.5"
                                 >
-                                    <Share2 size={16} className="group-hover/btn:scale-110 transition-transform" />
+                                    <Share2 size={18} className="group-hover/btn:scale-110 transition-transform" />
                                     <span>포트폴리오 공유하기</span>
                                 </button>
                             </div>
