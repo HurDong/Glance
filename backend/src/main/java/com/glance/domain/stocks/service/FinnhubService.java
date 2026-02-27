@@ -20,12 +20,24 @@ import java.util.List;
 
 @Slf4j
 @Service
-public class FinnhubService { // Re-using the class name to maintain Dependency Injection without extra changes
+public class FinnhubService { // Re-using the class name to maintain Dependency Injection without extra
+                              // changes
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public ChartDataResponse getUsChartData(String symbol, String range) {
+        String yahooSymbol = symbol;
+        if (symbol.startsWith("BINANCE:")) {
+            // Convert 'BINANCE:BTCUSDT' to 'BTC-USD' for Yahoo Finance
+            String coin = symbol.replace("BINANCE:", "");
+            if (coin.endsWith("USDT")) {
+                yahooSymbol = coin.substring(0, coin.length() - 4) + "-USD";
+            } else if (coin.endsWith("USD")) {
+                yahooSymbol = coin.substring(0, coin.length() - 3) + "-USD";
+            }
+        }
+
         try {
             // Mapping frontend ranges to Yahoo Finance ranges and intervals
             String interval;
@@ -71,12 +83,12 @@ public class FinnhubService { // Re-using the class name to maintain Dependency 
 
             String url = String.format(
                     "https://query1.finance.yahoo.com/v8/finance/chart/%s?range=%s&interval=%s",
-                    symbol, yfRange, interval);
+                    yahooSymbol, yfRange, interval);
 
             HttpHeaders headers = new HttpHeaders();
             headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
             HttpEntity<String> entity = new HttpEntity<>(headers);
-            
+
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
             JsonNode root = objectMapper.readTree(response.getBody());
             JsonNode result = root.path("chart").path("result").get(0);
@@ -95,8 +107,9 @@ public class FinnhubService { // Re-using the class name to maintain Dependency 
 
             if (timestamps != null && timestamps.isArray() && closePrices != null && closePrices.isArray()) {
                 for (int i = 0; i < timestamps.size(); i++) {
-                    if (closePrices.get(i).isNull()) continue; // Skip points with null closing price
-                    
+                    if (closePrices.get(i).isNull())
+                        continue; // Skip points with null closing price
+
                     long ts = timestamps.get(i).asLong();
                     Instant instant = Instant.ofEpochSecond(ts);
                     String dateStr;
@@ -111,7 +124,9 @@ public class FinnhubService { // Re-using the class name to maintain Dependency 
                                 .format(instant);
                     }
 
-                    long volume = volumes != null && volumes.has(i) && !volumes.get(i).isNull() ? volumes.get(i).asLong() : 0L;
+                    long volume = volumes != null && volumes.has(i) && !volumes.get(i).isNull()
+                            ? volumes.get(i).asLong()
+                            : 0L;
                     points.add(ChartPoint.builder()
                             .date(dateStr)
                             .price(closePrices.get(i).asDouble())

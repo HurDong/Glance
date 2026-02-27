@@ -131,9 +131,10 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol }) => {
     }
 
     const name = STOCK_NAMES[symbol] || symbol;
-    const isUS = /^[a-zA-Z]+$/.test(symbol);
-    const currencyPrefix = isUS ? '$' : '₩';
-    const marketLabel = isUS ? 'NASDAQ' : 'KRX';
+    // KR stocks are 6 digits. Everything else is treated as USD priced.
+    const isKR = /^\d{6}$/.test(symbol);
+    const currencyPrefix = isKR ? '₩' : '$';
+    const marketLabel = isKR ? 'KRX' : symbol.startsWith('BINANCE:') ? 'CRYPTO' : 'NASDAQ';
 
     return (
         <div className="bg-card/50 backdrop-blur-xl rounded-2xl border border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden flex flex-col h-full min-h-[500px]">
@@ -235,7 +236,7 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol }) => {
                                 (dataMin: number) => dataMin * 0.95,
                                 (dataMax: number) => dataMax * 1.05
                             ]}
-                            tickFormatter={(value: any) => isUS ? `$${value?.toFixed(1) || value}` : `₩${(value/10000).toFixed(0)}만`}
+                            tickFormatter={(value: any) => !isKR ? `$${value?.toFixed(1) || value}` : `₩${(value/10000).toFixed(0)}만`}
                             width={55}
                         />
                         <Tooltip 

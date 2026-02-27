@@ -56,7 +56,7 @@ const StockPriceCard = ({ stock, onDelete, onSelect }: { stock: InterestStockRes
                 {data ? (
                     <>
                         <div className="text-2xl font-bold font-mono tracking-tight">
-                            {stock.market === 'KR' || stock.symbol === 'BTC' ? '₩' : '$'}
+                            {(stock.market === 'KR' || stock.market === 'KOSPI' || stock.market === 'KOSDAQ' || /^\d{6}$/.test(stock.symbol)) ? '₩' : '$'}
                             {Number(data.price).toLocaleString()}
                         </div>
                         <div className={clsx("flex items-center text-sm font-semibold mt-1", isPositive ? "text-red-500" : "text-blue-500")}>
