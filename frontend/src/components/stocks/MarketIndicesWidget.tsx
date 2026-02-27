@@ -41,8 +41,9 @@ export const MarketIndicesWidget: React.FC<MarketIndicesWidgetProps> = ({ onSele
         return () => clearInterval(interval);
     }, []);
 
-    // Only show data if we have it
-    const displayData = indices;
+    // Separate main indices from the exchange rate
+    const mainIndices = indices.filter(i => i.symbol !== 'OANDA:USD_KRW');
+    const exchangeRate = indices.find(i => i.symbol === 'OANDA:USD_KRW');
 
     return (
         <div className="bg-card rounded-xl border border-border shadow-sm p-5 h-full flex flex-col">
@@ -55,7 +56,7 @@ export const MarketIndicesWidget: React.FC<MarketIndicesWidgetProps> = ({ onSele
             </div>
 
             <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                {displayData.map((index) => {
+                {mainIndices.map((index) => {
                     const isPositive = index.change.startsWith('+') || (!index.change.startsWith('-') && parseFloat(index.change) > 0);
                     const isZero = parseFloat(index.change) === 0;
                     
@@ -87,7 +88,10 @@ export const MarketIndicesWidget: React.FC<MarketIndicesWidgetProps> = ({ onSele
                             </div>
                             
                             <div className="text-right">
-                                <div className="font-mono text-sm font-medium">{index.price}</div>
+                                <div className="font-mono text-sm font-medium">
+                                    {index.type === 'US' || index.type === 'CRYPTO' || index.type === 'COMMODITY' ? '$' : index.type === 'KR' ? '₩' : ''}
+                                    {index.price}
+                                </div>
                                 <div className={clsx("text-xs font-bold flex items-center justify-end gap-1", 
                                     isPositive ? "text-red-500" : isZero ? "text-muted-foreground" : "text-blue-500")}>
                                     {!isZero && (isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />)}
@@ -100,9 +104,37 @@ export const MarketIndicesWidget: React.FC<MarketIndicesWidgetProps> = ({ onSele
             </div>
             
             <div className="mt-4 pt-3 border-t border-border">
-                <button className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors">
-                    전체 시장 보기 →
-                </button>
+                {exchangeRate ? (
+                    <div 
+                        onClick={() => onSelect?.(exchangeRate.symbol)}
+                        className="group flex items-center justify-between p-2 -mx-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-all border border-transparent hover:border-border"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
+                                <DollarSign size={14} />
+                            </div>
+                            <div>
+                                <div className="font-bold text-sm group-hover:text-primary transition-colors">{exchangeRate.name}</div>
+                                <div className="text-[10px] text-muted-foreground">USD/KRW</div>
+                            </div>
+                        </div>
+                        
+                        <div className="text-right">
+                            <div className="font-mono text-sm font-medium">
+                                ₩{exchangeRate.price}
+                            </div>
+                            <div className={clsx("text-xs font-bold flex items-center justify-end gap-1", 
+                                exchangeRate.change.startsWith('+') || (!exchangeRate.change.startsWith('-') && parseFloat(exchangeRate.change) > 0) ? "text-red-500" : parseFloat(exchangeRate.change) === 0 ? "text-muted-foreground" : "text-blue-500")}>
+                                {parseFloat(exchangeRate.change) !== 0 && ((exchangeRate.change.startsWith('+') || (!exchangeRate.change.startsWith('-') && parseFloat(exchangeRate.change) > 0)) ? <TrendingUp size={12} /> : <TrendingDown size={12} />)}
+                                {exchangeRate.changePercent}%
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="w-full text-xs text-center p-2 text-muted-foreground animate-pulse">
+                        환율 정보 로딩중...
+                    </div>
+                )}
             </div>
         </div>
     );

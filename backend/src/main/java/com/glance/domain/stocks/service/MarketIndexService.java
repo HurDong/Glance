@@ -62,7 +62,7 @@ public class MarketIndexService {
             return;
         }
 
-        String[] symbols = { "SPY", "QQQ", "EWY", "GLD" };
+        String[] symbols = { "SPY", "QQQ", "EWY", "GLD", "OANDA:USD_KRW" };
         log.info("Fetching Standard Indices: {}", Arrays.toString(symbols));
 
         for (String symbol : symbols) {
@@ -139,7 +139,7 @@ public class MarketIndexService {
         }
 
         // Return in specific order
-        List<String> order = List.of("SPY", "QQQ", "EWY", "GLD", "BINANCE:BTCUSDT");
+        List<String> order = List.of("SPY", "QQQ", "EWY", "GLD", "BINANCE:BTCUSDT", "OANDA:USD_KRW");
         List<MarketIndexDto> sortedList = new ArrayList<>();
 
         for (String s : order) {
@@ -180,6 +180,8 @@ public class MarketIndexService {
             return "CRYPTO";
         if (symbol.contains("GLD"))
             return "COMMODITY";
+        if (symbol.contains("USD_KRW"))
+            return "FOREX";
         return "US";
     }
 
@@ -195,6 +197,8 @@ public class MarketIndexService {
                 return "금 (ETF)";
             case "BINANCE:BTCUSDT":
                 return "비트코인";
+            case "OANDA:USD_KRW":
+                return "원/달러 환율";
             default:
                 return symbol;
         }
@@ -210,6 +214,7 @@ public class MarketIndexService {
                 new MarketIndexDto("QQQ", "NASDAQ", "17,962.40", "+113.09", "+0.71", "US"),
                 new MarketIndexDto("EWY", "KOSPI (ETF)", "62.40", "+0.50", "+0.81", "KR"),
                 new MarketIndexDto("GLD", "금 (ETF)", "188.50", "+1.20", "+0.52", "COMMODITY"),
-                new MarketIndexDto("BINANCE:BTCUSDT", "비트코인", "51,850.00", "+1,240.00", "+2.45", "CRYPTO"));
+                new MarketIndexDto("BINANCE:BTCUSDT", "비트코인", "51,850.00", "+1,240.00", "+2.45", "CRYPTO"),
+                new MarketIndexDto("OANDA:USD_KRW", "원/달러 환율", "1,350.50", "-5.20", "-0.38", "FOREX"));
     }
 }
