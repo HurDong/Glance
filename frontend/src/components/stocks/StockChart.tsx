@@ -198,7 +198,7 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol }) => {
                             <span className="text-sm font-medium">{errorMsg}</span>
                         </div>
                     ) : displayData.length > 0 ? (
-                        <ResponsiveContainer width="99%" height="100%" minWidth={0}>
+                        <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                             {/* ... chart ... */}
                             <AreaChart data={displayData}>
                         <defs>
@@ -240,12 +240,12 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol }) => {
                         />
                         <Tooltip 
                             contentStyle={{ 
-                                backgroundColor: 'rgba(20,20,24,0.85)', 
-                                backdropFilter: 'blur(12px)',
-                                borderColor: 'rgba(255,255,255,0.1)',
+                                backgroundColor: 'hsl(var(--card))', 
+                                borderColor: 'hsl(var(--border))',
                                 borderRadius: '12px',
-                                boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-                                fontWeight: 'bold'
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                                fontWeight: 'bold',
+                                color: 'hsl(var(--foreground))'
                             }}
                             itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold' }}
                             formatter={(value: any) => [`${currencyPrefix}${value.toLocaleString()}`, '가격']}
@@ -264,9 +264,10 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol }) => {
                             type="monotone" 
                             dataKey="price" 
                             stroke={isPositive ? "#ff4d4f" : "#3b82f6"} 
-                            strokeWidth={3}
+                            strokeWidth={displayData.length > 150 ? 1.5 : 3}
                             fillOpacity={1} 
                             fill="url(#colorPrice)" 
+                            isAnimationActive={displayData.length <= 100}
                         />
                     </AreaChart>
                 </ResponsiveContainer>
