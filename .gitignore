@@ -38,6 +38,15 @@ boot_log*.txt
 Thumbs.db
 COMMIT_MSG.txt
 backend/src/main/resources/application-kis.yml
+backend/src/main/resources/application.yml
+
+### Environment Variables
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 ### Docker
 docker/*/data/

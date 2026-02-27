@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.glance.domain.stocks.dto.StockPriceMessage;
 import com.glance.domain.stocks.service.KisService;
@@ -29,6 +30,21 @@ public class StockPriceController {
             return ApiResponse.success(message);
         }
         return ApiResponse.fail("Failed to fetch current price for " + symbol);
+    }
+
+    @GetMapping("/{symbol}/chart")
+    public ApiResponse<?> getChartData(
+            @PathVariable String symbol,
+            @RequestParam(defaultValue = "1M") String range) {
+        try {
+            var data = kisService.getChartData(symbol, range);
+            if (data != null) {
+                return ApiResponse.success(data);
+            }
+            return ApiResponse.fail("Failed to fetch chart data for " + symbol);
+        } catch (RuntimeException e) {
+            return ApiResponse.fail(e.getMessage());
+        }
     }
 
     @MessageMapping("/stocks/subscribe/{symbol}")

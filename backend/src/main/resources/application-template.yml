@@ -3,8 +3,8 @@ spring:
     include: kis
   datasource:
     url: jdbc:mysql://localhost:3306/glance?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&rewriteBatchedStatements=true
-    username: user
-    password: password
+    username: root
+    password: REPLACE_ME_DB_PASSWORD
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -45,9 +45,8 @@ logging:
             sql: info
 
 jwt:
-  secret: dGhpc2lzYXZlcnlzZWN1cmVzZWNyZXRrZXlmb3Jqd3R0b2tlZ2VuZXJhdGlvbmFuZHZhbGlkYXRpb24xMjM0NTY3ODkw
+  secret: REPLACE_ME_JWT_SECRET_KEY
 
 external:
   finnhub:
-    api-key: d6b4no9r01qnr27jm53gd6b4no9r01qnr27jm540
-
+    api-key: REPLACE_ME_FINNHUB_API_KEY
