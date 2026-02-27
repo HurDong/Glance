@@ -106,6 +106,7 @@ export const useStockWebSocket = () => {
             clientRef.current.deactivate();
             clientRef.current = null;
             isConnectedRef.current = false;
+            subscriptionsRef.current.clear(); // CRITCAL: clear so they re-subscribe on next connect
         }
     }, []);
 
