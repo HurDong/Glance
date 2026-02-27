@@ -5,6 +5,7 @@ import com.glance.domain.stocks.service.KisWebSocketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -48,7 +49,14 @@ public class StockPriceController {
     }
 
     @MessageMapping("/stocks/subscribe/{symbol}")
-    public void handleSubscribe(@DestinationVariable String symbol) {
+    public void handleSubscribe(@DestinationVariable String symbol, SimpMessageHeaderAccessor headerAccessor) {
+        String sessionId = headerAccessor.getSessionId();
+
+        // Track that this session is watching this symbol
+        if (sessionId != null) {
+            redisStockService.addSessionSubscription(sessionId, symbol);
+        }
+
         // 1. Subscribe to Redis Channel (Local Instance) so we can broadcast to this
         // user
         redisStockService.subscribeToChannel(symbol);
