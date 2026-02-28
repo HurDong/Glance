@@ -6,7 +6,7 @@ import { useStockStore } from '../stores/useStockStore';
 import { useAuthStore } from '../stores/authStore';
 import { apiClient as api } from '../api/axios';
 
-const SOCKET_URL = 'http://localhost:8080/ws-glance';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:8080/ws-glance';
 
 export const useStockWebSocket = () => {
     const clientRef = useRef<Client | null>(null);
