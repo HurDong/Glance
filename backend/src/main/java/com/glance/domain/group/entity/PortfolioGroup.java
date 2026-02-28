@@ -9,6 +9,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.DynamicUpdate;
 
+import java.util.UUID;
+
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -23,6 +25,9 @@ public class PortfolioGroup extends BaseTimeEntity {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(nullable = false, unique = true, length = 10)
+    private String inviteCode;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 
@@ -35,6 +40,11 @@ public class PortfolioGroup extends BaseTimeEntity {
         this.name = name;
         this.description = description;
         this.owner = owner;
+        this.inviteCode = generateShortCode();
+    }
+
+    private String generateShortCode() {
+        return UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
     public void updateInfo(String name, String description) {

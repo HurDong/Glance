@@ -13,6 +13,7 @@ public record PortfolioGroupResponse(
         Long id,
         String name,
         String description,
+        String inviteCode,
         MemberResponseDto owner,
         List<GroupMemberResponse> members,
         LocalDateTime createdAt) {
@@ -21,6 +22,7 @@ public record PortfolioGroupResponse(
                 group.getId(),
                 group.getName(),
                 group.getDescription(),
+                group.getInviteCode(),
                 MemberResponseDto.of(group.getOwner()),
                 members.stream().map(GroupMemberResponse::from).toList(),
                 group.getCreatedAt());

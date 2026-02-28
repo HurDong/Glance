@@ -30,6 +30,15 @@ public class PortfolioGroupController {
         return ApiResponse.success("그룹이 생성되었습니다.", group.getId());
     }
 
+    @DeleteMapping("/{groupId}")
+    public ApiResponse<Void> deleteGroup(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long groupId) {
+        Long userId = Long.parseLong(userDetails.getUsername());
+        groupService.deleteGroup(groupId, userId);
+        return ApiResponse.success("그룹이 삭제되었습니다.");
+    }
+
     @PostMapping("/{groupId}/join")
     public ApiResponse<Void> joinGroup(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -37,6 +46,15 @@ public class PortfolioGroupController {
         Long userId = Long.parseLong(userDetails.getUsername());
         groupService.joinGroup(groupId, userId);
         return ApiResponse.success("그룹 가입 신청이 완료되었습니다.");
+    }
+
+    @PostMapping("/join-by-code")
+    public ApiResponse<Void> joinGroupByCode(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam String code) {
+        Long userId = Long.parseLong(userDetails.getUsername());
+        groupService.joinGroupByCode(code, userId);
+        return ApiResponse.success("초대 코드로 그룹에 가입되었습니다.");
     }
 
     @PostMapping("/{groupId}/invite")

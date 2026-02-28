@@ -14,4 +14,6 @@ public interface PortfolioGroupMemberRepository extends JpaRepository<PortfolioG
     List<PortfolioGroupMember> findAllByMember(Member member);
 
     Optional<PortfolioGroupMember> findByGroupAndMember(PortfolioGroup group, Member member);
+
+    void deleteAllByGroup(PortfolioGroup group);
 }

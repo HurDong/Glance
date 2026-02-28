@@ -53,6 +53,23 @@ public class PortfolioGroupService {
         }
 
         @Transactional
+        public void deleteGroup(Long groupId, Long ownerId) {
+                PortfolioGroup group = groupRepository.findById(groupId)
+                                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+                if (!group.getOwner().getId().equals(ownerId)) {
+                        throw new BusinessException("그룹장만 그룹을 삭제할 수 있습니다.", ErrorCode.HANDLE_ACCESS_DENIED);
+                }
+
+                // Delete all group members first (since it's a manual many-to-one mapped entity
+                // without CascadeType.ALL on group's side)
+                groupMemberRepository.deleteAllByGroup(group);
+
+                // Then delete the group
+                groupRepository.delete(group);
+        }
+
+        @Transactional
         public void joinGroup(Long groupId, Long memberId) {
                 PortfolioGroup group = groupRepository.findById(groupId)
                                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
@@ -66,6 +83,24 @@ public class PortfolioGroupService {
                                 .group(group)
                                 .member(member)
                                 .status(GroupMemberStatus.PENDING)
+                                .build());
+        }
+
+        @Transactional
+        public void joinGroupByCode(String inviteCode, Long memberId) {
+                PortfolioGroup group = groupRepository.findByInviteCode(inviteCode)
+                                .orElseThrow(() -> new BusinessException("유효하지 않은 초대 코드입니다.",
+                                                ErrorCode.ENTITY_NOT_FOUND));
+                Member member = memberService.getMember(memberId);
+
+                if (groupMemberRepository.findByGroupAndMember(group, member).isPresent()) {
+                        throw new BusinessException("이미 그룹에 가입된 멤버이거나 요청 중입니다.", ErrorCode.INVALID_INPUT_VALUE);
+                }
+
+                groupMemberRepository.save(PortfolioGroupMember.builder()
+                                .group(group)
+                                .member(member)
+                                .status(GroupMemberStatus.ACCEPTED)
                                 .build());
         }
 
