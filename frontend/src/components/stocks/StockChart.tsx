@@ -250,15 +250,16 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol }) => {
                             }}
                             itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold' }}
                             formatter={(value: any) => [`${currencyPrefix}${value.toLocaleString()}`, '가격']}
-                            labelFormatter={(label: string) => {
+                            labelFormatter={(label: any) => {
                                 if (!label) return label;
-                                if (label.length === 12 || label.length === 14) {
-                                    return `${label.substring(0, 4)}-${label.substring(4, 6)}-${label.substring(6, 8)} ${label.substring(8, 10)}:${label.substring(10, 12)}`;
+                                const labelStr = String(label);
+                                if (labelStr.length === 12 || labelStr.length === 14) {
+                                    return `${labelStr.substring(0, 4)}-${labelStr.substring(4, 6)}-${labelStr.substring(6, 8)} ${labelStr.substring(8, 10)}:${labelStr.substring(10, 12)}`;
                                 }
-                                if (label.length === 8) {
-                                    return `${label.substring(0, 4)}-${label.substring(4, 6)}-${label.substring(6, 8)}`;
+                                if (labelStr.length === 8) {
+                                    return `${labelStr.substring(0, 4)}-${labelStr.substring(4, 6)}-${labelStr.substring(6, 8)}`;
                                 }
-                                return label;
+                                return labelStr;
                             }}
                         />
                         <Area 

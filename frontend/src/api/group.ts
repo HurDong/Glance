@@ -4,6 +4,7 @@ export interface Group {
   id: number;
   name: string;
   description: string;
+  inviteCode: string;
   owner: {
     nickname: string;
     email: string;
@@ -56,12 +57,20 @@ export const groupApi = {
     return response.data.data;
   },
 
+  deleteGroup: async (groupId: number): Promise<void> => {
+    await apiClient.delete(`/groups/${groupId}`);
+  },
+
   sharePortfolio: async (groupId: number, portfolioId: number): Promise<void> => {
     await apiClient.post(`/groups/${groupId}/share`, { portfolioId });
   },
 
   joinGroup: async (groupId: number): Promise<void> => {
     await apiClient.post(`/groups/${groupId}/join`);
+  },
+
+  joinGroupByCode: async (code: string): Promise<void> => {
+    await apiClient.post(`/groups/join-by-code?code=${code}`);
   },
 
   inviteMember: async (groupId: number, memberId: number): Promise<void> => {

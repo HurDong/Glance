@@ -31,7 +31,7 @@ export const useStockWebSocket = () => {
         // Only if logged in (for tracking interest), otherwise rely on global/public stream
         // Always send subscription request (both for auth and anonymous users)
         // Subscription count is managed globally by Redis service
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
         
         // Fetch initial price immediately (useful when market is closed and no real-time data is streaming)
         api.get(`/stocks/${symbol}/price`).then(response => {
