@@ -8,6 +8,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { Share2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { StockIcon } from '../stocks/StockIcon';
+import { useAlertStore } from '../../stores/useAlertStore';
 
 export const GroupFeed: React.FC = () => {
     const [groups, setGroups] = useState<Group[]>([]);
@@ -23,15 +24,16 @@ export const GroupFeed: React.FC = () => {
     const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
     const [selectedPortfolioId, setSelectedPortfolioId] = useState<number | null>(null);
     const { token, user } = useAuthStore();
+    const { showAlert } = useAlertStore();
 
     const handleAction = async (action: () => Promise<void>, successMsg: string) => {
         try {
             await action();
-            alert(successMsg);
+            showAlert(successMsg, { type: 'success' });
             fetchGroups();
         } catch (error) {
             console.error('Action failed:', error);
-            alert('작업에 실패했습니다.');
+            showAlert('작업에 실패했습니다.', { type: 'error' });
         }
     };
 
@@ -75,14 +77,14 @@ export const GroupFeed: React.FC = () => {
             alert('그룹이 생성되었습니다.');
         } catch (error) {
             console.error('Failed to create group:', error);
-            alert('그룹 생성에 실패했습니다.');
+            showAlert('그룹 생성에 실패했습니다.', { type: 'error' });
         }
     };
 
     const handleJoinGroup = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!joinGroupId) {
-            alert('그룹 ID를 입력해주세요.');
+            showAlert('그룹 ID를 입력해주세요.', { type: 'warning' });
             return;
         }
         await handleAction(() => groupApi.joinGroup(parseInt(joinGroupId)), '그룹 가입을 신청했습니다.');
@@ -97,7 +99,7 @@ export const GroupFeed: React.FC = () => {
 
     const handleSharePortfolio = async () => {
         if (!selectedGroupId || !selectedPortfolioId) {
-            alert('포트폴리오를 선택해주세요.');
+            showAlert('포트폴리오를 선택해주세요.', { type: 'warning' });
             return;
         }
         await handleAction(

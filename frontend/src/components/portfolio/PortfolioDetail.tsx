@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Edit2, Share2, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '../../stores/authStore';
+import { useAlertStore } from '../../stores/useAlertStore';
 import { StockSearchDropdown } from '../stocks/StockSearchDropdown';
 
 // Inline types to avoid module resolution issues
@@ -44,6 +45,7 @@ export const PortfolioDetail: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const token = useAuthStore((state) => state.token);
+    const { showAlert, showConfirm } = useAlertStore();
     
     const [newItem, setNewItem] = useState({
         symbol: '',
@@ -81,17 +83,17 @@ export const PortfolioDetail: React.FC = () => {
     const handleAddItem = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!portfolio || !selectedStock) {
-            alert('종목을 선택해주세요.');
+            showAlert('종목을 선택해주세요.', { type: 'warning' });
             return;
         }
         
         if (!newItem.averagePrice || newItem.averagePrice <= 0) {
-            alert('평단가를 입력해주세요.');
+            showAlert('평단가를 입력해주세요.', { type: 'warning' });
             return;
         }
         
         if (!newItem.quantity || newItem.quantity <= 0) {
-            alert('수량을 입력해주세요.');
+            showAlert('수량을 입력해주세요.', { type: 'warning' });
             return;
         }
         try {
@@ -105,7 +107,7 @@ export const PortfolioDetail: React.FC = () => {
         } catch (error: any) {
             console.error('Failed to add item:', error);
             const errorMessage = error.response?.data?.message || '종목 추가 실패: 심볼을 확인해주세요.';
-            alert(errorMessage);
+            showAlert(errorMessage, { type: 'error' });
         }
     };
 
@@ -119,7 +121,10 @@ export const PortfolioDetail: React.FC = () => {
     };
 
     const handleDeleteItem = async (itemId: number) => {
-        if (!portfolio || !confirm('정말 이 종목을 삭제하시겠습니까?')) return;
+        if (!portfolio) return;
+        const isConfirmed = await showConfirm('정말 이 종목을 삭제하시겠습니까?');
+        if (!isConfirmed) return;
+        
         try {
             await apiClient.delete(`/portfolios/${portfolio.id}/items/${itemId}`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -154,7 +159,7 @@ export const PortfolioDetail: React.FC = () => {
         } catch (error: any) {
             console.error('Failed to update portfolio:', error);
             const errorMessage = error.response?.data?.message || '포트폴리오 수정 실패';
-            alert(errorMessage);
+            showAlert(errorMessage, { type: 'error' });
         }
     };
 

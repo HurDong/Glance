@@ -7,6 +7,7 @@ import { useStockStore } from '../../stores/useStockStore';
 import { clsx } from 'clsx';
 import axios from 'axios';
 import { useAuthStore } from '../../stores/authStore';
+import { useAlertStore } from '../../stores/useAlertStore';
 
 // Note: Using a direct axios call for addItem as it might not be in portfolioApi yet 
 // based on PortfolioDetail.tsx using it directly
@@ -28,8 +29,10 @@ export const StockQuickAddModal: React.FC<StockQuickAddModalProps> = ({ symbol, 
     const [averagePrice, setAveragePrice] = useState<number>(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     
+    
     const { getPrice } = useStockStore();
     const token = useAuthStore((state) => state.token);
+    const { showAlert } = useAlertStore();
     
     const stockData = getPrice(symbol);
     const currentPriceStr = stockData?.price.replace(/,/g, '') || '0';
@@ -65,7 +68,7 @@ export const StockQuickAddModal: React.FC<StockQuickAddModalProps> = ({ symbol, 
         e.preventDefault();
         
         if (!selectedPortfolioId || quantity <= 0 || averagePrice <= 0) {
-            alert("모든 필드를 올바르게 입력해주세요.");
+            showAlert("모든 필드를 올바르게 입력해주세요.", { type: 'warning' });
             return;
         }
 
@@ -89,7 +92,7 @@ export const StockQuickAddModal: React.FC<StockQuickAddModalProps> = ({ symbol, 
         } catch (error: any) {
              console.error('Failed to add item:', error);
              const errorMessage = error.response?.data?.message || '종목 추가에 실패했습니다. (이미 있는 종목일 수 있습니다)';
-             alert(errorMessage);
+             showAlert(errorMessage, { type: 'error' });
         } finally {
             setIsSubmitting(false);
         }

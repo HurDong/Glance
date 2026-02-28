@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
+import { useAlertStore } from '../../stores/useAlertStore';
 
 const API_BASE_URL = 'http://localhost:8080/api/v1/auth';
 
@@ -12,6 +13,7 @@ export const SignupPage = () => {
   const [signupError, setSignupError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const { showAlert } = useAlertStore();
 
 
 
@@ -24,7 +26,7 @@ export const SignupPage = () => {
         password: data.password,
         nickname: data.nickname
       });
-      alert('회원가입이 완료되었습니다. 로그인해주세요.');
+      showAlert('회원가입이 완료되었습니다. 로그인해주세요.', { type: 'success' });
       navigate('/');
     } catch (error: any) {
       console.error(error);

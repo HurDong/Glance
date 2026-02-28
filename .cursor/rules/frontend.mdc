@@ -37,6 +37,7 @@ globs: frontend/**/*
 # 4. 🚨 Error & Feedback
 - **Global Error Handling**: Use `React Error Boundary` to catch rendering errors.
 - **User Feedback**: Use **Toast notifications** for all API success/fail responses.
+- **Alerts/Confirms**: **NEVER USE** native `window.alert` or `window.confirm`. ALWAYS use `useAlertStore` (`showAlert`, `showConfirm`) from `src/stores/useAlertStore.ts` for consistent UI.
 
 # 5. 🛠 Development Workflow
 - **Package Manager**: **pnpm** (STRICTLY REQUIRED).

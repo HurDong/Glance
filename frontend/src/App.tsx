@@ -14,7 +14,7 @@ import { QuickViewDashboard } from './components/stocks/QuickViewDashboard';
 import { MarketIndicesWidget } from './components/stocks/MarketIndicesWidget';
 import { StockChart } from './components/stocks/StockChart';
 import { GroupPortfolioWidget } from './components/groups/GroupPortfolioWidget';
-
+import { GlobalAlert } from './components/shared/GlobalAlert';
 
 const MainContent = ({ activeTab, onTabChange }: { activeTab: string, onTabChange: (tab: string) => void }) => {
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
@@ -87,21 +87,24 @@ function App() {
   };
 
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
-      <Route path="/portfolio/:id" element={
-        <MainLayout activeTab="portfolio" onTabChange={handleTabChange}>
-          <PortfolioDetail />
-        </MainLayout>
-      } />
-      <Route path="/portfolio" element={
-        <MainLayout activeTab="portfolio" onTabChange={handleTabChange}>
-          <PortfolioList />
-        </MainLayout>
-      } />
-      <Route path="/*" element={<MainContent activeTab={activeTab} onTabChange={handleTabChange} />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/portfolio/:id" element={
+          <MainLayout activeTab="portfolio" onTabChange={handleTabChange}>
+            <PortfolioDetail />
+          </MainLayout>
+        } />
+        <Route path="/portfolio" element={
+          <MainLayout activeTab="portfolio" onTabChange={handleTabChange}>
+            <PortfolioList />
+          </MainLayout>
+        } />
+        <Route path="/*" element={<MainContent activeTab={activeTab} onTabChange={handleTabChange} />} />
+      </Routes>
+      <GlobalAlert />
+    </>
   );
 }
 

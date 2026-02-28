@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { interestApi, type InterestStockResponse } from '../../api/interest';
 import { useAuthStore } from '../../stores/authStore';
 import { StockIcon } from './StockIcon';
-import { TrendingUp, TrendingDown, Star, Plus, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Star, Plus, Trash2 } from 'lucide-react';
 import { useStockStore } from '../../stores/useStockStore';
 import { useStockWebSocket } from '../../hooks/useStockWebSocket';
 import { clsx } from 'clsx';
 // import { useNavigate } from 'react-router-dom'; // keeping commented out or just removing lines completely
 import { StockSearchDropdown } from './StockSearchDropdown';
+import { useAlertStore } from '../../stores/useAlertStore';
 
 const StockPriceCard = ({ stock, onDelete, onSelect }: { stock: InterestStockResponse, onDelete: (symbol: string) => void, onSelect: (symbol: string) => void }) => {
     const { getPrice } = useStockStore();
@@ -25,15 +26,15 @@ const StockPriceCard = ({ stock, onDelete, onSelect }: { stock: InterestStockRes
             className="bg-card p-4 rounded-xl border border-border hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
             onClick={() => onSelect(stock.symbol)}
         >
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+            <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                  <button 
                     onClick={(e) => {
                         e.stopPropagation();
                         onDelete(stock.symbol);
                     }}
-                    className="p-1 hover:bg-muted rounded-full text-muted-foreground hover:text-destructive transition-colors"
+                    className="p-1.5 bg-background/80 backdrop-blur-sm border border-border/50 hover:bg-destructive/10 rounded-lg text-muted-foreground hover:text-destructive transition-all shadow-sm"
                 >
-                    <Minus size={16} />
+                    <Trash2 size={16} />
                 </button>
             </div>
 
@@ -84,6 +85,7 @@ export const QuickViewDashboard: React.FC<QuickViewDashboardProps> = ({ onSelect
     const [isLoading, setIsLoading] = useState(true);
     const { token } = useAuthStore();
     const [isAddMode, setIsAddMode] = useState(false);
+    const { showAlert, showConfirm } = useAlertStore();
 
     const fetchInterestStocks = async () => {
         try {
@@ -117,12 +119,14 @@ export const QuickViewDashboard: React.FC<QuickViewDashboardProps> = ({ onSelect
             fetchInterestStocks();
         } catch (error) {
             console.error('Failed to add stock:', error);
-            alert('종목 추가에 실패했습니다.');
+            showAlert('종목 추가에 실패했습니다.', { type: 'error' });
         }
     };
 
     const handleDeleteStock = async (symbol: string) => {
-        if (!confirm(`${symbol}을(를) 관심 종목에서 삭제하시겠습니까?`)) return;
+        const isConfirmed = await showConfirm(`${symbol}을(를) 관심 종목에서 삭제하시겠습니까?`);
+        if (!isConfirmed) return;
+        
         try {
             await interestApi.removeInterestStock(symbol);
             fetchInterestStocks();
