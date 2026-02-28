@@ -2,6 +2,7 @@ package com.glance.domain.stocks.controller;
 
 import com.glance.common.dto.ApiResponse;
 import com.glance.domain.stocks.dto.StockResponse;
+import com.glance.domain.stocks.entity.Market;
 import com.glance.domain.stocks.service.StockSymbolService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,8 +24,9 @@ public class StockSymbolController {
     @GetMapping
     public ApiResponse<Page<StockResponse>> getStocks(
             @RequestParam(required = false) String query,
+            @RequestParam(required = false) Market market,
             @PageableDefault(size = 50, sort = { "nameKr",
                     "symbol" }, direction = Sort.Direction.ASC) Pageable pageable) {
-        return ApiResponse.success(stockSymbolService.getStocks(query, pageable));
+        return ApiResponse.success(stockSymbolService.getStocks(query, market, pageable));
     }
 }

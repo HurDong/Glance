@@ -32,9 +32,10 @@ interface ChartPoint {
 
 interface StockChartProps {
     symbol: string | null;
+    market?: string;
 }
 
-export const StockChart: React.FC<StockChartProps> = ({ symbol }) => {
+export const StockChart: React.FC<StockChartProps> = ({ symbol, market }) => {
     const [timeRange, setTimeRange] = useState<'1m' | '5m' | '15m' | '1h' | '1d' | '1w' | '1M' | '1Y'>('1d');
     const [chartData, setChartData] = useState<ChartPoint[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -131,10 +132,22 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol }) => {
     }
 
     const name = STOCK_NAMES[symbol] || symbol;
-    // KR stocks are 6 digits. Everything else is treated as USD priced.
-    const isKR = /^\d{6}$/.test(symbol);
-    const currencyPrefix = isKR ? '₩' : '$';
-    const marketLabel = isKR ? 'KRX' : symbol.startsWith('BINANCE:') ? 'CRYPTO' : 'NASDAQ';
+    
+    // Determine market based on passed prop first, then fallback to symbol inference
+    const isKoreanMarket = market 
+        ? (market === 'KR' || market === 'KOSPI' || market === 'KOSDAQ' || market === 'KRX')
+        : /^\d{6}(?:[A-Z])?$/.test(symbol); // Also handle ETF symbols like 0026S0
+
+    const currencyPrefix = isKoreanMarket ? '₩' : '$';
+    
+    // Use the explicitly passed market label if available, otherwise guess
+    let marketLabel = market || 'NASDAQ';
+    if (!market) {
+        if (isKoreanMarket) marketLabel = 'KRX';
+        else if (symbol.startsWith('BINANCE:')) marketLabel = 'CRYPTO';
+    } else if (market === 'KR') {
+        marketLabel = 'KRX'; // Normalise 'KR' to 'KRX' for display
+    }
 
     return (
         <div className="bg-card/50 backdrop-blur-xl rounded-2xl border border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden flex flex-col h-full min-h-[500px]">
@@ -236,7 +249,7 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol }) => {
                                 (dataMin: number) => dataMin * 0.95,
                                 (dataMax: number) => dataMax * 1.05
                             ]}
-                            tickFormatter={(value: any) => !isKR ? `$${value?.toFixed(1) || value}` : `₩${(value/10000).toFixed(0)}만`}
+                            tickFormatter={(value: any) => !isKoreanMarket ? `$${value?.toFixed(1) || value}` : `₩${(value/10000).toFixed(0)}만`}
                             width={55}
                         />
                         <Tooltip 

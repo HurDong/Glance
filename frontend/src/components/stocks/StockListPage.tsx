@@ -1,8 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { StockIcon } from './StockIcon';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, Star } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { StockDetailModal } from './StockDetailModal';
+import { interestApi } from '../../api/interest';
+import { useAuthStore } from '../../stores/authStore';
+import { useAlertStore } from '../../stores/useAlertStore';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -23,11 +27,43 @@ export const StockListPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
+  
+  const [marketFilter, setMarketFilter] = useState('ALL');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [interestedItems, setInterestedItems] = useState<Set<string>>(new Set());
+  
+  const { token } = useAuthStore();
+  const { showAlert } = useAlertStore();
+
   const observerTarget = useRef<HTMLDivElement>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const fetchStocks = async (pageNum: number, query: string, isNewSearch: boolean) => {
+  useEffect(() => {
+    const fetchInterest = async () => {
+      if (token) {
+        try {
+          const res = await interestApi.getInterestStocks();
+          setInterestedItems(new Set(res.map(r => r.symbol)));
+        } catch (error) {
+          console.error('Failed to fetch interest items', error);
+        }
+      } else {
+        setInterestedItems(new Set());
+      }
+    };
+    fetchInterest();
+  }, [token]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const fetchStocks = async (pageNum: number, query: string, marketFl: string, isNewSearch: boolean) => {
     // If loading more (pagination), prevent duplicate requests
     if (!isNewSearch && loading) return;
 
@@ -42,8 +78,9 @@ export const StockListPage: React.FC = () => {
     setLoading(true);
     try {
       const signal = isNewSearch ? abortControllerRef.current?.signal : undefined;
+      const marketParam = marketFl !== 'ALL' ? `&market=${marketFl}` : '';
       const response = await fetch(
-        `/api/v1/stocks?page=${pageNum}&size=50&query=${encodeURIComponent(query)}`,
+        `/api/v1/stocks?page=${pageNum}&size=50&query=${encodeURIComponent(query)}${marketParam}`,
         { signal }
       );
       const result = await response.json();
@@ -75,32 +112,34 @@ export const StockListPage: React.FC = () => {
     }
   };
 
-  // Search effect with debounce could be added here, but for now strict effect
+  // Fetch when search or market changes
   useEffect(() => {
     setPage(0);
     setHasMore(true);
-    fetchStocks(0, searchQuery, true);
-  }, [searchQuery]);
+    fetchStocks(0, debouncedSearchQuery, marketFilter, true);
+  }, [debouncedSearchQuery, marketFilter]);
 
   // Refs for accessing latest state in observer without re-triggering effect
   const loadingRef = useRef(loading);
   const hasMoreRef = useRef(hasMore);
   const pageRef = useRef(page);
-  const searchQueryRef = useRef(searchQuery);
+  const debouncedSearchQueryRef = useRef(debouncedSearchQuery);
+  const marketFilterRef = useRef(marketFilter);
 
   useEffect(() => {
     loadingRef.current = loading;
     hasMoreRef.current = hasMore;
     pageRef.current = page;
-    searchQueryRef.current = searchQuery;
-  }, [loading, hasMore, page, searchQuery]);
+    debouncedSearchQueryRef.current = debouncedSearchQuery;
+    marketFilterRef.current = marketFilter;
+  }, [loading, hasMore, page, debouncedSearchQuery, marketFilter]);
 
   // Infinite scroll observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0].isIntersecting && hasMoreRef.current && !loadingRef.current) {
-          fetchStocks(pageRef.current + 1, searchQueryRef.current, false);
+          fetchStocks(pageRef.current + 1, debouncedSearchQueryRef.current, marketFilterRef.current, false);
         }
       },
       { threshold: 0.1 } // Changed threshold to 0.1 to trigger slightly earlier/easier
@@ -116,6 +155,35 @@ export const StockListPage: React.FC = () => {
       }
     };
   }, []); // Empty dependency array - observer is created once
+
+  const handleToggleInterest = async (e: React.MouseEvent, stock: Stock) => {
+    e.stopPropagation();
+    if (!token) {
+        showAlert('로그인이 필요한 기능입니다.', { type: 'warning' });
+        return;
+    }
+    const isInterested = interestedItems.has(stock.symbol);
+    try {
+        if (isInterested) {
+            await interestApi.removeInterestStock(stock.symbol);
+            setInterestedItems(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(stock.symbol);
+                return newSet;
+            });
+        } else {
+            await interestApi.addInterestStock(stock.symbol, stock.market);
+            setInterestedItems(prev => {
+                const newSet = new Set(prev);
+                newSet.add(stock.symbol);
+                return newSet;
+            });
+        }
+    } catch (error) {
+        console.error('Failed to toggle interest', error);
+        showAlert('관심 종목 상태 변경에 실패했습니다.', { type: 'error' });
+    }
+  };
 
   if (error && stocks.length === 0) {
     return (
@@ -134,21 +202,41 @@ export const StockListPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">전체 종목 리스트</h1>
-          <p className="text-sm text-muted-foreground">가나다순으로 정렬된 현재 상장 종목들입니다.</p>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">전체 종목 리스트</h1>
+            <p className="text-sm text-muted-foreground">가나다순으로 정렬된 현재 상장 종목들입니다.</p>
+          </div>
+          
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+            <input 
+              type="text" 
+              placeholder="종목명 또는 티커 검색..." 
+              className="w-full bg-card border border-border rounded-lg py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary outline-none transition-all"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
-        
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-          <input 
-            type="text" 
-            placeholder="종목명 또는 티커 검색..." 
-            className="w-full bg-card border border-border rounded-lg py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary outline-none transition-all"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+
+        {/* Market Filters */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
+          {['ALL', 'KOSPI', 'KOSDAQ', 'NASDAQ', 'NYSE', 'AMEX'].map(market => (
+            <button
+              key={market}
+              onClick={() => setMarketFilter(market)}
+              className={cn(
+                "px-4 py-1.5 rounded-full text-sm font-bold transition-all whitespace-nowrap",
+                marketFilter === market 
+                  ? "bg-primary text-primary-foreground shadow-sm" 
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50"
+              )}
+            >
+              {market === 'ALL' ? '전체' : market}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -162,12 +250,17 @@ export const StockListPage: React.FC = () => {
                 <th className="px-6 py-4">티커</th>
                 <th className="px-6 py-4 text-right">시장</th>
                 <th className="px-6 py-4 text-right">상태</th>
+                <th className="px-6 py-4 text-center w-16">관심</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {stocks.length > 0 ? (
                 stocks.map((stock) => (
-                  <tr key={`${stock.market}-${stock.symbol}`} className="hover:bg-accent/40 transition-colors cursor-pointer group">
+                  <tr 
+                    key={`${stock.market}-${stock.symbol}`} 
+                    className="hover:bg-accent/40 transition-colors cursor-pointer group"
+                    onClick={() => setSelectedStock(stock)}
+                  >
                     <td className="px-6 py-4">
                       <StockIcon 
                         symbol={stock.symbol} 
@@ -196,12 +289,28 @@ export const StockListPage: React.FC = () => {
                     <td className="px-6 py-4 text-right">
                       <span className="text-xs font-medium text-green-500">상장중</span>
                     </td>
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={(e) => handleToggleInterest(e, stock)}
+                        className="p-2 hover:bg-muted rounded-full transition-colors group/star"
+                      >
+                        <Star 
+                           size={18} 
+                           className={cn(
+                               "transition-all",
+                               interestedItems.has(stock.symbol) 
+                                 ? "fill-yellow-500 text-yellow-500" 
+                                 : "text-muted-foreground group-hover/star:text-yellow-500/50"
+                           )} 
+                        />
+                      </button>
+                    </td>
                   </tr>
                 ))
               ) : (
                 !loading && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
+                    <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
                       검색 결과가 없습니다.
                     </td>
                   </tr>
@@ -216,6 +325,16 @@ export const StockListPage: React.FC = () => {
           {loading && <Loader2 className="animate-spin text-muted-foreground" size={24} />}
         </div>
       </div>
+
+      {/* Stock Detail Modal */}
+      {selectedStock && (
+        <StockDetailModal 
+          symbol={selectedStock.symbol} 
+          name={selectedStock.nameKr || selectedStock.nameEn || selectedStock.symbol} 
+          market={selectedStock.market}
+          onClose={() => setSelectedStock(null)} 
+        />
+      )}
     </div>
   );
 };

@@ -1,6 +1,7 @@
 package com.glance.domain.stocks.service;
 
 import com.glance.domain.stocks.dto.StockResponse;
+import com.glance.domain.stocks.entity.Market;
 import com.glance.domain.stocks.entity.StockSymbol;
 import com.glance.domain.stocks.repository.StockSymbolRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,15 +21,22 @@ public class StockSymbolService {
 
     private final StockSymbolRepository stockSymbolRepository;
 
-    public Page<StockResponse> getStocks(String query, Pageable pageable) {
+    public Page<StockResponse> getStocks(String query, Market market, Pageable pageable) {
         Page<StockSymbol> stockPage;
 
         if (query == null || query.trim().isEmpty()) {
-
-            stockPage = stockSymbolRepository.findAll(pageable);
+            if (market != null) {
+                stockPage = stockSymbolRepository.findAllByMarket(market, pageable);
+            } else {
+                stockPage = stockSymbolRepository.findAll(pageable);
+            }
         } else {
             String searchTerm = query.trim();
-            stockPage = stockSymbolRepository.searchStocks(searchTerm, pageable);
+            if (market != null) {
+                stockPage = stockSymbolRepository.searchStocksByMarket(searchTerm, market, pageable);
+            } else {
+                stockPage = stockSymbolRepository.searchStocks(searchTerm, pageable);
+            }
         }
 
         return stockPage.map(StockResponse::from);
