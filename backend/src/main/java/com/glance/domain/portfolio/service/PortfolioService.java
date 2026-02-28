@@ -17,7 +17,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -70,15 +73,37 @@ public class PortfolioService {
         StockSymbol stockSymbol = stockSymbolRepository.findBySymbol(request.symbol())
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
-        PortfolioItem item = PortfolioItem.builder()
-                .stockSymbol(stockSymbol)
-                .quantity(request.quantity())
-                .averagePrice(request.averagePrice())
-                .currency(request.currency())
-                .build();
+        Optional<PortfolioItem> existingItemOpt = portfolioItemRepository.findByPortfolioAndStockSymbol(portfolio,
+                stockSymbol);
 
-        portfolio.addItem(item);
-        // Cascade save
+        if (existingItemOpt.isPresent()) {
+            PortfolioItem existingItem = existingItemOpt.get();
+            BigDecimal oldQuantity = existingItem.getQuantity();
+            BigDecimal oldPrice = existingItem.getAveragePrice();
+            BigDecimal newQuantityReq = request.quantity();
+            BigDecimal newPriceReq = request.averagePrice();
+
+            BigDecimal totalQuantity = oldQuantity.add(newQuantityReq);
+
+            // weighted average = (oldQuantity * oldPrice + newQuantityReq * newPriceReq) /
+            // totalQuantity
+            BigDecimal oldTotal = oldQuantity.multiply(oldPrice);
+            BigDecimal newTotal = newQuantityReq.multiply(newPriceReq);
+            BigDecimal combinedTotal = oldTotal.add(newTotal);
+
+            BigDecimal newAveragePrice = combinedTotal.divide(totalQuantity, 4, RoundingMode.HALF_UP);
+
+            existingItem.update(totalQuantity, newAveragePrice, request.currency());
+        } else {
+            PortfolioItem item = PortfolioItem.builder()
+                    .stockSymbol(stockSymbol)
+                    .quantity(request.quantity())
+                    .averagePrice(request.averagePrice())
+                    .currency(request.currency())
+                    .build();
+
+            portfolio.addItem(item);
+        }
     }
 
     @Transactional
