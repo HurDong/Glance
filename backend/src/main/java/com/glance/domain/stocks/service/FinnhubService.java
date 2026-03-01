@@ -28,7 +28,9 @@ public class FinnhubService { // Re-using the class name to maintain Dependency 
 
     public ChartDataResponse getUsChartData(String symbol, String range) {
         String yahooSymbol = symbol;
-        if (symbol.startsWith("BINANCE:")) {
+        if ("OANDA:USD_KRW".equals(symbol)) {
+            yahooSymbol = "KRW=X";
+        } else if (symbol.startsWith("BINANCE:")) {
             // Convert 'BINANCE:BTCUSDT' to 'BTC-USD' for Yahoo Finance
             String coin = symbol.replace("BINANCE:", "");
             if (coin.endsWith("USDT")) {

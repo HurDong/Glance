@@ -4,5 +4,6 @@ public enum SecurityType {
     STOCK,
     ETF,
     ETN,
+    CASH,
     UNKNOWN
 }

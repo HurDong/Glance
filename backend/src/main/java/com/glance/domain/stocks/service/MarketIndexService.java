@@ -62,7 +62,7 @@ public class MarketIndexService {
             return;
         }
 
-        String[] symbols = { "SPY", "QQQ", "EWY", "GLD", "OANDA:USD_KRW" };
+        String[] symbols = { "SPY", "QQQ", "EWY", "GLD" }; // Removed OANDA:USD_KRW
         log.info("Fetching Standard Indices: {}", Arrays.toString(symbols));
 
         for (String symbol : symbols) {
@@ -74,6 +74,10 @@ public class MarketIndexService {
                 log.error("Thread interrupted during rate limiting sleep.", e);
             }
         }
+
+        // Fetch exchange rate from alternative source
+        fetchExchangeRate("OANDA:USD_KRW");
+
         log.info("Standard indices refreshed. Current cache size: {}", cache.size());
     }
 
@@ -114,22 +118,82 @@ public class MarketIndexService {
 
             if (response.statusCode() == 200) {
                 JsonNode node = objectMapper.readTree(response.body());
-                // Validate data presence (Finnhub returns {c:0, ...} if invalid usually, or all
-                // nulls)
                 if (node.has("c") && !node.path("c").isNull() && node.path("c").asDouble() != 0) {
                     MarketIndexDto dto = mapFinnhubToDto(symbol, node);
                     cache.put(symbol, dto);
                     log.debug("Successfully fetched and cached {}: {}", symbol, dto);
                 } else {
                     log.warn("Finnhub No Data for {}: {}", symbol, response.body());
+                    if (symbol.equals("OANDA:USD_KRW")) {
+                        log.info(
+                                "Applying fallback mock data for USD/KRW due to missing permissions or empty response");
+                        getMockIndices().stream().filter(dto -> dto.getSymbol().equals("OANDA:USD_KRW")).findFirst()
+                                .ifPresent(dto -> cache.put(symbol, dto));
+                    }
                 }
             } else {
                 log.error("Finnhub Error for {}: Status {}", symbol, response.statusCode());
                 log.error("Finnhub Error Body for {}: {}", symbol, response.body());
+                if (symbol.equals("OANDA:USD_KRW")) {
+                    log.info("Applying fallback mock data for USD/KRW due to HTTP Error");
+                    getMockIndices().stream().filter(dto -> dto.getSymbol().equals("OANDA:USD_KRW")).findFirst()
+                            .ifPresent(dto -> cache.put(symbol, dto));
+                }
             }
         } catch (Exception e) {
             log.error("Failed to fetch {} from Finnhub", symbol, e);
         }
+    }
+
+    private void fetchExchangeRate(String cacheSymbol) {
+        log.info("Fetching alternative Exchange Rate (Yahoo Finance KRW=X)");
+        try {
+            // Using Yahoo Finance API as it doesn't require a key
+            String url = "https://query1.finance.yahoo.com/v8/finance/chart/KRW=X";
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                JsonNode root = objectMapper.readTree(response.body());
+                JsonNode result = root.path("chart").path("result").get(0);
+                JsonNode meta = result.path("meta");
+
+                double currentPrice = meta.path("regularMarketPrice").asDouble();
+                double previousClose = meta.path("chartPreviousClose").asDouble();
+
+                double change = currentPrice - previousClose;
+                double changePercent = (change / previousClose) * 100.0;
+
+                MarketIndexDto dto = MarketIndexDto.builder()
+                        .symbol(cacheSymbol)
+                        .name("원/달러 환율")
+                        .price(String.format("%,.2f", currentPrice))
+                        .change((change > 0 ? "+" : "") + String.format("%.2f", change))
+                        .changePercent((changePercent > 0 ? "+" : "") + String.format("%.2f", changePercent))
+                        .type("FOREX")
+                        .build();
+
+                cache.put(cacheSymbol, dto);
+                log.debug("Successfully fetched and cached Exchange Rate via Yahoo Finance: {}", dto);
+            } else {
+                log.error("Yahoo Finance Error for KRW=X: Status {}", response.statusCode());
+                applyMockExchangeRate(cacheSymbol);
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch Exchange Rate from Yahoo Finance", e);
+            applyMockExchangeRate(cacheSymbol);
+        }
+    }
+
+    private void applyMockExchangeRate(String symbol) {
+        log.info("Applying fallback mock data for USD/KRW due to alternative API failure");
+        getMockIndices().stream().filter(dto -> dto.getSymbol().equals("OANDA:USD_KRW")).findFirst()
+                .ifPresent(dto -> cache.put(symbol, dto));
     }
 
     public List<MarketIndexDto> getIndices() {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { clsx } from 'clsx';
-import { TrendingUp, TrendingDown, Globe, DollarSign, Bitcoin, Coins } from 'lucide-react';
+import { TrendingUp, TrendingDown, Globe, DollarSign, Bitcoin } from 'lucide-react';
 
 interface MarketIndex {
     symbol: string;
@@ -41,101 +41,69 @@ export const MarketIndicesWidget: React.FC<MarketIndicesWidgetProps> = ({ onSele
         return () => clearInterval(interval);
     }, []);
 
-    // Separate main indices from the exchange rate
-    const mainIndices = indices.filter(i => i.symbol !== 'OANDA:USD_KRW');
-    const exchangeRate = indices.find(i => i.symbol === 'OANDA:USD_KRW');
+    // Identify exchange rate and bitcoin flexibly
+    const exchangeRate = indices.find(i => i.symbol?.includes('USD_KRW') || i.name?.includes('환율') || i.type === 'FOREX' || i.symbol === 'OANDA:USD_KRW');
+    const mainIndices = indices.filter(i => i !== exchangeRate);
+
+    const kospi = mainIndices.find(i => i.name.includes('KOSPI') || i.symbol === 'KOSPI' || i.symbol === 'KS11');
+    const nasdaq = mainIndices.find(i => i.name.includes('NASDAQ') || i.name.includes('나스닥') || i.symbol === 'IXIC');
+    const btc = mainIndices.find(i => i.symbol?.includes('BTC') || i.name?.toLowerCase().includes('bitcoin') || i.type === 'CRYPTO');
+
+    const renderCard = (index: MarketIndex | undefined, isExchangeRate = false) => {
+        if (!index && isLoading) {
+            return (
+                <div className="glass-card p-6 rounded-2xl animate-pulse flex flex-col justify-between min-h-[140px]">
+                    <div className="h-6 w-24 bg-white/10 rounded mb-4"></div>
+                    <div className="space-y-2">
+                        <div className="h-8 w-32 bg-white/10 rounded"></div>
+                        <div className="h-4 w-16 bg-white/10 rounded"></div>
+                    </div>
+                </div>
+            );
+        }
+        if (!index) return null;
+
+        const isPositive = index.change.startsWith('+') || (!index.change.startsWith('-') && parseFloat(index.change) > 0);
+        const isZero = parseFloat(index.change) === 0;
+
+        return (
+            <div 
+                key={index.symbol}
+                onClick={() => onSelect?.(index.symbol)}
+                className="glass-card p-6 rounded-2xl flex flex-col justify-between min-h-[140px] cursor-pointer hover:bg-white/5 transition-all group overflow-hidden relative"
+            >
+                {/* Background ambient glow based on trend */}
+                <div className={clsx("absolute -bottom-10 -right-10 w-32 h-32 blur-[60px] opacity-20 rounded-full", isPositive ? "bg-[#ff4d4f]" : "bg-[#3b82f6]")}></div>
+                
+                <div className="flex items-center justify-between mb-4 z-10">
+                    <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-white/10 rounded-lg">
+                            {isExchangeRate ? <DollarSign size={16} /> : index.type === 'CRYPTO' || index.symbol?.includes('BTC') ? <Bitcoin size={16} /> : index.type === 'US' ? 'US' : index.type === 'KR' ? 'KR' : <Globe size={16} />}
+                        </div>
+                        <span className="font-bold text-sm text-foreground/80 group-hover:text-primary transition-colors">{index.name}</span>
+                    </div>
+                </div>
+
+                <div className="z-10">
+                    <div className="text-2xl font-black font-mono mb-1">
+                        {isExchangeRate ? `₩${index.price}` : index.type === 'US' ? `$${index.price}` : index.type === 'KR' ? `₩${index.price}` : index.price}
+                    </div>
+                    <div className={clsx("text-sm font-bold flex items-center gap-1 w-fit px-2 py-0.5 rounded-md", 
+                        isPositive ? "text-[#ff4d4f] bg-[#ff4d4f]/10" : isZero ? "text-muted-foreground bg-white/5" : "text-[#3b82f6] bg-[#3b82f6]/10")}>
+                        {!isZero && (isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />)}
+                        {index.changePercent}%
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     return (
-        <div className="bg-card rounded-xl border border-border shadow-sm p-5 h-full flex flex-col">
-            <div className="flex items-center gap-2 mb-4">
-                <div className="p-1.5 bg-blue-500/10 rounded-lg">
-                    <Globe className="text-blue-500 fill-blue-500/20" size={20} />
-                </div>
-                <h3 className="font-bold text-lg">주요 지수</h3>
-                {isLoading && indices.length === 0 && <span className="text-xs text-muted-foreground ml-auto">로딩중...</span>}
-            </div>
-
-            <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                {mainIndices.map((index) => {
-                    const isPositive = index.change.startsWith('+') || (!index.change.startsWith('-') && parseFloat(index.change) > 0);
-                    const isZero = parseFloat(index.change) === 0;
-                    
-                    return (
-                        <div 
-                            key={index.symbol}
-                            onClick={() => onSelect?.(index.symbol)}
-                            className="group flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-all border border-transparent hover:border-border"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className={clsx(
-                                    "w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs",
-                                    index.type === 'US' ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" :
-                                    index.type === 'KR' ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" :
-                                    index.type === 'FOREX' ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" :
-                                    index.type === 'CRYPTO' ? "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400" :
-                                    "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
-                                )}>
-                                    {index.type === 'US' && 'US'}
-                                    {index.type === 'KR' && 'KR'}
-                                    {index.type === 'FOREX' && <DollarSign size={14} />}
-                                    {index.type === 'CRYPTO' && <Bitcoin size={16} />}
-                                    {index.type === 'COMMODITY' && <Coins size={14} />}
-                                </div>
-                                <div>
-                                    <div className="font-bold text-sm group-hover:text-primary transition-colors">{index.name}</div>
-                                    <div className="text-[10px] text-muted-foreground">{index.symbol}</div>
-                                </div>
-                            </div>
-                            
-                            <div className="text-right">
-                                <div className="font-mono text-sm font-medium">
-                                    {index.type === 'US' || index.type === 'CRYPTO' || index.type === 'COMMODITY' ? '$' : index.type === 'KR' ? '₩' : ''}
-                                    {index.price}
-                                </div>
-                                <div className={clsx("text-xs font-bold flex items-center justify-end gap-1", 
-                                    isPositive ? "text-red-500" : isZero ? "text-muted-foreground" : "text-blue-500")}>
-                                    {!isZero && (isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />)}
-                                    {index.changePercent}%
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-            
-            <div className="mt-4 pt-3 border-t border-border">
-                {exchangeRate ? (
-                    <div 
-                        onClick={() => onSelect?.(exchangeRate.symbol)}
-                        className="group flex items-center justify-between p-2 -mx-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-all border border-transparent hover:border-border"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
-                                <DollarSign size={14} />
-                            </div>
-                            <div>
-                                <div className="font-bold text-sm group-hover:text-primary transition-colors">{exchangeRate.name}</div>
-                                <div className="text-[10px] text-muted-foreground">USD/KRW</div>
-                            </div>
-                        </div>
-                        
-                        <div className="text-right">
-                            <div className="font-mono text-sm font-medium">
-                                ₩{exchangeRate.price}
-                            </div>
-                            <div className={clsx("text-xs font-bold flex items-center justify-end gap-1", 
-                                exchangeRate.change.startsWith('+') || (!exchangeRate.change.startsWith('-') && parseFloat(exchangeRate.change) > 0) ? "text-red-500" : parseFloat(exchangeRate.change) === 0 ? "text-muted-foreground" : "text-blue-500")}>
-                                {parseFloat(exchangeRate.change) !== 0 && ((exchangeRate.change.startsWith('+') || (!exchangeRate.change.startsWith('-') && parseFloat(exchangeRate.change) > 0)) ? <TrendingUp size={12} /> : <TrendingDown size={12} />)}
-                                {exchangeRate.changePercent}%
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="w-full text-xs text-center p-2 text-muted-foreground animate-pulse">
-                        환율 정보 로딩중...
-                    </div>
-                )}
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 w-full">
+            {renderCard(kospi)}
+            {renderCard(nasdaq)}
+            {renderCard(exchangeRate, true)}
+            {renderCard(btc)}
         </div>
     );
 };

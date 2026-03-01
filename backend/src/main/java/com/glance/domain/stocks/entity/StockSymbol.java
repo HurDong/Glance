@@ -25,7 +25,7 @@ public class StockSymbol extends BaseTimeEntity {
     private String symbol; // Ticker Symbol (e.g. AAPL, 005930)
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false, columnDefinition = "VARCHAR(20)")
     private Market market;
 
     private String nameKr;

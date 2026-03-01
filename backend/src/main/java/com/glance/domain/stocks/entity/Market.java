@@ -5,5 +5,6 @@ public enum Market {
     NYSE,
     AMEX,
     KOSPI,
-    KOSDAQ
+    KOSDAQ,
+    CASH
 }

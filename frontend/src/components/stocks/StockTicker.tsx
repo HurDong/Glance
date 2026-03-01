@@ -69,19 +69,19 @@ export const StockTicker: React.FC<StockTickerProps> = ({ symbols: propSymbols }
     const tickerSymbols = [...displaySymbols, ...displaySymbols, ...displaySymbols, ...displaySymbols];
 
     return (
-        <div className="w-full bg-card/40 backdrop-blur-md border-b border-white/5 overflow-hidden relative group"> {/* added group for hover pause */}
+        <div className="w-full h-[40px] bg-card/40 backdrop-blur-md border-b border-white/5 overflow-hidden relative group flex items-center"> 
             {/* Header Overlay */}
-            <div className="absolute left-0 top-0 bottom-0 z-20 flex items-center bg-card/80 backdrop-blur-md pr-4 pl-5 border-r border-white/5 shadow-[4px_0_12px_rgba(0,0,0,0.1)]">
-                <div className="text-xs font-bold text-primary whitespace-nowrap flex items-center gap-1">
+            <div className="absolute left-0 top-0 bottom-0 z-[40] flex items-center justify-center bg-card px-6 border-r border-border shadow-[4px_0_12px_rgba(0,0,0,0.1)]">
+                <div className="text-[13px] font-black text-primary whitespace-nowrap flex items-center gap-2">
                     <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                     </span>
                     실시간 시세
                 </div>
             </div>
 
-            <div className="flex w-max animate-ticker group-hover:[animation-play-state:paused] pl-32 items-center h-10"> {/* Adjusted padding and height */}
+            <div className="flex w-max animate-ticker group-hover:[animation-play-state:paused] pl-[130px] items-center h-full">
                 {tickerSymbols.map((symbol, index) => {
                     // Use index in key to allow duplicates
                     const key = `${symbol}-${index}`; 
@@ -95,10 +95,10 @@ export const StockTicker: React.FC<StockTickerProps> = ({ symbols: propSymbols }
                         </div>
                     );
 
-                    const changeVal = parseFloat(data.change);
-                    const isUp = changeVal > 0;
-                    const isDown = changeVal < 0;
-                    const isSame = changeVal === 0;
+                    const rateVal = parseFloat(data.changeRate || "0");
+                    const isUp = rateVal > 0;
+                    const isDown = rateVal < 0;
+                    const isSame = rateVal === 0 || isNaN(rateVal);
 
                     const isUS = /^[a-zA-Z]+$/.test(symbol);
                     const currencyPrefix = isUS ? '$' : '₩';
@@ -108,15 +108,15 @@ export const StockTicker: React.FC<StockTickerProps> = ({ symbols: propSymbols }
                     });
 
                     return (
-                        <div key={key} className="flex-shrink-0 flex items-center space-x-3 px-6 border-r border-white/5 last:border-0 hover:bg-white/5 transition-colors cursor-default">
-                            <span className="font-semibold text-[15px] text-foreground/90">{name}</span>
+                        <div key={key} className="flex-shrink-0 flex items-center space-x-3 px-5 border-r border-white/5 last:border-0 hover:bg-white/5 transition-colors cursor-default">
+                            <span className="font-semibold text-[14px] text-foreground/90">{name}</span>
                             
                             <div className="flex items-center space-x-2">
                                 <span className={clsx(
                                     "font-mono text-sm font-semibold tracking-tight",
                                     isUp && "text-[#ff4d4f]",
                                     isDown && "text-[#3b82f6]",
-                                    isSame && "text-foreground"
+                                    isSame && "text-muted-foreground"
                                 )}>
                                     {currencyPrefix}{formattedPrice}
                                 </span>

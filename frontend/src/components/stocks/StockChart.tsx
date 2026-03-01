@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { clsx } from 'clsx';
-import { ArrowUpRight, ArrowDownRight, Maximize2, MoreHorizontal } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Maximize2 } from 'lucide-react';
 
 const STOCK_NAMES: { [key: string]: string } = {
     '005930': '삼성전자',
@@ -16,9 +16,9 @@ const STOCK_NAMES: { [key: string]: string } = {
     'AAPL': 'Apple',
     'MSFT': 'Microsoft',
     'AMZN': 'Amazon',
-    'GOOGL': 'Alphabet',
     'META': 'Meta',
-    'AMD': 'AMD'
+    'AMD': 'AMD',
+    'OANDA:USD_KRW': '원/달러 환율'
 };
 
 import { apiClient as api } from '../../api/axios';
@@ -138,11 +138,13 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol, market }) => {
         ? (market === 'KR' || market === 'KOSPI' || market === 'KOSDAQ' || market === 'KRX')
         : /^\d{6}(?:[A-Z])?$/.test(symbol); // Also handle ETF symbols like 0026S0
 
-    const currencyPrefix = isKoreanMarket ? '₩' : '$';
+    const currencyPrefix = (isKoreanMarket || symbol === 'OANDA:USD_KRW') ? '₩' : '$';
     
     // Use the explicitly passed market label if available, otherwise guess
     let marketLabel = market || 'NASDAQ';
-    if (!market) {
+    if (symbol === 'OANDA:USD_KRW') {
+        marketLabel = 'FOREX';
+    } else if (!market) {
         if (isKoreanMarket) marketLabel = 'KRX';
         else if (symbol.startsWith('BINANCE:')) marketLabel = 'CRYPTO';
     } else if (market === 'KR') {
@@ -150,7 +152,7 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol, market }) => {
     }
 
     return (
-        <div className="bg-card/50 backdrop-blur-xl rounded-2xl border border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden flex flex-col h-full min-h-[500px]">
+        <div className="glass-panel rounded-2xl overflow-hidden flex flex-col h-full min-h-[500px]">
             {/* Chart Header */}
             <div className="p-7 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
@@ -192,9 +194,6 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol, market }) => {
                             );
                         })}
                     </div>
-                    <button className="p-2 hover:bg-white/10 rounded-xl text-muted-foreground transition-all duration-300 hover:rotate-90">
-                        <MoreHorizontal size={20} />
-                    </button>
                 </div>
             </div>
 
@@ -249,7 +248,7 @@ export const StockChart: React.FC<StockChartProps> = ({ symbol, market }) => {
                                 (dataMin: number) => dataMin * 0.95,
                                 (dataMax: number) => dataMax * 1.05
                             ]}
-                            tickFormatter={(value: any) => !isKoreanMarket ? `$${value?.toFixed(1) || value}` : `₩${(value/10000).toFixed(0)}만`}
+                            tickFormatter={(value: any) => (!isKoreanMarket && symbol !== 'OANDA:USD_KRW') ? `$${value?.toFixed(1) || value}` : symbol === 'OANDA:USD_KRW' ? `₩${value.toLocaleString()}` : `₩${(value/10000).toFixed(0)}만`}
                             width={55}
                         />
                         <Tooltip 
