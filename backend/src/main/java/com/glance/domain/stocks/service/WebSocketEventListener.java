@@ -69,13 +69,21 @@ public class WebSocketEventListener {
                 }
 
                 // Fetch and send INITIAL snapshot
-                // Run asynchronously to avoid blocking the event listener?
-                // For now, run synchronously or use a managed executor if slow.
+                // Run asynchronously to avoid blocking the event listener
                 try {
                     var initialData = kisService.getCurrentPrice(symbol);
                     if (initialData != null) {
-                        messagingTemplate.convertAndSend("/api/v1/sub/stocks/" + symbol, initialData);
-                        log.debug("📡 Sent initial snapshot for {}", symbol);
+                        try {
+                            messagingTemplate.convertAndSend("/api/v1/sub/stocks/" + symbol, initialData);
+                            log.debug("📡 Sent initial snapshot for {}", symbol);
+                        } catch (org.springframework.messaging.MessageDeliveryException mde) {
+                            log.warn("Failed to send STOMP message (Client may have disconnected early): {}",
+                                    mde.getMessage());
+                        } catch (Exception sendEx) {
+                            log.error("Unexpected error sending initial snapshot via STOMP for {}", symbol, sendEx);
+                        }
+                    } else {
+                        log.debug("No initial data available from KIS for symbol: {} (e.g. Market closed)", symbol);
                     }
                 } catch (Exception e) {
                     log.error("Failed to fetch initial price for {}", symbol, e);

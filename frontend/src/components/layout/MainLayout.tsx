@@ -38,10 +38,17 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, onT
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  React.useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
+  }, [theme]);
+
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
-    document.documentElement.classList.toggle('dark');
     localStorage.setItem('theme', newTheme);
   };
 
@@ -126,9 +133,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, onT
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
         <header className="h-16 flex items-center justify-between px-6 bg-background/60 backdrop-blur-xl border-b border-white/5 sticky top-0 z-40">
-          <div className="flex items-center space-x-4">
-            <button onClick={toggleSidebar} className="p-2 hover:bg-white/5 rounded-xl transition-colors text-muted-foreground hover:text-foreground">
-              <Menu size={20} />
+          <div className="flex items-center space-x-4 gap-2">
+            <button 
+              onClick={toggleSidebar} 
+              className="p-2 bg-card hover:bg-accent border border-border/50 shadow-sm rounded-xl transition-all text-foreground/80 hover:text-primary flex items-center justify-center group"
+              title="사이드바 열기/닫기"
+            >
+              <Menu size={22} className="group-hover:scale-110 transition-transform duration-300" />
             </button>
             <div className="relative hidden md:block w-96 group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
@@ -174,8 +185,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, onT
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 overflow-y-auto p-6 bg-transparent">
-          <div className="max-w-7xl mx-auto h-full">
+        <main className="flex-1 overflow-y-auto bg-transparent">
+          <div className="h-full">
             {children}
           </div>
         </main>

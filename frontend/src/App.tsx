@@ -4,16 +4,15 @@ import { MainLayout } from './components/layout/MainLayout';
 // import { GroupFeed } from './components/groups/GroupFeed'; // Deprecated
 import { GroupPortfolioDashboard } from './components/groups/GroupPortfolioDashboard';
 import { StockListPage } from './components/stocks/StockListPage';
-import { PortfolioList } from './components/portfolio/PortfolioList';
-import { PortfolioDetail } from './components/portfolio/PortfolioDetail';
+import { MyPortfolioDashboard } from './components/portfolio/MyPortfolioDashboard';
 import { LoginPage } from './components/auth/LoginPage';
 import { SignupPage } from './components/auth/SignupPage';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { StockTicker } from './components/stocks/StockTicker';
-import { QuickViewDashboard } from './components/stocks/QuickViewDashboard';
+import { PortfolioOverviewWidget } from './components/portfolio/PortfolioOverviewWidget';
 import { MarketIndicesWidget } from './components/stocks/MarketIndicesWidget';
 import { StockChart } from './components/stocks/StockChart';
-import { GroupPortfolioWidget } from './components/groups/GroupPortfolioWidget';
+import { WatchlistWidget } from './components/stocks/WatchlistWidget';
 import { GlobalAlert } from './components/shared/GlobalAlert';
 
 const MainContent = ({ activeTab, onTabChange }: { activeTab: string, onTabChange: (tab: string) => void }) => {
@@ -23,34 +22,36 @@ const MainContent = ({ activeTab, onTabChange }: { activeTab: string, onTabChang
     switch (activeTab) {
       case 'dashboard':
         return (
-          <div className="flex flex-col h-[calc(100vh-100px)] space-y-4">
-            {/* Top Section: Ticker + QuickView + Hot */}
-            <div>
-                 <StockTicker />
+          <div className="flex flex-col h-[calc(100vh-80px)] space-y-6 pb-8 custom-scrollbar overflow-y-auto overflow-x-hidden">
+            {/* Top Section: Ticker */}
+            <div className="w-full max-w-[1700px] mx-auto px-4 lg:px-8 pt-6">
+                 <div className="rounded-2xl overflow-hidden border border-white/10 shadow-lg">
+                     <StockTicker />
+                 </div>
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 w-full max-w-[1700px] mx-auto px-4 lg:px-8">
                 {/* Left Column (Main) */}
-                <div className="lg:col-span-9 flex flex-col gap-6 h-full min-h-0">
-                    {/* Top Row: Interest Stocks & Hot Stocks */}
-                    <div className="grid grid-cols-1 md:grid-cols-7 gap-6 min-h-[300px]">
-                        <div className="md:col-span-4 h-full">
-                            <QuickViewDashboard onSelect={setSelectedSymbol} />
-                        </div>
-                        <div className="md:col-span-3 h-full">
-                            <MarketIndicesWidget onSelect={setSelectedSymbol} />
-                        </div>
+                <div className="lg:col-span-9 flex flex-col gap-6 h-full">
+                    {/* Top Row: Market Indices Grid */}
+                    <div className="w-full">
+                        <MarketIndicesWidget onSelect={setSelectedSymbol} />
                     </div>
 
-                    {/* Bottom Row: Chart */}
-                    <div className="flex-1 min-h-[400px]">
+                    {/* Middle Row: Chart */}
+                    <div className="flex-1 min-h-[500px]">
                         <StockChart symbol={selectedSymbol} />
+                    </div>
+
+                    {/* Bottom Row: Portfolio Overview */}
+                    <div className="w-full">
+                        <PortfolioOverviewWidget />
                     </div>
                 </div>
 
                 {/* Right Column (Sidebar) */}
-                <div className="lg:col-span-3 h-full min-h-0">
-                    <GroupPortfolioWidget />
+                <div className="lg:col-span-3 flex flex-col gap-6 h-full">
+                    <WatchlistWidget onSelect={setSelectedSymbol} />
                 </div>
             </div>
           </div>
@@ -58,7 +59,7 @@ const MainContent = ({ activeTab, onTabChange }: { activeTab: string, onTabChang
       case 'stocks':
         return <StockListPage />;
       case 'portfolio':
-        return <PortfolioList />;
+        return <MyPortfolioDashboard />;
       case 'group':
         return <GroupPortfolioDashboard />;
       default:
@@ -93,12 +94,12 @@ function App() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/portfolio/:id" element={
           <MainLayout activeTab="portfolio" onTabChange={handleTabChange}>
-            <PortfolioDetail />
+            <MyPortfolioDashboard />
           </MainLayout>
         } />
         <Route path="/portfolio" element={
           <MainLayout activeTab="portfolio" onTabChange={handleTabChange}>
-            <PortfolioList />
+            <MyPortfolioDashboard />
           </MainLayout>
         } />
         <Route path="/*" element={<MainContent activeTab={activeTab} onTabChange={handleTabChange} />} />

@@ -22,6 +22,7 @@ public class KisAccessTokenService {
     private final KisProperties kisProperties;
     private String accessToken;
     private LocalDateTime expiryDate;
+    private String approvalKey;
 
     public synchronized String getAccessToken() {
         if (accessToken != null && expiryDate != null && expiryDate.isAfter(LocalDateTime.now().plusMinutes(10))) {
@@ -58,6 +59,10 @@ public class KisAccessTokenService {
     }
 
     public synchronized String getApprovalKey() {
+        if (this.approvalKey != null) {
+            return this.approvalKey;
+        }
+
         log.info("🔑 Requesting KIS WebSocket Approval Key...");
         RestClient restClient = RestClient.create();
 
@@ -76,7 +81,8 @@ public class KisAccessTokenService {
                 throw new BusinessException("KIS Approval Key 발급 실패", ErrorCode.INTERNAL_SERVER_ERROR);
             }
 
-            return (String) response.get("approval_key");
+            this.approvalKey = (String) response.get("approval_key");
+            return this.approvalKey;
         } catch (Exception e) {
             log.error("Failed to get KIS Approval Key", e);
             throw new BusinessException("KIS WebSocket 인증 실패", ErrorCode.INTERNAL_SERVER_ERROR);
