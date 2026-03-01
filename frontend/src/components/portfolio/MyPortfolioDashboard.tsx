@@ -69,48 +69,77 @@ const QuickAddButtons = ({
     type?: 'amount' | 'quantity',
     onReset?: () => void
 }) => {
-    const buttons = type === 'quantity' 
+    const negButtons = type === 'quantity' 
         ? [
-            { label: '+100', value: 100 },
-            { label: '+10', value: 10 },
-            { label: '+1', value: 1 },
+            { label: '-100', value: -100 },
+            { label: '-10', value: -10 },
+            { label: '-1', value: -1 }
           ]
         : currency === 'KRW'
             ? [
-                { label: '+100만', value: 1000000 },
-                { label: '+10만', value: 100000 },
-                { label: '+1만', value: 10000 },
-                { label: '+1천', value: 1000 },
+                { label: '-100만', value: -1000000 },
+                { label: '-10만', value: -100000 },
+                { label: '-1만', value: -10000 }
               ]
             : [
-                { label: '+$1k', value: 1000 },
-                { label: '+$100', value: 100 },
+                { label: '-$100', value: -100 },
+                { label: '-$10', value: -10 },
+                { label: '-$1', value: -1 }
+              ];
+
+    const posButtons = type === 'quantity'
+        ? [
+            { label: '+1', value: 1 },
+            { label: '+10', value: 10 },
+            { label: '+100', value: 100 }
+          ]
+        : currency === 'KRW'
+            ? [
+                { label: '+1만', value: 10000 },
+                { label: '+10만', value: 100000 },
+                { label: '+100만', value: 1000000 }
+              ]
+            : [
+                { label: '+$1', value: 1 },
                 { label: '+$10', value: 10 },
+                { label: '+$100', value: 100 }
               ];
 
     return (
-        <div className="flex items-center gap-1.5 mt-1.5 px-0.5">
-            <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-                {buttons.map(btn => (
-                    <button
-                        key={btn.label}
-                        type="button"
-                        onClick={() => onAdd(btn.value)}
-                        className="whitespace-nowrap px-2 py-1 text-[10px] font-bold bg-white/5 hover:bg-primary/20 hover:text-primary-foreground border border-white/10 hover:border-primary/50 rounded-md transition-all active:scale-95 shadow-sm backdrop-blur-sm"
-                    >
-                        {btn.label}
-                    </button>
-                ))}
-            </div>
-            {onReset && (
+        <div className="grid grid-cols-7 gap-1.5 mt-2 w-full items-stretch">
+            {negButtons.map((btn, i) => (
                 <button
+                    key={`neg-${i}`}
                     type="button"
-                    onClick={onReset}
-                    className="whitespace-nowrap px-2 py-1 text-[10px] font-bold text-red-400/70 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all ml-auto"
+                    onClick={() => onAdd(btn.value)}
+                    className="w-full py-2 text-[10px] font-bold text-red-500 bg-red-400/5 hover:bg-red-400/15 border border-red-400/10 rounded-lg transition-all active:scale-95 shadow-sm"
                 >
-                    초기화
+                    {btn.label}
                 </button>
-            )}
+            ))}
+            
+            <div className="flex items-center justify-center">
+                {onReset && (
+                    <button
+                        type="button"
+                        onClick={onReset}
+                        className="text-[10px] font-bold text-muted-foreground/70 hover:text-red-500 hover:scale-105 transition-all whitespace-nowrap"
+                    >
+                        초기화
+                    </button>
+                )}
+            </div>
+
+            {posButtons.map((btn, i) => (
+                <button
+                    key={`pos-${i}`}
+                    type="button"
+                    onClick={() => onAdd(btn.value)}
+                    className="w-full py-2 text-[10px] font-bold text-primary bg-primary/5 hover:bg-primary/20 border border-primary/10 rounded-lg transition-all active:scale-95 shadow-sm"
+                >
+                    {btn.label}
+                </button>
+            ))}
         </div>
     );
 };
@@ -133,19 +162,19 @@ const PremiumStepper = ({
     step?: number
 }) => {
     return (
-        <div className="flex items-center bg-muted/30 border border-border/60 rounded-lg p-0.5 group/stepper focus-within:border-primary/40 transition-all h-9">
+        <div className="flex items-center bg-muted/30 border border-border/60 rounded-xl p-1 group/stepper focus-within:border-primary/40 transition-all h-12">
             <button 
                 type="button"
                 disabled={disabled}
                 onClick={() => onAdd(-step)}
-                className="w-8 h-full flex items-center justify-center rounded-md hover:bg-white/5 text-muted-foreground/60 hover:text-foreground transition-all disabled:opacity-20 active:scale-90"
+                className="w-10 h-full flex items-center justify-center rounded-lg hover:bg-white/5 text-muted-foreground/80 hover:text-foreground transition-all disabled:opacity-20 active:scale-90"
             >
-                <Minus size={14} />
+                <Minus size={18} />
             </button>
             
             <div className="relative flex-1 flex items-center justify-center h-full">
                 {currency && (
-                    <span className="absolute left-2 text-muted-foreground/50 font-bold text-[11px] pointer-events-none">
+                    <span className="absolute left-3 text-muted-foreground/60 font-bold text-sm pointer-events-none">
                         {currency === 'KRW' ? '₩' : '$'}
                     </span>
                 )}
@@ -155,7 +184,7 @@ const PremiumStepper = ({
                     placeholder={placeholder}
                     value={value}
                     onChange={(e) => onChange(Number(e.target.value))}
-                    className={`w-full bg-transparent border-none outline-none text-center font-mono text-xs font-medium ${currency ? 'pl-6' : ''} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+                    className={`w-full bg-transparent border-none outline-none text-center font-mono text-base font-semibold ${currency ? 'pl-8' : ''} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
                 />
             </div>
 
@@ -163,9 +192,9 @@ const PremiumStepper = ({
                 type="button"
                 disabled={disabled}
                 onClick={() => onAdd(step)}
-                className="w-8 h-full flex items-center justify-center rounded-md hover:bg-white/5 text-muted-foreground/60 hover:text-foreground transition-all disabled:opacity-20 active:scale-90"
+                className="w-10 h-full flex items-center justify-center rounded-lg hover:bg-white/5 text-muted-foreground/80 hover:text-foreground transition-all disabled:opacity-20 active:scale-90"
             >
-                <Plus size={14} />
+                <Plus size={18} />
             </button>
         </div>
     );
@@ -756,24 +785,24 @@ export const MyPortfolioDashboard: React.FC = () => {
                             <h3 className="text-xl font-bold flex items-center gap-2">💰 현금 추가</h3>
                             <p className="text-sm text-muted-foreground mt-1">포트폴리오에 보유 현금을 추가합니다.</p>
                         </div>
-                        <form onSubmit={handleAddCash} className="p-5 space-y-4">
-                            <div className="space-y-1">
-                                <label className="text-[11px] font-bold text-muted-foreground mb-1 block opacity-60 ml-1">통화 선택</label>
-                                <div className="flex gap-1.5">
+                        <form onSubmit={handleAddCash} className="p-6 space-y-6">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-muted-foreground mb-1.5 block opacity-70 ml-1">통화 선택</label>
+                                <div className="flex gap-2">
                                     {['KRW', 'USD'].map(cur => (
                                         <button
                                             key={cur}
                                             type="button"
                                             onClick={() => setCashForm(f => ({ ...f, currency: cur }))}
-                                            className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all active:scale-95 ${cashForm.currency === cur ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/30 text-muted-foreground border-border/60 hover:bg-accent'}`}
+                                            className={`flex-1 py-3 rounded-xl text-sm font-bold border transition-all active:scale-95 ${cashForm.currency === cur ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/30 text-muted-foreground border-border/60 hover:bg-accent'}`}
                                         >
                                             {cur === 'KRW' ? '원화 (KRW)' : '달러 (USD)'}
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                            <div className="space-y-1">
-                                <label className="text-[11px] font-bold text-muted-foreground mb-1 block opacity-60 ml-1">추가 금액</label>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-muted-foreground mb-1.5 block opacity-70 ml-1">추가 금액</label>
                                 <PremiumStepper 
                                     value={cashForm.amount || ''}
                                     onChange={(val) => setCashForm(f => ({ ...f, amount: val }))}
@@ -788,24 +817,24 @@ export const MyPortfolioDashboard: React.FC = () => {
                                     onReset={() => setCashForm(f => ({ ...f, amount: 0 }))}
                                 />
                                 {cashForm.amount > 0 && (
-                                    <p className="text-[10px] text-muted-foreground mt-1 px-1 opacity-60">
+                                    <p className="text-[11px] text-muted-foreground mt-1.5 px-2 opacity-60">
                                         = {cashForm.currency === 'KRW'
                                             ? `\u20a9${cashForm.amount.toLocaleString()}`
                                             : `$${cashForm.amount.toLocaleString()}`}
                                     </p>
                                 )}
                             </div>
-                            <div className="flex gap-2 pt-1">
+                            <div className="flex gap-3 pt-2">
                                 <button
                                     type="button"
                                     onClick={() => setIsAddCashModalOpen(false)}
-                                    className="flex-1 py-2 text-xs bg-accent/50 text-foreground font-bold rounded-lg hover:bg-muted transition-all active:scale-95"
+                                    className="flex-1 py-3.5 text-sm bg-accent/50 text-foreground font-bold rounded-xl hover:bg-muted transition-all active:scale-95"
                                 >
                                     취소
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 py-2 text-xs bg-primary text-white font-bold rounded-lg shadow-md hover:bg-primary/90 transition-all active:scale-95"
+                                    className="flex-1 py-3.5 text-sm bg-primary text-white font-bold rounded-xl shadow-lg hover:bg-primary/90 transition-all active:scale-95"
                                 >
                                     추가 완료
                                 </button>
@@ -904,39 +933,41 @@ export const MyPortfolioDashboard: React.FC = () => {
                                 )}
                             </div>
                             
-                            <div className="p-5 space-y-4">
-                                <div className="flex gap-2">
-                                    <div className="flex-1">
-                                        <label className="text-[11px] font-bold text-muted-foreground mb-1 block opacity-60 ml-1">보유 수량 (주)</label>
-                                        <PremiumStepper 
-                                            value={newItemForm.quantity}
-                                            onChange={(val) => setNewItemForm({ ...newItemForm, quantity: val })}
-                                            onAdd={(step) => setNewItemForm(f => ({ ...f, quantity: Math.max(0, (f.quantity || 0) + step) }))}
-                                            disabled={!selectedStock}
-                                            step={1}
-                                        />
-                                        <QuickAddButtons 
-                                            type="quantity"
-                                            onAdd={(val) => setNewItemForm(f => ({ ...f, quantity: (f.quantity || 0) + val }))}
-                                            onReset={() => setNewItemForm(f => ({ ...f, quantity: 1 }))}
-                                        />
+                            <div className="p-6 space-y-6">
+                                <div>
+                                    <div className="flex gap-3 mb-1.5">
+                                        <div className="flex-1">
+                                            <label className="text-xs font-bold text-muted-foreground mb-1.5 block opacity-70 ml-1">보유 수량 (주)</label>
+                                            <PremiumStepper 
+                                                value={newItemForm.quantity}
+                                                onChange={(val) => setNewItemForm({ ...newItemForm, quantity: val })}
+                                                onAdd={(step) => setNewItemForm(f => ({ ...f, quantity: Math.max(0, (f.quantity || 0) + step) }))}
+                                                disabled={!selectedStock}
+                                                step={1}
+                                            />
+                                        </div>
+                                        <div className="w-28">
+                                            <label className="text-xs font-bold text-muted-foreground mb-1.5 block opacity-70 ml-1">통화</label>
+                                            <select
+                                                value={newItemForm.currency}
+                                                onChange={e => setNewItemForm({ ...newItemForm, currency: e.target.value })}
+                                                className="w-full h-12 bg-muted/30 border border-border/60 rounded-xl px-3 text-sm font-bold focus:border-primary/40 outline-none transition-all disabled:opacity-50"
+                                                disabled
+                                            >
+                                                <option value="KRW">KRW (₩)</option>
+                                                <option value="USD">USD ($)</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div className="w-24">
-                                        <label className="text-[11px] font-bold text-muted-foreground mb-1 block opacity-60 ml-1">통화</label>
-                                        <select
-                                            value={newItemForm.currency}
-                                            onChange={e => setNewItemForm({ ...newItemForm, currency: e.target.value })}
-                                            className="w-full h-9 bg-muted/30 border border-border/60 rounded-lg px-2 text-[10px] font-bold focus:border-primary/40 outline-none transition-all disabled:opacity-50"
-                                            disabled
-                                        >
-                                            <option value="KRW">KRW (₩)</option>
-                                            <option value="USD">USD ($)</option>
-                                        </select>
-                                    </div>
+                                    <QuickAddButtons 
+                                        type="quantity"
+                                        onAdd={(val) => setNewItemForm(f => ({ ...f, quantity: (f.quantity || 0) + val }))}
+                                        onReset={() => setNewItemForm(f => ({ ...f, quantity: 1 }))}
+                                    />
                                 </div>
                                 
                                 <div>
-                                    <label className="text-[11px] font-bold text-muted-foreground mb-1 block opacity-60 ml-1">매수 평단가</label>
+                                    <label className="text-xs font-bold text-muted-foreground mb-1.5 block opacity-70 ml-1">매수 평단가</label>
                                     <PremiumStepper 
                                         value={newItemForm.averagePrice}
                                         onChange={(val) => setNewItemForm({ ...newItemForm, averagePrice: val })}
@@ -953,18 +984,18 @@ export const MyPortfolioDashboard: React.FC = () => {
                                     />
                                 </div>
 
-                                <div className="flex gap-2 pt-2">
+                                <div className="flex gap-3 pt-4">
                                     <button
                                         type="button"
                                         onClick={() => { setIsAddStockModalOpen(false); setSelectedStock(null); }}
-                                        className="flex-1 py-2 text-xs bg-accent/50 text-foreground font-bold rounded-lg hover:bg-muted transition-all active:scale-95"
+                                        className="flex-1 py-3.5 text-sm bg-accent/50 text-foreground font-bold rounded-xl hover:bg-muted transition-all active:scale-95"
                                     >
                                         취소
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={!selectedStock}
-                                        className="flex-1 py-2 text-xs bg-primary bg-gradient-to-r from-primary to-indigo-600 text-white font-bold rounded-lg shadow-md hover:opacity-90 transition-all disabled:opacity-30 active:scale-95"
+                                        className="flex-1 py-3.5 text-sm bg-primary bg-gradient-to-r from-primary to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:opacity-90 transition-all disabled:opacity-30 active:scale-95"
                                     >
                                         + 리스트에 추가
                                     </button>
@@ -986,36 +1017,38 @@ export const MyPortfolioDashboard: React.FC = () => {
                             </p>
                         </div>
                         <form onSubmit={handleUpdateItem} className="p-6 space-y-5">
-                            <div className="p-5 space-y-4">
-                                <div className="flex gap-2">
-                                    <div className="flex-1">
-                                        <label className="text-[11px] font-bold text-muted-foreground mb-1 block opacity-60 ml-1">보유 수량 (주)</label>
-                                        <PremiumStepper 
-                                            value={editItemForm.quantity}
-                                            onChange={(val) => setEditItemForm({ ...editItemForm, quantity: val })}
-                                            onAdd={(step) => setEditItemForm(f => ({ ...f, quantity: Math.max(0, (f.quantity || 0) + step) }))}
-                                            step={1}
-                                        />
-                                        <QuickAddButtons 
-                                            type="quantity"
-                                            onAdd={(val) => setEditItemForm(f => ({ ...f, quantity: (f.quantity || 0) + val }))}
-                                            onReset={() => setEditItemForm(f => ({ ...f, quantity: editingItem?.quantity || 1 }))}
-                                        />
+                            <div className="p-6 space-y-6">
+                                <div>
+                                    <div className="flex gap-3 mb-1.5">
+                                        <div className="flex-1">
+                                            <label className="text-xs font-bold text-muted-foreground mb-1.5 block opacity-70 ml-1">보유 수량 (주)</label>
+                                            <PremiumStepper 
+                                                value={editItemForm.quantity}
+                                                onChange={(val) => setEditItemForm({ ...editItemForm, quantity: val })}
+                                                onAdd={(step) => setEditItemForm(f => ({ ...f, quantity: Math.max(0, (f.quantity || 0) + step) }))}
+                                                step={1}
+                                            />
+                                        </div>
+                                        <div className="w-28">
+                                            <label className="text-xs font-bold text-muted-foreground mb-1.5 block opacity-70 ml-1">통화</label>
+                                            <select
+                                                value={editItemForm.currency}
+                                                onChange={e => setEditItemForm({ ...editItemForm, currency: e.target.value })}
+                                                className="w-full h-12 bg-muted/30 border border-border/60 rounded-xl px-3 text-sm font-bold focus:border-primary/40 outline-none transition-all"
+                                            >
+                                                <option value="KRW">KRW (₩)</option>
+                                                <option value="USD">USD ($)</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div className="w-24">
-                                        <label className="text-[11px] font-bold text-muted-foreground mb-1 block opacity-60 ml-1">통화</label>
-                                        <select
-                                            value={editItemForm.currency}
-                                            onChange={e => setEditItemForm({ ...editItemForm, currency: e.target.value })}
-                                            className="w-full h-9 bg-muted/30 border border-border/60 rounded-lg px-2 text-[10px] font-bold focus:border-primary/40 outline-none transition-all"
-                                        >
-                                            <option value="KRW">KRW (₩)</option>
-                                            <option value="USD">USD ($)</option>
-                                        </select>
-                                    </div>
+                                    <QuickAddButtons 
+                                        type="quantity"
+                                        onAdd={(val) => setEditItemForm(f => ({ ...f, quantity: (f.quantity || 0) + val }))}
+                                        onReset={() => setEditItemForm(f => ({ ...f, quantity: editingItem?.quantity || 1 }))}
+                                    />
                                 </div>
-                                 <div className="space-y-1">
-                                    <label className="text-[11px] font-bold text-muted-foreground mb-1 block opacity-60 ml-1">평단가</label>
+                                 <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-muted-foreground mb-1.5 block opacity-70 ml-1">평단가</label>
                                     <PremiumStepper 
                                         value={editItemForm.averagePrice}
                                         onChange={(val) => setEditItemForm({ ...editItemForm, averagePrice: val })}
@@ -1030,17 +1063,17 @@ export const MyPortfolioDashboard: React.FC = () => {
                                         onReset={() => setEditItemForm(f => ({ ...f, averagePrice: editingItem?.averagePrice || 0 }))}
                                     />
                                 </div>
-                                <div className="flex gap-2 pt-2">
+                                <div className="flex gap-3 pt-4">
                                     <button
                                         type="button"
                                         onClick={() => setEditingItem(null)}
-                                        className="flex-1 py-2 text-xs bg-accent/50 text-foreground font-bold rounded-lg hover:bg-muted transition-all active:scale-95"
+                                        className="flex-1 py-3.5 text-sm bg-accent/50 text-foreground font-bold rounded-xl hover:bg-muted transition-all active:scale-95"
                                     >
                                         취소
                                     </button>
                                     <button
                                         type="submit"
-                                        className="flex-1 py-2 text-xs bg-gradient-to-r from-primary to-indigo-600 text-white font-bold rounded-lg shadow-md hover:opacity-90 transition-all active:scale-95"
+                                        className="flex-1 py-3.5 text-sm bg-gradient-to-r from-primary to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:opacity-90 transition-all active:scale-95"
                                     >
                                         수정 저장
                                     </button>
