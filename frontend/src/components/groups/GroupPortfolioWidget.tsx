@@ -1,77 +1,96 @@
-import React, { useEffect, useState } from 'react';
-import { Users, ChevronRight, PieChart } from 'lucide-react';
-import { groupApi, type Group } from '../../api/group';
+import React, { useEffect } from 'react';
+import { Users, PieChart } from 'lucide-react';
+import { groupApi } from '../../api/group';
 import { useAuthStore } from '../../stores/authStore';
+import { clsx } from 'clsx';
 
 export const GroupPortfolioWidget: React.FC = () => {
-    const [groups, setGroups] = useState<Group[]>([]);
-    const { token, user } = useAuthStore();
+    const { token } = useAuthStore();
 
     useEffect(() => {
         if (token) {
-            groupApi.getMyGroups().then(setGroups).catch(console.error);
+            groupApi.getMyGroups().catch(console.error);
         }
     }, [token]);
 
-    const activeGroups = groups.filter(g => 
-        g.members.some(m => m.member.email === user?.email && m.status === 'ACCEPTED')
-    );
-
     return (
-        <div className="bg-card rounded-xl border border-border shadow-sm p-5 h-full flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-lg flex items-center gap-2">
-                    <Users size={18} className="text-primary" />
-                    <span>내 그룹</span>
-                </h3>
-            </div>
+        <div className="flex flex-col gap-6 h-full">
+            {/* Weekly Challenge Leaderboard */}
+            <div className="glass-panel rounded-2xl p-5 flex flex-col relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
+                
+                <div className="flex items-center justify-between mb-5 z-10">
+                    <h3 className="font-black text-lg flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+                            <PieChart size={16} />
+                        </div>
+                        주간 챌린지
+                    </h3>
+                    <button className="text-xs font-bold text-muted-foreground hover:text-foreground">
+                        더보기
+                    </button>
+                </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto pr-1 custom-scrollbar">
-                {activeGroups.length === 0 ? (
-                    <div className="text-center py-6 text-muted-foreground text-sm border border-dashed border-border rounded-lg">
-                        <p>활성화된 그룹이 없습니다.</p>
-                        <p className="text-xs mt-1 opacity-70">그룹에 가입하고 경쟁하세요!</p>
-                    </div>
-                ) : (
-                    activeGroups.slice(0, 3).map(group => (
-                        <div key={group.id} className="p-3 bg-muted/30 rounded-lg border border-transparent hover:border-primary/20 transition-all cursor-pointer group">
-                             <div className="flex justify-between items-start mb-2">
-                                <h4 className="font-bold text-sm truncate pr-2">{group.name}</h4>
-                                <span className="text-[10px] bg-background px-1.5 py-0.5 rounded border border-border">
-                                    {group.members.length}명 대기중
-                                </span>
-                             </div>
-                             
-                             <div className="flex items-center gap-2 mt-2">
-                                <div className="h-1.5 flex-1 bg-muted rounded-full overflow-hidden">
-                                     {/* Mock progress bar for "Ranking" or "Performance" */}
-                                    <div className="h-full bg-primary w-2/3" />
+                <div className="space-y-4 z-10">
+                    {/* Mock Leaderboard */}
+                    {[
+                        { rank: 1, name: '투자왕김존버', return: '+12.5%', isUp: true, color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
+                        { rank: 2, name: '워렌버핏조카', return: '+8.2%', isUp: true, color: 'text-zinc-300', bg: 'bg-zinc-300/10' },
+                        { rank: 3, name: '단타의신', return: '+5.1%', isUp: true, color: 'text-amber-600', bg: 'bg-amber-600/10' },
+                    ].map(user => (
+                        <div key={user.rank} className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
+                            <div className="flex items-center gap-3">
+                                <div className={clsx("w-7 h-7 flex items-center justify-center rounded-full font-black text-xs", user.bg, user.color)}>
+                                    {user.rank}
                                 </div>
-                                <span className="text-xs font-mono font-medium text-primary">#1</span>
-                             </div>
+                                <div className="font-bold text-sm">{user.name}</div>
+                            </div>
+                            <div className="text-[#ff4d4f] font-mono font-bold text-sm">
+                                {user.return}
+                            </div>
                         </div>
-                    ))
-                )}
-
-                {/* Promo Card if few groups */}
-                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/90 to-primary p-4 text-primary-foreground mt-2">
-                    <div className="relative z-10">
-                        <div className="font-bold text-sm mb-1">주간 챌린지</div>
-                        <div className="text-xs opacity-90 mb-3">
-                            이번 주 수익률 1위는 누구일까요?
-                        </div>
-                        <button className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1">
-                            <PieChart size={14} /> 대시보드 바로가기
-                        </button>
-                    </div>
-                    {/* Decorative Circle */}
-                    <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full blur-xl" />
+                    ))}
                 </div>
             </div>
-            
-             <button className="w-full mt-4 text-xs flex items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors">
-                전체 그룹 보기 <ChevronRight size={12} />
-            </button>
+
+            {/* Group Feed */}
+            <div className="glass-panel rounded-2xl p-5 flex flex-col flex-1 relative overflow-hidden">
+                <div className="flex items-center justify-between mb-5 z-10">
+                    <h3 className="font-black text-lg flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-500">
+                            <Users size={16} />
+                        </div>
+                        그룹 피드
+                    </h3>
+                </div>
+
+                <div className="flex-1 space-y-4 overflow-y-auto pr-1 custom-scrollbar z-10">
+                    {/* Mock Feed Items */}
+                    {[
+                        { id: 1, user: '투자왕김존버', action: 'NVIDIA 매수', time: '10분 전', icon: '📈' },
+                        { id: 2, user: '워렌버핏조카', action: '새 포트폴리오 공유', time: '1시간 전', icon: '💼' },
+                        { id: 3, user: '테슬람', action: '테슬라 목표가 달성!', time: '2시간 전', icon: '🚀' },
+                        { id: 4, user: '단타의신', action: '삼성전자 수익 실현', time: '5시간 전', icon: '💰' },
+                    ].map(item => (
+                        <div key={item.id} className="flex gap-3 pb-4 border-b border-white/5 last:border-0 last:pb-0">
+                            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-lg flex-shrink-0 border border-white/10">
+                                {item.icon}
+                            </div>
+                            <div>
+                                <div className="text-sm">
+                                    <span className="font-bold text-primary">{item.user}</span>님이
+                                    <span className="font-medium text-foreground ml-1">{item.action}</span>
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">{item.time}</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                
+                <button className="w-full mt-4 bg-white/5 hover:bg-white/10 text-foreground py-2.5 rounded-xl text-sm font-bold transition-colors border border-white/5 z-10">
+                    내 그룹 전체보기
+                </button>
+            </div>
         </div>
     );
 };

@@ -21,6 +21,7 @@ export interface GroupMember {
   };
   sharedPortfolioId?: number;
   sharedPortfolioName?: string;
+  sharedPortfolioIsPublic?: boolean;
   sharedPortfolioItems?: SharedPortfolioItem[];
   status: 'PENDING' | 'INVITED' | 'ACCEPTED' | 'REJECTED';
   joinedAt: string;

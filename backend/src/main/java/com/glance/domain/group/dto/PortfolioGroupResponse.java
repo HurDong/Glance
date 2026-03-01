@@ -33,6 +33,7 @@ public record PortfolioGroupResponse(
             MemberResponseDto member,
             Long sharedPortfolioId,
             String sharedPortfolioName,
+            Boolean sharedPortfolioIsPublic,
             List<PortfolioItemResponse> sharedPortfolioItems,
             String status,
             LocalDateTime joinedAt) {
@@ -49,6 +50,7 @@ public record PortfolioGroupResponse(
                     MemberResponseDto.of(groupMember.getMember()),
                     groupMember.getSharedPortfolio() != null ? groupMember.getSharedPortfolio().getId() : null,
                     groupMember.getSharedPortfolio() != null ? groupMember.getSharedPortfolio().getName() : null,
+                    groupMember.getSharedPortfolio() != null ? groupMember.getSharedPortfolio().getIsPublic() : null,
                     items,
                     groupMember.getStatus().name(),
                     groupMember.getCreatedAt());
