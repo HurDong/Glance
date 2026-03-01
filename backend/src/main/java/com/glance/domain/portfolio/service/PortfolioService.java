@@ -11,6 +11,7 @@ import com.glance.domain.portfolio.entity.Portfolio;
 import com.glance.domain.portfolio.entity.PortfolioItem;
 import com.glance.domain.portfolio.repository.PortfolioItemRepository;
 import com.glance.domain.portfolio.repository.PortfolioRepository;
+import com.glance.domain.stocks.entity.Market;
 import com.glance.domain.stocks.entity.StockSymbol;
 import com.glance.domain.stocks.repository.StockSymbolRepository;
 import lombok.RequiredArgsConstructor;
@@ -70,8 +71,21 @@ public class PortfolioService {
             throw new BusinessException(ErrorCode.HANDLE_ACCESS_DENIED);
         }
 
-        StockSymbol stockSymbol = stockSymbolRepository.findBySymbol(request.symbol())
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+        // market이 제공된 경우 (e.g. CASH) 정확히 일치하는 심볼을 조회
+        StockSymbol stockSymbol;
+        if (request.market() != null && !request.market().isBlank()) {
+            Market market;
+            try {
+                market = Market.valueOf(request.market().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            }
+            stockSymbol = stockSymbolRepository.findBySymbolAndMarket(request.symbol(), market)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+        } else {
+            stockSymbol = stockSymbolRepository.findBySymbol(request.symbol())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+        }
 
         Optional<PortfolioItem> existingItemOpt = portfolioItemRepository.findByPortfolioAndStockSymbol(portfolio,
                 stockSymbol);
