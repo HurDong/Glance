@@ -34,11 +34,12 @@ public class SecurityConfig {
                 .sessionManagement(
                         sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/api/v1/stocks/interest/**").authenticated() // Interest stocks require auth
-                        .requestMatchers("/api/v1/stocks/**").permitAll() // Public access to other stock info
-                        .requestMatchers("/api/v1/market/**").permitAll() // Public access to market indices
-                        .requestMatchers("/ws-glance/**").permitAll() // Allow WebSocket connection
+                        .requestMatchers("/api/v1/stocks/interest/**").authenticated()
+                        .requestMatchers("/api/v1/stocks/**").permitAll()
+                        .requestMatchers("/api/v1/market/**").permitAll()
+                        .requestMatchers("/ws-glance/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
@@ -51,7 +52,7 @@ public class SecurityConfig {
     public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
         configuration.setAllowedOrigins(java.util.List.of("http://localhost:5173"));
-        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(java.util.List.of("*"));
         configuration.setAllowCredentials(true);
 
