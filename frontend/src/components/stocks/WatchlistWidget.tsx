@@ -251,7 +251,6 @@ export const WatchlistWidget: React.FC<WatchlistWidgetProps> = ({ onSelect }) =>
                     </div>
                 ) : (
                     (() => {
-                        const totalPages = Math.ceil(interestedStocks.length / ITEMS_PER_PAGE);
                         const pagedStocks = interestedStocks.slice(
                             currentPage * ITEMS_PER_PAGE,
                             (currentPage + 1) * ITEMS_PER_PAGE
