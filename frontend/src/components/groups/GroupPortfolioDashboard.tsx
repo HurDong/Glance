@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Plus, Share2, Send, Trash2, X, Sparkles, Activity } from 'lucide-react';
+import { Users, Plus, Share2, Send, Trash2, X, Sparkles, Activity, LogOut } from 'lucide-react';
 import { groupApi } from '../../api/group';
 import type { Group } from '../../api/group';
 import { portfolioApi } from '../../api/portfolio';
@@ -9,6 +9,7 @@ import { clsx } from 'clsx';
 import { StockIcon } from '../stocks/StockIcon';
 import { useStockStore } from '../../stores/useStockStore';
 import { useStockWebSocket } from '../../hooks/useStockWebSocket';
+import { useAlertStore } from '../../stores/useAlertStore';
 import { StockQuickAddModal } from '../portfolio/StockQuickAddModal';
 
 const PortfolioItemPrice = ({ symbol, market: _market }: { symbol: string, market: string }) => {
@@ -51,6 +52,7 @@ export const GroupPortfolioDashboard: React.FC = () => {
     const [selectedGroupDetails, setSelectedGroupDetails] = useState<Group | null>(null);
     const [selectedGroupForFeed, setSelectedGroupForFeed] = useState<Group | null>(null);
     const { token, user } = useAuthStore();
+    const { showAlert, showConfirm } = useAlertStore();
 
     const showToast = (text: string, isError = false) => {
         setToastMessage({ text, isError });
@@ -58,14 +60,23 @@ export const GroupPortfolioDashboard: React.FC = () => {
     };
 
     const handleAction = async (action: () => Promise<void>, successMsg: string, errorMsg: string = '작업에 실패했습니다.') => {
+        if (!token) {
+            showAlert('로그인이 필요한 서비스입니다.', { type: 'warning' });
+            return false;
+        }
         try {
             await action();
             if (successMsg) showToast(`✅ ${successMsg}`);
             fetchGroups();
             return true;
-        } catch (error) {
+        } catch (error: any) {
             console.error('Action failed:', error);
-            showToast(`❌ ${errorMsg}`, true);
+            const status = error.response?.status;
+            if (status === 401 || status === 403) {
+                showAlert('로그인이 필요한 서비스입니다.', { type: 'error' });
+            } else {
+                showAlert(errorMsg, { type: 'error' });
+            }
             return false;
         }
     };
@@ -102,15 +113,24 @@ export const GroupPortfolioDashboard: React.FC = () => {
 
     const handleCreateGroup = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!token) {
+            showAlert('로그인이 필요한 서비스입니다.', { type: 'warning' });
+            return;
+        }
         try {
             await groupApi.createGroup(newGroup);
             setIsCreateModalOpen(false);
             setNewGroup({ name: '', description: '' });
             fetchGroups();
             showToast('✅ 새 그룹이 생성되었습니다!');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to create group:', error);
-            showToast('❌ 그룹 생성에 실패했습니다. (이름이 중복될 수 있습니다)', true);
+            const status = error.response?.status;
+            if (status === 401 || status === 403) {
+                showAlert('로그인이 필요한 서비스입니다.', { type: 'error' });
+            } else {
+                showToast('❌ 그룹 생성에 실패했습니다. (이름이 중복될 수 있습니다)', true);
+            }
         }
     };
 
@@ -157,8 +177,16 @@ export const GroupPortfolioDashboard: React.FC = () => {
     };
 
     const handleDeleteGroup = async (groupId: number, groupName: string) => {
-        if (window.confirm(`'${groupName}' 그룹을 정말 삭제하시겠습니까? 모든 멤버와 공유 데이터가 사라집니다.`)) {
+        const isConfirmed = await showConfirm(`'${groupName}' 그룹을 정말 삭제하시겠습니까?\n\n⚠️ 그룹 자체가 완전히 폐쇄되며, 모든 멤버와 공유 데이터가 즉시 사라집니다. 이 작업은 되돌릴 수 없습니다.`);
+        if (isConfirmed) {
             await handleAction(() => groupApi.deleteGroup(groupId), '그룹이 삭제되었습니다.', '방장만 그룹을 삭제할 수 있습니다.');
+        }
+    };
+
+    const handleLeaveGroup = async (groupId: number, groupName: string) => {
+        const isConfirmed = await showConfirm(`'${groupName}' 그룹에서 정말 탈퇴하시겠습니까?\n\n본인의 공유 데이터만 제거되며, 그룹은 계속 유지됩니다.`);
+        if (isConfirmed) {
+            await handleAction(() => groupApi.leaveGroup(groupId), '그룹에서 탈퇴하였습니다.', '그룹 탈퇴 중 오류가 발생했습니다.');
         }
     };
 
@@ -240,7 +268,13 @@ export const GroupPortfolioDashboard: React.FC = () => {
                         </button>
                     </div>
                     <button 
-                        onClick={() => setIsCreateModalOpen(true)}
+                        onClick={() => {
+                            if (!token) {
+                                showAlert('로그인이 필요한 서비스입니다.', { type: 'warning' });
+                                return;
+                            }
+                            setIsCreateModalOpen(true);
+                        }}
                         className="p-2 sm:px-4 sm:py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-full hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-sm shrink-0"
                     >
                         <Plus size={18} /> <span className="hidden sm:inline">그룹 만들기</span>
@@ -320,13 +354,21 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                     >
                                         <Send size={16} />
                                     </button>
-                                    {selectedGroupForFeed.owner.email === user?.email && (
+                                    {selectedGroupForFeed.owner.email === user?.email ? (
                                         <button 
                                             onClick={() => handleDeleteGroup(selectedGroupForFeed.id, selectedGroupForFeed.name)}
                                             className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20"
-                                            title="그룹 삭제"
+                                            title="그룹 삭제 (방장)"
                                         >
                                             <Trash2 size={16} />
+                                        </button>
+                                    ) : (
+                                        <button 
+                                            onClick={() => handleLeaveGroup(selectedGroupForFeed.id, selectedGroupForFeed.name)}
+                                            className="p-2 bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors border border-border/50"
+                                            title="그룹 탈퇴"
+                                        >
+                                            <LogOut size={16} />
                                         </button>
                                     )}
                                     <button 
@@ -462,8 +504,14 @@ export const GroupPortfolioDashboard: React.FC = () => {
 
             {/* Modals (Create, Share) - Keeping simplified versions for brevity in this initial implementation */}
             {isCreateModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-card p-6 rounded-xl w-full max-w-md">
+                <div 
+                    className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+                    onClick={() => setIsCreateModalOpen(false)}
+                >
+                    <div 
+                        className="bg-card p-6 rounded-xl w-full max-w-md"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <h3 className="text-lg font-bold mb-4">새 그룹 만들기</h3>
                         <form onSubmit={handleCreateGroup}>
                             <input className="w-full bg-muted border-none p-3 rounded-lg mb-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all" placeholder="그룹 이름" value={newGroup.name} onChange={e => setNewGroup({...newGroup, name: e.target.value})} required autoFocus />
@@ -478,8 +526,14 @@ export const GroupPortfolioDashboard: React.FC = () => {
             )}
 
             {isShareModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-card p-6 rounded-xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+                <div 
+                    className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+                    onClick={() => setIsShareModalOpen(false)}
+                >
+                    <div 
+                        className="bg-card p-6 rounded-xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <h3 className="text-lg font-bold mb-4">공유할 포트폴리오 선택</h3>
                         <div className="overflow-y-auto flex-1 space-y-2 mb-6 hide-scrollbar max-h-60">
                             {portfolios.map(p => (
@@ -520,8 +574,14 @@ export const GroupPortfolioDashboard: React.FC = () => {
             )}
             {/* Group Details / Member List Modal */}
             {selectedGroupDetails && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-card rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col shadow-xl animate-in fade-in zoom-in-95 duration-200">
+                <div 
+                    className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+                    onClick={() => setSelectedGroupDetails(null)}
+                >
+                    <div 
+                        className="bg-card rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col shadow-xl animate-in fade-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="p-6 border-b border-border/50 relative">
                             <button 
                                 onClick={() => setSelectedGroupDetails(null)} 

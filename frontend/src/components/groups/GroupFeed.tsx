@@ -25,15 +25,30 @@ export const GroupFeed: React.FC = () => {
     const [selectedPortfolioId, setSelectedPortfolioId] = useState<number | null>(null);
     const { token, user } = useAuthStore();
     const { showAlert } = useAlertStore();
+    const [toastMessage, setToastMessage] = useState<{text: string, isError: boolean} | null>(null);
 
-    const handleAction = async (action: () => Promise<void>, successMsg: string) => {
+    const showToast = (text: string, isError = false) => {
+        setToastMessage({ text, isError });
+        setTimeout(() => setToastMessage(null), 3000);
+    };
+
+    const handleAction = async (action: () => Promise<void>, successMsg: string, errorMsg: string = '작업에 실패했습니다.') => {
+        if (!token) {
+            showAlert('로그인이 필요한 서비스입니다.', { type: 'warning' });
+            return;
+        }
         try {
             await action();
-            showAlert(successMsg, { type: 'success' });
+            if (successMsg) showToast(`✅ ${successMsg}`);
             fetchGroups();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Action failed:', error);
-            showAlert('작업에 실패했습니다.', { type: 'error' });
+            const status = error.response?.status;
+            if (status === 401 || status === 403) {
+                showAlert('로그인이 필요한 서비스입니다.', { type: 'error' });
+            } else {
+                showAlert(errorMsg, { type: 'error' });
+            }
         }
     };
 
@@ -69,15 +84,24 @@ export const GroupFeed: React.FC = () => {
 
     const handleCreateGroup = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!token) {
+            showAlert('로그인이 필요한 서비스입니다.', { type: 'warning' });
+            return;
+        }
         try {
             await groupApi.createGroup(newGroup);
             setIsCreateModalOpen(false);
             setNewGroup({ name: '', description: '' });
             fetchGroups();
-            alert('그룹이 생성되었습니다.');
-        } catch (error) {
+            showToast('✅ 그룹이 생성되었습니다!');
+        } catch (error: any) {
             console.error('Failed to create group:', error);
-            showAlert('그룹 생성에 실패했습니다.', { type: 'error' });
+            const status = error.response?.status;
+            if (status === 401 || status === 403) {
+                showAlert('로그인이 필요한 서비스입니다.', { type: 'error' });
+            } else {
+                showAlert('그룹 생성에 실패했습니다. (이름이 중복될 수 있습니다)', { type: 'error' });
+            }
         }
     };
 
@@ -87,7 +111,11 @@ export const GroupFeed: React.FC = () => {
             showAlert('그룹 ID를 입력해주세요.', { type: 'warning' });
             return;
         }
-        await handleAction(() => groupApi.joinGroup(parseInt(joinGroupId)), '그룹 가입을 신청했습니다.');
+        await handleAction(
+            () => groupApi.joinGroup(parseInt(joinGroupId)), 
+            '그룹 가입을 신청했습니다.',
+            '존재하지 않는 그룹 ID이거나 이미 가입된 그룹입니다.'
+        );
         setJoinGroupId('');
     };
 
@@ -143,7 +171,13 @@ export const GroupFeed: React.FC = () => {
                 </form>
                 
                 <button
-                    onClick={() => setIsCreateModalOpen(true)}
+                    onClick={() => {
+                        if (!token) {
+                            showAlert('로그인이 필요한 서비스입니다.', { type: 'warning' });
+                            return;
+                        }
+                        setIsCreateModalOpen(true);
+                    }}
                     className="flex items-center justify-center space-x-2 px-7 py-3 bg-gradient-to-r from-primary to-indigo-500 text-white rounded-xl hover:shadow-[0_0_20px_rgba(36,99,235,0.4)] hover:scale-105 transition-all duration-300 text-sm font-bold"
                 >
                     <Plus size={18} />
@@ -347,8 +381,14 @@ export const GroupFeed: React.FC = () => {
 
             {/* Share Portfolio Modal */}
             {isShareModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-card p-6 rounded-xl w-full max-w-md shadow-2xl border border-border">
+                <div 
+                    className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+                    onClick={() => setIsShareModalOpen(false)}
+                >
+                    <div 
+                        className="bg-card p-6 rounded-xl w-full max-w-md shadow-2xl border border-border"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-xl font-bold">공유할 포트폴리오 선택</h3>
                             <button onClick={() => setIsShareModalOpen(false)} className="text-muted-foreground hover:text-foreground">
@@ -403,8 +443,14 @@ export const GroupFeed: React.FC = () => {
                 </div>
             )}
             {isCreateModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-card p-6 rounded-xl w-full max-w-md shadow-2xl border border-border">
+                <div 
+                    className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+                    onClick={() => setIsCreateModalOpen(false)}
+                >
+                    <div 
+                        className="bg-card p-6 rounded-xl w-full max-w-md shadow-2xl border border-border"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <h3 className="text-xl font-bold mb-4">새 그룹 만들기</h3>
                         <form onSubmit={handleCreateGroup} className="space-y-4">
                             <div>
@@ -443,6 +489,16 @@ export const GroupFeed: React.FC = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            {/* Toast Notification */}
+            {toastMessage && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[150] animate-in slide-in-from-bottom-5 fade-in duration-300">
+                    <div className={clsx("text-white backdrop-blur-md px-6 py-3 rounded-full shadow-lg font-bold flex items-center gap-2 border", 
+                        toastMessage.isError ? "bg-red-500/90 shadow-[0_8px_30px_rgba(239,68,68,0.3)] border-red-400/20" : "bg-green-500/90 shadow-[0_8px_30px_rgba(34,197,94,0.3)] border-green-400/20"
+                    )}>
+                        {toastMessage.text}
                     </div>
                 </div>
             )}

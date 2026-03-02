@@ -39,6 +39,15 @@ public class PortfolioGroupController {
         return ApiResponse.success("그룹이 삭제되었습니다.");
     }
 
+    @DeleteMapping("/leave/{groupId}")
+    public ApiResponse<Void> leaveGroup(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long groupId) {
+        Long userId = Long.parseLong(userDetails.getUsername());
+        groupService.leaveGroup(groupId, userId);
+        return ApiResponse.success("그룹에서 탈퇴하였습니다.");
+    }
+
     @PostMapping("/{groupId}/join")
     public ApiResponse<Void> joinGroup(
             @AuthenticationPrincipal UserDetails userDetails,

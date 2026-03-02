@@ -61,6 +61,10 @@ export const groupApi = {
   deleteGroup: async (groupId: number): Promise<void> => {
     await apiClient.delete(`/groups/${groupId}`);
   },
+  
+  leaveGroup: async (groupId: number): Promise<void> => {
+    await apiClient.delete(`/groups/leave/${groupId}`);
+  },
 
   sharePortfolio: async (groupId: number, portfolioId: number): Promise<void> => {
     await apiClient.post(`/groups/${groupId}/share`, { portfolioId });

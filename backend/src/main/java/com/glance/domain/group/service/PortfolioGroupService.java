@@ -53,6 +53,20 @@ public class PortfolioGroupService {
         }
 
         @Transactional
+        public void leaveGroup(Long groupId, Long userId) {
+                PortfolioGroup group = groupRepository.findById(groupId)
+                                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+                Member member = memberService.getMember(userId);
+
+                if (group.getOwner().getId().equals(userId)) {
+                        throw new BusinessException("방장은 탈퇴할 수 없습니다. 그룹을 삭제하거나 방장을 위임하세요.",
+                                        ErrorCode.INVALID_INPUT_VALUE);
+                }
+
+                groupMemberRepository.deleteByGroupAndMember(group, member);
+        }
+
+        @Transactional
         public void deleteGroup(Long groupId, Long ownerId) {
                 PortfolioGroup group = groupRepository.findById(groupId)
                                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
