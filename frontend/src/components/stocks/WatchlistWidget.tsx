@@ -28,6 +28,10 @@ export const WatchlistWidget: React.FC<WatchlistWidgetProps> = ({ onSelect }) =>
     const { getPrice } = useStockStore();
     const navigate = useNavigate();
 
+    // Pagination
+    const ITEMS_PER_PAGE = 11;
+    const [currentPage, setCurrentPage] = useState(0);
+
     // Search state
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<SearchStock[]>([]);
@@ -44,6 +48,7 @@ export const WatchlistWidget: React.FC<WatchlistWidgetProps> = ({ onSelect }) =>
         try {
             const res = await interestApi.getInterestStocks();
             setInterestedStocks(res);
+            setCurrentPage(0); // 목록 변경 시 첫 페이지로 리셋
         } catch (error) {
             console.error('Failed to fetch interest items', error);
         } finally {
@@ -171,7 +176,7 @@ export const WatchlistWidget: React.FC<WatchlistWidgetProps> = ({ onSelect }) =>
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onFocus={() => { if (searchResults.length > 0) setShowDropdown(true); }}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-9 pr-8 text-sm focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-muted-foreground/50"
+                        className="w-full bg-muted border border-border rounded-lg py-2.5 pl-9 pr-8 text-sm focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-muted-foreground/50"
                     />
                     {searchQuery && (
                         <button 
@@ -185,7 +190,7 @@ export const WatchlistWidget: React.FC<WatchlistWidgetProps> = ({ onSelect }) =>
 
                 {/* Dropdown Results */}
                 {showDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-[#1a1f2e] border border-white/10 rounded-lg shadow-xl overflow-hidden z-50">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-xl overflow-hidden z-50">
                         {isSearching ? (
                             <div className="flex justify-center p-4">
                                 <Loader2 className="animate-spin text-primary" size={20} />
@@ -199,10 +204,10 @@ export const WatchlistWidget: React.FC<WatchlistWidgetProps> = ({ onSelect }) =>
                                             key={stock.symbol}
                                             onClick={() => !isAlreadyAdded && handleAdd(stock)}
                                             className={clsx(
-                                                "flex items-center justify-between p-3 border-b border-white/5 last:border-0 transition-colors",
+                                                "flex items-center justify-between p-3 border-b border-border last:border-0 transition-colors",
                                                 isAlreadyAdded 
-                                                    ? "opacity-50 cursor-not-allowed bg-black/20" 
-                                                    : "hover:bg-white/5 cursor-pointer group"
+                                                    ? "opacity-50 cursor-not-allowed bg-muted/50" 
+                                                    : "hover:bg-accent cursor-pointer group"
                                             )}
                                         >
                                             <div className="flex items-center gap-3 overflow-hidden">
@@ -234,7 +239,7 @@ export const WatchlistWidget: React.FC<WatchlistWidgetProps> = ({ onSelect }) =>
                 )}
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2 relative z-10">
+            <div className="flex-1 space-y-2 relative z-10">
                 {isLoading && interestedStocks.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
                         <Loader2 className="animate-spin text-primary" size={32} />
@@ -245,7 +250,13 @@ export const WatchlistWidget: React.FC<WatchlistWidgetProps> = ({ onSelect }) =>
                         <p className="text-sm mt-1 mb-4">위의 검색창을 이용해 추가해보세요.</p>
                     </div>
                 ) : (
-                    interestedStocks.map((stock) => {
+                    (() => {
+                        const totalPages = Math.ceil(interestedStocks.length / ITEMS_PER_PAGE);
+                        const pagedStocks = interestedStocks.slice(
+                            currentPage * ITEMS_PER_PAGE,
+                            (currentPage + 1) * ITEMS_PER_PAGE
+                        );
+                        return pagedStocks.map((stock) => {
                         const liveData = getPrice(stock.symbol);
                         const rateVal = liveData ? parseFloat(liveData.changeRate || "0") : 0;
                         const isUp = rateVal > 0;
@@ -310,7 +321,7 @@ export const WatchlistWidget: React.FC<WatchlistWidgetProps> = ({ onSelect }) =>
                                     {/* Delete Button (Visible on Hover) */}
                                     <button 
                                         onClick={(e) => handleRemove(e, stock.symbol)}
-                                        className="p-2.5 text-muted-foreground hover:bg-destructive/20 hover:text-destructive rounded-lg transition-all opacity-0 group-hover:opacity-100 absolute right-1.5 shrink-0 bg-[#0F121C] shadow-md border border-white/5"
+                                        className="p-2.5 text-muted-foreground hover:bg-destructive/20 hover:text-destructive rounded-lg transition-all opacity-0 group-hover:opacity-100 absolute right-1.5 shrink-0 bg-card shadow-md border border-border"
                                         title="관심종목에서 삭제"
                                     >
                                         <Trash2 size={16} />
@@ -318,20 +329,47 @@ export const WatchlistWidget: React.FC<WatchlistWidgetProps> = ({ onSelect }) =>
                                 </div>
                             </div>
                         );
-                    })
+                    });
+                    })()
                 )}
             </div>
-            
-            {interestedStocks.length > 0 && (
-                <div className="pt-4 mt-2 border-t border-white/5 text-center shrink-0">
-                   <button 
-                        onClick={() => navigate('/stocks')}
-                        className="text-[11px] font-bold text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest"
-                   >
-                       전체 종목 관리하기
-                   </button>
-                </div>
-            )}
+
+            {/* Pagination Navigator */}
+            {interestedStocks.length > ITEMS_PER_PAGE && (() => {
+                const totalPages = Math.ceil(interestedStocks.length / ITEMS_PER_PAGE);
+                return (
+                    <div className="flex items-center justify-center gap-1.5 pt-3 mt-1 border-t border-border shrink-0">
+                        <button
+                            onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                            disabled={currentPage === 0}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        >
+                            ‹
+                        </button>
+                        {Array.from({ length: totalPages }, (_, i) => (
+                            <button
+                                key={i}
+                                onClick={() => setCurrentPage(i)}
+                                className={clsx(
+                                    "w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all",
+                                    currentPage === i
+                                        ? "bg-primary text-primary-foreground shadow-sm"
+                                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                                )}
+                            >
+                                {i + 1}
+                            </button>
+                        ))}
+                        <button
+                            onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                            disabled={currentPage === totalPages - 1}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        >
+                            ›
+                        </button>
+                    </div>
+                );
+            })()}
         </div>
     );
 };
