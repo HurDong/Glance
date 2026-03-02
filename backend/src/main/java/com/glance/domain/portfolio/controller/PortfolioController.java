@@ -84,4 +84,21 @@ public class PortfolioController {
         PortfolioResponse response = portfolioService.updatePortfolio(portfolioId, userId, request);
         return ApiResponse.success("포트폴리오가 수정되었습니다.", response);
     }
+
+    @PatchMapping("/{portfolioId}/primary")
+    public ApiResponse<PortfolioResponse> setPrimaryPortfolio(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long portfolioId) {
+        Long userId = Long.parseLong(userDetails.getUsername());
+        PortfolioResponse response = portfolioService.setPrimaryPortfolio(userId, portfolioId);
+        return ApiResponse.success("대표 포트폴리오가 설정되었습니다.", response);
+    }
+
+    @GetMapping("/primary")
+    public ApiResponse<PortfolioResponse> getPrimaryPortfolio(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = Long.parseLong(userDetails.getUsername());
+        PortfolioResponse response = portfolioService.getPrimaryPortfolio(userId);
+        return ApiResponse.success(response);
+    }
 }

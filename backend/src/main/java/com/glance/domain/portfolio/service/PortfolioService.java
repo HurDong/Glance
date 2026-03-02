@@ -63,6 +63,37 @@ public class PortfolioService {
     }
 
     @Transactional
+    public PortfolioResponse setPrimaryPortfolio(Long userId, Long portfolioId) {
+        Member member = memberService.getMember(userId);
+
+        // 기존 대표 포트폴리오 해제
+        portfolioRepository.findByMemberAndIsPrimaryTrue(member)
+                .ifPresent(existing -> existing.setPrimary(false));
+
+        Portfolio target = portfolioRepository.findById(portfolioId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (!target.getMember().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.HANDLE_ACCESS_DENIED);
+        }
+
+        target.setPrimary(true);
+        return PortfolioResponse.from(target);
+    }
+
+    public PortfolioResponse getPrimaryPortfolio(Long userId) {
+        Member member = memberService.getMember(userId);
+
+        // 대표가 지정됐으면 반환, 없으면 첫 번째 포트폴리오 반환 (fallback)
+        Portfolio portfolio = portfolioRepository.findByMemberAndIsPrimaryTrue(member)
+                .orElseGet(() -> portfolioRepository.findAllByMember(member)
+                        .stream().findFirst()
+                        .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND)));
+
+        return PortfolioResponse.from(portfolio);
+    }
+
+    @Transactional
     public void addPortfolioItem(Long portfolioId, Long userId, PortfolioItemRequest request) {
         Portfolio portfolio = portfolioRepository.findById(portfolioId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));

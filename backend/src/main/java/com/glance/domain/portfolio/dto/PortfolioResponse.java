@@ -7,25 +7,27 @@ import java.time.LocalDateTime;
 
 @Builder
 public record PortfolioResponse(
-        Long id,
-        Long userId,
-        String name,
-        String description,
-        Boolean isPublic,
-        LocalDateTime createdAt,
-        java.util.List<PortfolioItemResponse> items) {
+                Long id,
+                Long userId,
+                String name,
+                String description,
+                Boolean isPublic,
+                Boolean isPrimary,
+                LocalDateTime createdAt,
+                java.util.List<PortfolioItemResponse> items) {
 
-    public static PortfolioResponse from(Portfolio portfolio) {
-        return PortfolioResponse.builder()
-                .id(portfolio.getId())
-                .userId(portfolio.getMember().getId())
-                .name(portfolio.getName())
-                .description(portfolio.getDescription())
-                .isPublic(portfolio.getIsPublic())
-                .createdAt(portfolio.getCreatedAt())
-                .items(portfolio.getItems().stream()
-                        .map(PortfolioItemResponse::from)
-                        .toList())
-                .build();
-    }
+        public static PortfolioResponse from(Portfolio portfolio) {
+                return PortfolioResponse.builder()
+                                .id(portfolio.getId())
+                                .userId(portfolio.getMember().getId())
+                                .name(portfolio.getName())
+                                .description(portfolio.getDescription())
+                                .isPublic(portfolio.getIsPublic())
+                                .isPrimary(portfolio.getIsPrimary())
+                                .createdAt(portfolio.getCreatedAt())
+                                .items(portfolio.getItems().stream()
+                                                .map(PortfolioItemResponse::from)
+                                                .toList())
+                                .build();
+        }
 }

@@ -34,6 +34,9 @@ public class Portfolio extends BaseTimeEntity {
     @Column(nullable = false)
     private Boolean isPublic;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private Boolean isPrimary = false;
+
     @OneToMany(mappedBy = "portfolio", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PortfolioItem> items = new ArrayList<>();
 
@@ -43,6 +46,7 @@ public class Portfolio extends BaseTimeEntity {
         this.name = name;
         this.description = description;
         this.isPublic = (isPublic != null) ? isPublic : false;
+        this.isPrimary = false;
     }
 
     public void addItem(PortfolioItem item) {
@@ -59,5 +63,9 @@ public class Portfolio extends BaseTimeEntity {
         this.name = name;
         this.description = description;
         this.isPublic = isPublic;
+    }
+
+    public void setPrimary(boolean primary) {
+        this.isPrimary = primary;
     }
 }

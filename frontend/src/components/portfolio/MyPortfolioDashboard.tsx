@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Plus, Minus, Trash2, RefreshCw, PieChart, TrendingUp, Eye, EyeOff, LayoutDashboard, Settings, Pencil } from 'lucide-react';
+import { Plus, Minus, Trash2, RefreshCw, PieChart, TrendingUp, Eye, EyeOff, LayoutDashboard, Settings, Pencil, Star } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { useAuthStore } from '../../stores/authStore';
@@ -14,6 +14,7 @@ interface Portfolio {
     name: string;
     description: string;
     isPublic: boolean;
+    isPrimary: boolean;
     items: PortfolioItem[];
     createdAt: string;
 }
@@ -314,6 +315,19 @@ export const MyPortfolioDashboard: React.FC = () => {
         }
     };
 
+    const handleSetPrimary = async (portfolioId: number) => {
+        try {
+            await apiClient.patch(`/portfolios/${portfolioId}/primary`, {}, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            });
+            loadPortfolios();
+            showAlert('대표 포트폴리오로 설정되었습니다. ⭐', { type: 'success' });
+        } catch (error) {
+            showAlert('대표 설정에 실패했습니다.', { type: 'error' });
+        }
+    };
+
+
     const handleAddStock = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!activePortfolioId || !selectedStock) {
@@ -522,12 +536,13 @@ export const MyPortfolioDashboard: React.FC = () => {
                             <button
                                 key={p.id}
                                 onClick={() => { setActivePortfolioId(p.id); navigate(`/portfolio/${p.id}`); }}
-                                className={`px-5 py-3 font-semibold rounded-2xl whitespace-nowrap transition-all duration-300 border backdrop-blur-md ${
+                                className={`px-5 py-3 font-semibold rounded-2xl whitespace-nowrap transition-all duration-300 border backdrop-blur-md flex items-center gap-2 ${
                                     activePortfolioId === p.id 
                                     ? 'bg-primary border-primary text-primary-foreground shadow-[0_4px_20px_rgba(36,99,235,0.3)]' 
                                     : 'bg-card/50 border-border/50 text-muted-foreground hover:bg-card hover:text-foreground'
                                 }`}
                             >
+                                {p.isPrimary && <Star size={13} className="fill-yellow-400 text-yellow-400 shrink-0" />}
                                 {p.name}
                             </button>
                         ))}
@@ -547,6 +562,18 @@ export const MyPortfolioDashboard: React.FC = () => {
                                             title={hideDetails ? "금액 숨김 해제" : "금액 숨기기"}
                                         >
                                             {hideDetails ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
+                                        <button
+                                            onClick={() => handleSetPrimary(activePortfolio.id)}
+                                            className={`p-1.5 rounded-md transition-colors ${
+                                                activePortfolio.isPrimary
+                                                ? 'text-yellow-400 bg-yellow-400/10 cursor-default'
+                                                : 'text-muted-foreground hover:text-yellow-400 hover:bg-yellow-400/10'
+                                            }`}
+                                            title={activePortfolio.isPrimary ? '대표 포트폴리오' : '대표로 설정'}
+                                            disabled={activePortfolio.isPrimary}
+                                        >
+                                            <Star size={16} className={activePortfolio.isPrimary ? 'fill-yellow-400' : ''} />
                                         </button>
                                         <button 
                                             onClick={() => {
