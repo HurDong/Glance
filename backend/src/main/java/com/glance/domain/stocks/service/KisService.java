@@ -106,6 +106,16 @@ public class KisService {
     }
 
     private StockPriceMessage getUSCurrentPrice(String symbol) {
+        StockPriceMessage kisResult = getUSCurrentPriceFromKis(symbol);
+        if (kisResult != null) {
+            return kisResult;
+        }
+        // KIS 실패 시 Yahoo Finance 폴백
+        log.warn("[KIS REST] Failed for {}. Falling back to Yahoo Finance.", symbol);
+        return finnhubService.getUSCurrentPrice(symbol);
+    }
+
+    private StockPriceMessage getUSCurrentPriceFromKis(String symbol) {
         try {
             // Determine Market Code (NAS/NYS/AMS)
             String marketCode = "NAS"; // Default

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.glance.domain.stocks.dto.ChartDataResponse;
 import com.glance.domain.stocks.dto.ChartDataResponse.ChartPoint;
+import com.glance.domain.stocks.dto.StockPriceMessage;
+import java.time.LocalTime;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -118,11 +120,11 @@ public class FinnhubService { // Re-using the class name to maintain Dependency 
 
                     if (isIntraday) {
                         dateStr = DateTimeFormatter.ofPattern("yyyyMMddHHmm")
-                                .withZone(ZoneId.of("America/New_York"))
+                                .withZone(ZoneId.of("Asia/Seoul"))
                                 .format(instant);
                     } else {
                         dateStr = DateTimeFormatter.ofPattern("yyyyMMdd")
-                                .withZone(ZoneId.of("America/New_York"))
+                                .withZone(ZoneId.of("Asia/Seoul"))
                                 .format(instant);
                     }
 
@@ -146,6 +148,55 @@ public class FinnhubService { // Re-using the class name to maintain Dependency 
         } catch (Exception e) {
             log.error("Error fetching US chart data from Yahoo Finance for {}", symbol, e);
             throw new RuntimeException("해외 주식 차트 데이터를 불러올 수 없습니다. (" + e.getMessage() + ")", e);
+        }
+    }
+
+    /**
+     * Yahoo Finance에서 해외주식 현재가를 조회합니다.
+     * KIS WebSocket/REST가 공휴일 등으로 데이터를 제공하지 않을 때 폴백으로 사용됩니다.
+     */
+    public StockPriceMessage getUSCurrentPrice(String symbol) {
+        try {
+            String url = String.format(
+                    "https://query1.finance.yahoo.com/v8/finance/chart/%s?range=1d&interval=1m&includePrePost=true",
+                    symbol);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+            JsonNode root = objectMapper.readTree(response.getBody());
+            JsonNode meta = root.path("chart").path("result").get(0).path("meta");
+
+            if (meta == null || meta.isMissingNode()) {
+                log.warn("[Yahoo Fallback] No meta for {}", symbol);
+                return null;
+            }
+
+            String price = meta.path("regularMarketPrice").asText();
+            String prevClose = meta.path("chartPreviousClose").asText();
+            String time = LocalTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
+
+            double priceVal = Double.parseDouble(price);
+            double prevCloseVal = Double.parseDouble(prevClose);
+            double change = priceVal - prevCloseVal;
+            double changeRate = prevCloseVal != 0 ? (change / prevCloseVal) * 100 : 0;
+
+            log.info("[Yahoo Fallback] {} price={} change={} rate={}%", symbol, price,
+                    String.format("%.4f", change), String.format("%.2f", changeRate));
+
+            return StockPriceMessage.builder()
+                    .symbol(symbol)
+                    .price(price)
+                    .change(String.format("%.4f", change))
+                    .changeRate(String.format("%.2f", changeRate))
+                    .time(time)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("[Yahoo Fallback] Error fetching price for {}: {}", symbol, e.getMessage());
+            return null;
         }
     }
 }

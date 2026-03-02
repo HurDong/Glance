@@ -23,6 +23,7 @@ public class StockPriceController {
     private final KisWebSocketService kisWebSocketService;
     private final com.glance.domain.stocks.service.RedisStockService redisStockService;
     private final KisService kisService;
+    private final com.glance.domain.stocks.service.StockPricePollingService stockPricePollingService;
 
     @GetMapping("/{symbol}/price")
     public ApiResponse<?> getCurrentPrice(@PathVariable String symbol) {
@@ -65,11 +66,10 @@ public class StockPriceController {
         redisStockService.subscribe(symbol);
 
         // 3. Always attempt to subscribe to KIS (Global)
-        // Even if Redis count was > 0, our local KIS WebSocket might not be subscribed
-        // yet (e.g. server restart)
-        // KisWebSocketService.subscribe() has internal deduplication, so this is
-        // safe/idempotent.
         kisWebSocketService.subscribe(symbol);
+
+        // 4. 해외주식이면 폴링 폴백 대상으로 등록
+        stockPricePollingService.registerUssSymbol(symbol);
     }
 
     @PostMapping("/{symbol}/subscribe")
