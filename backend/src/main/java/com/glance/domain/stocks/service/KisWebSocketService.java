@@ -19,6 +19,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.time.Instant;
 
 @Slf4j
 @Service
@@ -34,6 +35,13 @@ public class KisWebSocketService extends TextWebSocketHandler {
 
     private WebSocketSession session;
     private final Set<String> subscribedSymbols = ConcurrentHashMap.newKeySet();
+
+    // 심볼별 마지막 실시간 데이터 수신 시각 (폴링 폴백 판단용)
+    private final Map<String, Instant> lastReceivedTime = new ConcurrentHashMap<>();
+
+    public Instant getLastReceivedTime(String symbol) {
+        return lastReceivedTime.getOrDefault(symbol, Instant.EPOCH);
+    }
 
     // Add heartbeat scheduler
     // Note: Requires @EnableScheduling in the application configuration
@@ -90,7 +98,25 @@ public class KisWebSocketService extends TextWebSocketHandler {
         log.debug("RAW KIS MSG: {}", payload);
 
         if (payload.startsWith("{")) {
-            log.debug("KIS WS Response: {}", payload);
+            // KIS 구독 응답 JSON 파싱 - 에러 여부 확인
+            try {
+                com.fasterxml.jackson.databind.JsonNode resp = new com.fasterxml.jackson.databind.ObjectMapper()
+                        .readTree(payload);
+                String rtCd = resp.path("body").path("rt_cd").asText("");
+                String msg = resp.path("body").path("msg1").asText("");
+                String trId = resp.path("header").path("tr_id").asText("");
+                if ("1".equals(rtCd)) {
+                    if (msg.contains("ALREADY IN SUBSCRIBE")) {
+                        log.debug("[KIS WS] Already subscribed: TR_ID={}", trId);
+                    } else {
+                        log.warn("[한국투자증권 KIS WS 에러] TR_ID={} msg={}", trId, msg);
+                    }
+                } else {
+                    log.debug("[KIS WS 응답] TR_ID={} msg={}", trId, msg);
+                }
+            } catch (Exception ex) {
+                log.debug("KIS WS Response (non-JSON parseable): {}", payload);
+            }
             return;
         }
 
@@ -172,6 +198,7 @@ public class KisWebSocketService extends TextWebSocketHandler {
                 .build();
 
         redisStockService.publish(symbol, msg);
+        lastReceivedTime.put(symbol, Instant.now()); // 실시간 수신 시각 기록
         log.debug("📡 Published to Redis: {} - {} ({}%)", symbol, price, changeRate);
     }
 
@@ -232,7 +259,7 @@ public class KisWebSocketService extends TextWebSocketHandler {
                                     "tr_id", trId,
                                     "tr_key", trKey)));
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(request)));
-            log.info("{} Requested {} subscription for: {} (TR_ID: {}, TR_KEY: {})",
+            log.debug("{} Requested {} subscription for: {} (TR_ID: {}, TR_KEY: {})",
                     subscribe ? "📤" : "🗑️",
                     isUS ? "US" : "KR", symbol, trId, trKey);
         } catch (Exception e) {
