@@ -27,8 +27,8 @@ export const GlobalAlert: React.FC = () => {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-        onClick={() => type !== 'confirm' ? closeAlert(false) : null}
+        className="absolute inset-0 bg-background/80 backdrop-blur-sm transition-opacity"
+        onClick={() => closeAlert(false)}
       />
       
       {/* Modal */}

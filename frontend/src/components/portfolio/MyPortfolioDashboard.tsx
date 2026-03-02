@@ -262,6 +262,10 @@ export const MyPortfolioDashboard: React.FC = () => {
 
     const handleCreatePortfolio = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!token) {
+            showAlert('로그인이 필요한 서비스입니다.', { type: 'warning' });
+            return;
+        }
         try {
             const res = await apiClient.post<{ data: Portfolio }>('/portfolios', portfolioForm, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -273,9 +277,14 @@ export const MyPortfolioDashboard: React.FC = () => {
             await loadPortfolios();
             navigate(`/portfolio/${res.data.data.id}`);
             showAlert('새 포트폴리오가 생성되었습니다.', { type: 'success' });
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to create portfolio:', error);
-            showAlert('포트폴리오 생성에 실패했습니다.', { type: 'error' });
+            const status = error.response?.status;
+            if (status === 401 || status === 403) {
+                showAlert('로그인이 필요한 서비스입니다.', { type: 'error' });
+            } else {
+                showAlert('포트폴리오 생성에 실패했습니다.', { type: 'error' });
+            }
         }
     };
 
@@ -806,8 +815,14 @@ export const MyPortfolioDashboard: React.FC = () => {
             {/* Modals */}
             {/* Cash Add Modal */}
             {isAddCashModalOpen && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] px-4">
-                    <div className="bg-card w-full max-w-sm rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
+                <div 
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] px-4"
+                    onClick={() => setIsAddCashModalOpen(false)}
+                >
+                    <div 
+                        className="bg-card w-full max-w-sm rounded-3xl shadow-2xl border border-white/10 overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="p-6 border-b border-border">
                             <h3 className="text-xl font-bold flex items-center gap-2">💰 현금 추가</h3>
                             <p className="text-sm text-muted-foreground mt-1">포트폴리오에 보유 현금을 추가합니다.</p>
@@ -873,8 +888,14 @@ export const MyPortfolioDashboard: React.FC = () => {
 
             {/* Create / Edit Portfolio Modal */}
             {(isCreateModalOpen || isEditModalOpen) && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] px-4">
-                    <div className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-white/10 overflow-hidden transform animate-in fade-in zoom-in-95 duration-200">
+                <div 
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] px-4"
+                    onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }}
+                >
+                    <div 
+                        className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-white/10 overflow-hidden transform animate-in fade-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="p-6 border-b border-border">
                             <h3 className="text-2xl font-bold">{isCreateModalOpen ? '새 포트폴리오 만들기' : '포트폴리오 설정'}</h3>
                         </div>
@@ -934,8 +955,14 @@ export const MyPortfolioDashboard: React.FC = () => {
 
             {/* Add Stock Modal */}
             {isAddStockModalOpen && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] px-4">
-                    <div className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-white/10 overflow-hidden transform animate-in fade-in zoom-in-95 duration-200">
+                <div 
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] px-4"
+                    onClick={() => { setIsAddStockModalOpen(false); setSelectedStock(null); }}
+                >
+                    <div 
+                        className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-white/10 overflow-hidden transform animate-in fade-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="p-6 border-b border-border">
                             <h3 className="text-2xl font-bold">포트폴리오 종목 추가</h3>
                         </div>
@@ -1035,8 +1062,14 @@ export const MyPortfolioDashboard: React.FC = () => {
 
             {/* Edit Stock Modal */}
             {editingItem && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] px-4">
-                    <div className="bg-card w-full max-w-md rounded-3xl shadow-2xl border border-white/10 overflow-hidden transform animate-in fade-in zoom-in-95 duration-200">
+                <div 
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] px-4"
+                    onClick={() => setEditingItem(null)}
+                >
+                    <div 
+                        className="bg-card w-full max-w-md rounded-3xl shadow-2xl border border-white/10 overflow-hidden transform animate-in fade-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="p-6 border-b border-border">
                             <h3 className="text-2xl font-bold">종목 정보 수정</h3>
                             <p className="text-sm text-muted-foreground mt-1">

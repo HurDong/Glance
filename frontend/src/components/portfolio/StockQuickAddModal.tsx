@@ -99,8 +99,14 @@ export const StockQuickAddModal: React.FC<StockQuickAddModalProps> = ({ symbol, 
     };
 
     return (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] animate-in fade-in duration-200 p-4">
-            <div className="bg-background w-full max-w-md p-6 sm:p-8 rounded-2xl shadow-xl border border-border relative transform transition-all scale-100 opacity-100">
+        <div 
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] animate-in fade-in duration-200 p-4"
+            onClick={onClose}
+        >
+            <div 
+                className="bg-background w-full max-w-md p-6 sm:p-8 rounded-2xl shadow-xl border border-border relative transform transition-all scale-100 opacity-100"
+                onClick={(e) => e.stopPropagation()}
+            >
                 <button 
                     onClick={onClose}
                     className="absolute top-5 right-5 p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors"

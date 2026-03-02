@@ -282,8 +282,14 @@ export const PortfolioDetail: React.FC = () => {
             </div>
 
             {isAddModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-card p-6 rounded-xl w-full max-w-md shadow-2xl border border-border">
+                <div 
+                    className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+                    onClick={() => setIsAddModalOpen(false)}
+                >
+                    <div 
+                        className="bg-card p-6 rounded-xl w-full max-w-md shadow-2xl border border-border"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <h3 className="text-xl font-bold mb-4">종목 추가</h3>
                         <form onSubmit={handleAddItem} className="space-y-4">
                             <div>
@@ -363,8 +369,14 @@ export const PortfolioDetail: React.FC = () => {
             )}
 
             {isEditModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-card p-6 rounded-xl w-full max-w-md shadow-2xl border border-border">
+                <div 
+                    className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+                    onClick={() => setIsEditModalOpen(false)}
+                >
+                    <div 
+                        className="bg-card p-6 rounded-xl w-full max-w-md shadow-2xl border border-border"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <h3 className="text-xl font-bold mb-4">포트폴리오 수정</h3>
                         <form onSubmit={handleUpdatePortfolio} className="space-y-4">
                             <div>
