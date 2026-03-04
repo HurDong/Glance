@@ -86,7 +86,7 @@ export const MarketIndicesWidget: React.FC<MarketIndicesWidgetProps> = ({ onSele
 
                 <div className="z-10">
                     <div className="text-2xl font-black font-mono mb-1">
-                        {isExchangeRate ? `₩${index.price}` : index.type === 'US' ? `$${index.price}` : index.type === 'KR' ? `₩${index.price}` : index.price}
+                        {isExchangeRate ? `₩${index.price}` : index.type === 'US' || index.type === 'CRYPTO' || index.symbol?.includes('BTC') ? `$${index.price}` : index.type === 'KR' ? `₩${index.price}` : index.price}
                     </div>
                     <div className={clsx("text-sm font-bold flex items-center gap-1 w-fit px-2 py-0.5 rounded-md", 
                         isPositive ? "text-[#ff4d4f] bg-[#ff4d4f]/10" : isZero ? "text-muted-foreground bg-white/5" : "text-[#3b82f6] bg-[#3b82f6]/10")}>
