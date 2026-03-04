@@ -8,7 +8,8 @@ public record StockPriceMessage(
         String change,
         String changeRate,
         String volume,
-        String time) {
+        String time,
+        String marketStatus) {
     @Builder
     public StockPriceMessage {
     }

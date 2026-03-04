@@ -36,6 +36,18 @@ public class KisService {
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private static class CachedPrice {
+        public final StockPriceMessage message;
+        public final long timestamp;
+
+        public CachedPrice(StockPriceMessage message, long timestamp) {
+            this.message = message;
+            this.timestamp = timestamp;
+        }
+    }
+
+    private final java.util.concurrent.ConcurrentHashMap<String, CachedPrice> priceCache = new java.util.concurrent.ConcurrentHashMap<>();
+
     public StockPriceMessage getCurrentPrice(String symbol) {
         if (symbol == null || symbol.isEmpty())
             return null;
@@ -61,18 +73,36 @@ public class KisService {
     }
 
     private StockPriceMessage getKoreaCurrentPrice(String symbol) {
+        long now = System.currentTimeMillis();
+        CachedPrice cached = priceCache.get(symbol);
+        if (cached != null && (now - cached.timestamp) < 3000) { // 3-second cache
+            return cached.message;
+        }
+
         try {
-            String url = kisProperties.getUrl() + "/uapi/domestic-stock/v1/quotations/inquire-price";
+            String urlBasePath = kisProperties.getUrl() + "/uapi/domestic-stock/v1/quotations/inquire-price";
+
+            // Determine Time and Market Status first
+            String time = LocalTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
+            String marketStatus = "REGULAR";
+            if (time.compareTo("153000") >= 0 && time.compareTo("200000") <= 0)
+                marketStatus = "AFTER_HOURS";
+            else if (time.compareTo("080000") >= 0 && time.compareTo("090000") < 0)
+                marketStatus = "PRE_MARKET";
 
             HttpHeaders headers = new HttpHeaders();
             headers.set("content-type", "application/json; charset=utf-8");
             headers.set("authorization", "Bearer " + tokenService.getAccessToken());
             headers.set("appkey", kisProperties.getAppKey());
             headers.set("appsecret", kisProperties.getAppSecret());
-            headers.set("tr_id", "FHKST01010100");
+            headers.set("tr_id", "FHKST01010100"); // Use regular market TR_ID for all times to get consistent daily
+                                                   // change
 
-            String queryUrl = String.format("%s?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=%s", url, symbol);
+            String price = "0";
+            String change = "0";
+            String changeRate = "0";
 
+            String queryUrl = String.format("%s?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=%s", urlBasePath, symbol);
             HttpEntity<String> entity = new HttpEntity<>(headers);
             ResponseEntity<String> response = restTemplate.exchange(queryUrl, HttpMethod.GET, entity, String.class);
 
@@ -84,20 +114,30 @@ public class KisService {
                 return null;
             }
 
-            String price = output.path("stck_prpr").asText(); // Current Price
-            String change = output.path("prdy_vrss").asText(); // Change
-            String changeRate = output.path("prdy_ctrt").asText(); // Change Rate
-            // Time is not explicitly in this API output usually, so we use current time or
-            // ignore
-            String time = LocalTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
+            price = output.path("stck_prpr").asText();
+            String sign = output.path("prdy_vrss_sign").asText();
+            change = output.path("prdy_vrss").asText();
+            changeRate = output.path("prdy_ctrt").asText();
 
-            return StockPriceMessage.builder()
+            // Apply negative sign based on VRSS_SIGN
+            if ("4".equals(sign) || "5".equals(sign)) {
+                change = "-" + change;
+                if (!changeRate.startsWith("-") && !changeRate.equals("0.00")) {
+                    changeRate = "-" + changeRate;
+                }
+            }
+
+            StockPriceMessage result = StockPriceMessage.builder()
                     .symbol(symbol)
                     .price(price)
                     .change(change)
                     .changeRate(changeRate)
                     .time(time)
+                    .marketStatus(marketStatus)
                     .build();
+
+            priceCache.put(symbol, new CachedPrice(result, System.currentTimeMillis()));
+            return result;
 
         } catch (Exception e) {
             log.error("Error fetching KR price for {}", symbol, e);
@@ -164,12 +204,18 @@ public class KisService {
             // Usually 'diff' has sign or we check 'sign' field if available.
             // For this API, let's assume raw values are correct or adjust if needed.
 
+            String marketStatus = "REGULAR";
+            if (time.compareTo("060000") >= 0 && time.compareTo("233000") < 0) { // Rough Pre-market check for US
+                marketStatus = "PRE_MARKET";
+            }
+
             return StockPriceMessage.builder()
                     .symbol(symbol)
                     .price(price)
                     .change(change)
                     .changeRate(changeRate)
                     .time(time)
+                    .marketStatus(marketStatus)
                     .build();
 
         } catch (Exception e) {

@@ -6,6 +6,7 @@ export interface StockPrice {
   change: string;
   changeRate: string;
   time: string;
+  marketStatus?: string;
 }
 
 interface StockState {

@@ -105,14 +105,19 @@ public class KisWebSocketService extends TextWebSocketHandler {
                 String rtCd = resp.path("body").path("rt_cd").asText("");
                 String msg = resp.path("body").path("msg1").asText("");
                 String trId = resp.path("header").path("tr_id").asText("");
+                String trKey = resp.path("header").path("tr_key").asText("");
                 if ("1".equals(rtCd)) {
                     if (msg.contains("ALREADY IN SUBSCRIBE")) {
                         log.debug("[KIS WS] Already subscribed: TR_ID={}", trId);
                     } else {
-                        log.warn("[한국투자증권 KIS WS 에러] TR_ID={} msg={}", trId, msg);
+                        log.warn("[KIS WS Error] TR_ID={} tr_key={} msg={}", trId, trKey, msg);
                     }
                 } else {
-                    log.debug("[KIS WS 응답] TR_ID={} msg={}", trId, msg);
+                    if ("H0NXMKO0".equals(trId)) {
+                        log.info("[NXT] ACK OK: tr_key={}, msg={}", trKey, msg);
+                    } else {
+                        log.debug("[KIS WS ACK] TR_ID={} msg={}", trId, msg);
+                    }
                 }
             } catch (Exception ex) {
                 log.debug("KIS WS Response (non-JSON parseable): {}", payload);
@@ -131,8 +136,11 @@ public class KisWebSocketService extends TextWebSocketHandler {
             String trId = parts[1];
             // log.info("KIS WS TR_ID: {}", trId); // Debugging line
 
-            if ("H0STCNT0".equals(trId)) { // 국내주식 실시간 체결
-                parseAndBroadcastKorea(parts[3]);
+            if ("H0STCNT0".equals(trId)) { // 국내주식 실시간 체결 (KRX)
+                parseAndBroadcastKorea(parts[3], "KRX");
+            } else if ("H0NXMKO0".equals(trId)) { // 국내주식 실시간 체결 (Nextrade ATS)
+                log.info("[NXT] RAW message received: {}", parts[3].substring(0, Math.min(200, parts[3].length())));
+                parseAndBroadcastKorea(parts[3], "ATS");
             } else if ("HDFSASP0".equals(trId) || "HDFSCNT0".equals(trId)) { // 해외주식 실시간 호가 or 체결
                 parseAndBroadcastUS(parts[3]);
             } else {
@@ -143,7 +151,7 @@ public class KisWebSocketService extends TextWebSocketHandler {
         }
     }
 
-    private void parseAndBroadcastKorea(String data) {
+    private void parseAndBroadcastKorea(String data, String exchangeHint) {
         String[] fields = data.split("\\^");
         if (fields.length < 6)
             return;
@@ -154,7 +162,42 @@ public class KisWebSocketService extends TextWebSocketHandler {
         String changeRate = fields[5];
         String time = fields[1];
 
-        broadcast(symbol, price, change, changeRate, time);
+        String marketStatus;
+        if ("ATS".equals(exchangeHint)) {
+            // H0NXMKO0: This is Nextrade (ATS) data
+            // Determine if pre-market or after-market by time
+            if (time.compareTo("090000") < 0) {
+                marketStatus = "PRE_MARKET";
+            } else if (time.compareTo("153000") >= 0) {
+                marketStatus = "AFTER_HOURS";
+            } else {
+                marketStatus = "ATS";
+            }
+        } else {
+            // H0STCNT0: KRX market
+            // Extract Market Operation Code or rely on time for after-hours
+            marketStatus = "REGULAR";
+            if (fields.length > 42) {
+                String mkopClsCode = fields[42]; // 시장운영구분코드
+                if ("4".equals(mkopClsCode))
+                    marketStatus = "AFTER_HOURS";
+                else if ("1".equals(mkopClsCode))
+                    marketStatus = "PRE_MARKET";
+            } else {
+                // Fallback to time-based
+                if (time.compareTo("153000") >= 0 && time.compareTo("200000") <= 0)
+                    marketStatus = "AFTER_HOURS";
+                else if (time.compareTo("080000") >= 0 && time.compareTo("090000") < 0)
+                    marketStatus = "PRE_MARKET";
+            }
+        }
+
+        if ("ATS".equals(exchangeHint)) {
+            log.info("[NXT] Parsed: symbol={}, price={}, change={}, rate={}, time={}, marketStatus={}",
+                    symbol, price, change, changeRate, time, marketStatus);
+        }
+
+        broadcast(symbol, price, change, changeRate, time, marketStatus);
     }
 
     private void parseAndBroadcastUS(String data) {
@@ -182,19 +225,31 @@ public class KisWebSocketService extends TextWebSocketHandler {
                 change = "-" + change;
             }
 
-            broadcast(symbol, price, change, changeRate, time);
+            // US After-Hours/Pre-Market Logic (Time-based fallback for now)
+            String marketStatus = "REGULAR";
+            if (fields.length > 43) {
+                String mkopClsCode = fields[43]; // US 시장운영구분코드 (1: 프리, 2: 정규, 5: 애프터)
+                if ("1".equals(mkopClsCode) || "6".equals(mkopClsCode))
+                    marketStatus = "PRE_MARKET";
+                else if ("5".equals(mkopClsCode) || "7".equals(mkopClsCode))
+                    marketStatus = "AFTER_HOURS";
+            }
+
+            broadcast(symbol, price, change, changeRate, time, marketStatus);
         } catch (Exception e) {
             log.error("Failed to parse pricing data for {}", symbol);
         }
     }
 
-    private void broadcast(String symbol, String price, String change, String changeRate, String time) {
+    private void broadcast(String symbol, String price, String change, String changeRate, String time,
+            String marketStatus) {
         StockPriceMessage msg = StockPriceMessage.builder()
                 .symbol(symbol)
                 .price(price)
                 .change(change)
                 .changeRate(changeRate)
                 .time(time)
+                .marketStatus(marketStatus)
                 .build();
 
         redisStockService.publish(symbol, msg);
@@ -222,31 +277,42 @@ public class KisWebSocketService extends TextWebSocketHandler {
 
     private synchronized void sendSubscribeRequest(String symbol, boolean subscribe) {
         boolean isUS = com.glance.domain.stocks.utils.MarketUtils.isGlobalSymbol(symbol);
-        String trId = isUS ? "HDFSCNT0" : "H0STCNT0";
-        String trKey = symbol;
 
-        if (isUS) {
-            String marketCode = "DNAS"; // Default to NASDAQ
-            try {
-                var stockSymbol = stockSymbolRepository.findBySymbol(symbol);
-                if (stockSymbol.isPresent()) {
-                    switch (stockSymbol.get().getMarket()) {
-                        case NYSE:
-                            marketCode = "DNYS";
-                            break;
-                        case AMEX:
-                            marketCode = "DAMS";
-                            break;
-                        default:
-                            marketCode = "DNAS";
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("Failed to lookup market for symbol: {}, using default DNAS", symbol);
-            }
-            trKey = marketCode + symbol;
+        if (!isUS) {
+            // For Korean stocks, subscribe to KRX and also Nextrade (ATS)
+            // H0NXMKO0 uses plain stock code (strip Q-prefix if present)
+            String nxtKey = symbol.startsWith("Q") ? symbol.substring(1) : symbol;
+            log.info("[NXT] Subscribing symbol={} (nxtKey={}) to H0NXMKO0 (Nextrade ATS)", symbol, nxtKey);
+            sendSingleSubscribeRequest("H0STCNT0", symbol, subscribe);
+            sendSingleSubscribeRequest("H0NXMKO0", nxtKey, subscribe);
+            return;
         }
 
+        // US stocks
+        String marketCode = "DNAS";
+        try {
+            var stockSymbol = stockSymbolRepository.findBySymbol(symbol);
+            if (stockSymbol.isPresent()) {
+                switch (stockSymbol.get().getMarket()) {
+                    case NYSE:
+                        marketCode = "DNYS";
+                        break;
+                    case AMEX:
+                        marketCode = "DAMS";
+                        break;
+                    default:
+                        marketCode = "DNAS";
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to lookup market for symbol: {}, using default DNAS", symbol);
+        }
+        String trKey = marketCode + symbol;
+
+        sendSingleSubscribeRequest("HDFSCNT0", trKey, subscribe);
+    }
+
+    private void sendSingleSubscribeRequest(String trId, String trKey, boolean subscribe) {
         try {
             Map<String, Object> request = Map.of(
                     "header", Map.of(
@@ -261,9 +327,9 @@ public class KisWebSocketService extends TextWebSocketHandler {
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(request)));
             log.debug("{} Requested {} subscription for: {} (TR_ID: {}, TR_KEY: {})",
                     subscribe ? "📤" : "🗑️",
-                    isUS ? "US" : "KR", symbol, trId, trKey);
+                    "KIS", trKey, trId, trKey);
         } catch (Exception e) {
-            log.error("Failed to send subscription request", e);
+            log.error("Failed to send subscription request for {} {}", trId, trKey, e);
         }
     }
 }

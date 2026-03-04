@@ -16,8 +16,6 @@ export const useStockWebSocket = () => {
     const isConnectedRef = useRef<boolean>(false);
 
     const subscribeToSymbol = useCallback((client: Client, symbol: string) => {
-        // ... (same as before)
-        // console.log(`Subscribing to ${symbol}`);
         client.subscribe(`/api/v1/sub/stocks/${symbol}`, (message) => {
             try {
                 const body = JSON.parse(message.body);
@@ -26,17 +24,12 @@ export const useStockWebSocket = () => {
                 console.error('Failed to parse stock message', e);
             }
         });
-        
-        // Send a subscription request to the backend to start receiving data for this symbol
-        // Only if logged in (for tracking interest), otherwise rely on global/public stream
-        // Always send subscription request (both for auth and anonymous users)
-        // Subscription count is managed globally by Redis service
+
         const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-        
+
         // Fetch initial price immediately (useful when market is closed and no real-time data is streaming)
         api.get(`/stocks/${symbol}/price`).then(response => {
             if (response.data && response.data.data) {
-                // If we haven't received a WS message yet, or just to sync the latest known price
                 setPrice(symbol, response.data.data);
             }
         }).catch(err => console.error(`Failed to fetch initial price for ${symbol}`, err));
@@ -50,21 +43,16 @@ export const useStockWebSocket = () => {
 
     const subscribe = useCallback((symbol: string) => {
         if (subscriptionsRef.current.has(symbol)) return;
-        
+
         subscriptionsRef.current.add(symbol);
 
         if (clientRef.current && isConnectedRef.current) {
             subscribeToSymbol(clientRef.current, symbol);
-        } else {
-            // console.log(`Queueing subscription for ${symbol}`);
         }
     }, [subscribeToSymbol]);
 
     const connect = useCallback(() => {
-        // if (!token) return; // Removed token requirement
         if (clientRef.current?.active) return;
-        
-        // console.log('Connecting ' + (token ? 'with token' : 'as guest'));
 
         const client = new Client({
             webSocketFactory: () => new SockJS(SOCKET_URL),
@@ -78,9 +66,8 @@ export const useStockWebSocket = () => {
             heartbeatIncoming: 10000,
             heartbeatOutgoing: 10000,
             onConnect: () => {
-                // console.log('Connected to WebSocket');
                 isConnectedRef.current = true;
-                
+
                 // Process queued subscriptions
                 subscriptionsRef.current.forEach(symbol => {
                     subscribeToSymbol(client, symbol);
@@ -92,7 +79,6 @@ export const useStockWebSocket = () => {
             },
             onWebSocketClose: () => {
                 isConnectedRef.current = false;
-                // console.log('WebSocket Closed');
             }
         });
 
@@ -102,16 +88,14 @@ export const useStockWebSocket = () => {
 
     const disconnect = useCallback(() => {
         if (clientRef.current) {
-            // console.log('Disconnecting WebSocket...');
             clientRef.current.deactivate();
             clientRef.current = null;
             isConnectedRef.current = false;
-            subscriptionsRef.current.clear(); // CRITCAL: clear so they re-subscribe on next connect
+            subscriptionsRef.current.clear();
         }
     }, []);
 
     useEffect(() => {
-        // Updated: Connect regardless of token (allow Public Ticker)
         connect();
         return () => disconnect();
     }, [connect, disconnect, token]);
