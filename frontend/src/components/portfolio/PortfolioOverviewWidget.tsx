@@ -47,7 +47,7 @@ export const PortfolioOverviewWidget = () => {
 
     if (isLoading) {
         return (
-            <div className="glass-panel p-6 rounded-2xl h-[160px] flex items-center justify-center">
+            <div className="bg-card/40 backdrop-blur-xl border border-border shadow-sm p-6 rounded-2xl h-[160px] flex items-center justify-center">
                 <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
             </div>
         );
@@ -55,7 +55,7 @@ export const PortfolioOverviewWidget = () => {
 
     if (error || !portfolio) {
         return (
-            <div className="glass-panel p-6 rounded-2xl flex items-center gap-3 text-muted-foreground">
+            <div className="bg-card/40 backdrop-blur-xl border border-border shadow-sm p-6 rounded-2xl flex items-center gap-3 text-muted-foreground">
                 <AlertCircle size={18} />
                 <span className="text-sm">대표 포트폴리오를 불러올 수 없습니다.</span>
             </div>
@@ -80,7 +80,7 @@ export const PortfolioOverviewWidget = () => {
     };
 
     return (
-        <div className="glass-panel p-6 rounded-2xl flex flex-col md:flex-row gap-6 items-center">
+        <div className="bg-card/40 backdrop-blur-xl border border-border shadow-sm p-6 rounded-2xl flex flex-col md:flex-row gap-6 items-center">
             {/* Left Info */}
             <div className="flex-1 space-y-4 min-w-0">
                 <div className="flex items-center gap-2 mb-2">
@@ -121,7 +121,7 @@ export const PortfolioOverviewWidget = () => {
                                 outerRadius={62}
                                 paddingAngle={5}
                                 dataKey="value"
-                                stroke="rgba(255,255,255,0.05)"
+                                stroke="none"
                             >
                                 {chartData.map((_, index) => (
                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

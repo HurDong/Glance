@@ -646,6 +646,7 @@ export const MyPortfolioDashboard: React.FC = () => {
                                                         outerRadius={80}
                                                         paddingAngle={3}
                                                         dataKey="value"
+                                                        stroke="none"
                                                     >
                                                         {chartData.map((_, index) => (
                                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
