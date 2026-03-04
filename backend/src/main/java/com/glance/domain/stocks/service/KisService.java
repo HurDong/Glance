@@ -40,7 +40,7 @@ public class KisService {
         if (symbol == null || symbol.isEmpty())
             return null;
 
-        boolean isUS = symbol.matches("^[a-zA-Z].*");
+        boolean isUS = com.glance.domain.stocks.utils.MarketUtils.isGlobalSymbol(symbol);
         if (isUS) {
             return getUSCurrentPrice(symbol);
         } else {
@@ -52,7 +52,7 @@ public class KisService {
         if (symbol == null || symbol.isEmpty())
             return null;
 
-        boolean isUS = symbol.matches("^[a-zA-Z].*");
+        boolean isUS = com.glance.domain.stocks.utils.MarketUtils.isGlobalSymbol(symbol);
         if (isUS) {
             return finnhubService.getUsChartData(symbol, range);
         } else {

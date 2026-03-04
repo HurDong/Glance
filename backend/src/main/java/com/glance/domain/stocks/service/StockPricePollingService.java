@@ -37,7 +37,7 @@ public class StockPricePollingService {
      */
     public void registerUssSymbol(String symbol) {
         // 영문자로만 이루어진 심볼 = 해외주식
-        if (symbol != null && symbol.matches("^[a-zA-Z].*")) {
+        if (com.glance.domain.stocks.utils.MarketUtils.isGlobalSymbol(symbol)) {
             pollingSymbols.add(symbol.toUpperCase());
         }
     }

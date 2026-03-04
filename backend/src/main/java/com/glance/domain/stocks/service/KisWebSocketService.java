@@ -221,7 +221,7 @@ public class KisWebSocketService extends TextWebSocketHandler {
     }
 
     private synchronized void sendSubscribeRequest(String symbol, boolean subscribe) {
-        boolean isUS = symbol.matches("^[a-zA-Z].*");
+        boolean isUS = com.glance.domain.stocks.utils.MarketUtils.isGlobalSymbol(symbol);
         String trId = isUS ? "HDFSCNT0" : "H0STCNT0";
         String trKey = symbol;
 
