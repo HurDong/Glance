@@ -53,10 +53,10 @@ export const MarketIndicesWidget: React.FC<MarketIndicesWidgetProps> = ({ onSele
         if (!index && isLoading) {
             return (
                 <div className="glass-card p-6 rounded-2xl animate-pulse flex flex-col justify-between min-h-[140px]">
-                    <div className="h-6 w-24 bg-white/10 rounded mb-4"></div>
+                    <div className="h-6 w-24 bg-black/10 dark:bg-white/10 rounded mb-4"></div>
                     <div className="space-y-2">
-                        <div className="h-8 w-32 bg-white/10 rounded"></div>
-                        <div className="h-4 w-16 bg-white/10 rounded"></div>
+                        <div className="h-8 w-32 bg-black/10 dark:bg-white/10 rounded"></div>
+                        <div className="h-4 w-16 bg-black/10 dark:bg-white/10 rounded"></div>
                     </div>
                 </div>
             );

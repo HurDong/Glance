@@ -700,7 +700,7 @@ export const MyPortfolioDashboard: React.FC = () => {
                                 <div className="bg-card/40 backdrop-blur-2xl border border-white/5 rounded-3xl shadow-xl overflow-hidden h-full flex flex-col">
                                     <div className="p-6 border-b border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                         <h3 className="text-xl font-bold flex items-center gap-2">
-                                            보유 종목 <span className="bg-white/10 text-muted-foreground text-sm py-0.5 px-2.5 rounded-full font-medium">{activePortfolio.items?.length || 0}</span>
+                                            보유 종목 <span className="bg-black/5 dark:bg-white/10 text-muted-foreground text-sm py-0.5 px-2.5 rounded-full font-medium">{activePortfolio.items?.length || 0}</span>
                                         </h3>
                                         <div className="flex items-center gap-2">
                                             <button

@@ -67,7 +67,11 @@ export const TrendingCards = ({ onStockClick }: { onStockClick: (stock: Trending
                                 
                                 <div className="mt-auto flex items-end justify-between">
                                     <div className="flex flex-col">
-                                        <div className="text-[11px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Current Price</div>
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                            <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Current Price</div>
+                                            {data?.marketStatus === 'AFTER_HOURS' && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-blue-500/10 text-blue-500">시간외</span>}
+                                            {data?.marketStatus === 'PRE_MARKET' && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-amber-500/10 text-amber-500">프리장</span>}
+                                        </div>
                                        {data ? (
                                            <div className="text-xl font-black tracking-tight flex items-center gap-1">
                                                <span className="text-sm opacity-60 font-semibold">{stock.market === 'US' ? '$' : '₩'}</span>

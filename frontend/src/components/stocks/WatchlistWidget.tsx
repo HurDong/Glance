@@ -161,7 +161,7 @@ export const WatchlistWidget: React.FC<WatchlistWidgetProps> = ({ onSelect }) =>
                     </div>
                     <h2 className="text-xl font-bold font-header">나의 관심종목</h2>
                 </div>
-                <span className="text-sm font-bold text-muted-foreground bg-white/5 px-2 py-1 rounded-md">
+                <span className="text-sm font-bold text-muted-foreground bg-black/5 dark:bg-white/5 px-2 py-1 rounded-md">
                     {interestedStocks.length}
                 </span>
             </div>
@@ -220,7 +220,7 @@ export const WatchlistWidget: React.FC<WatchlistWidgetProps> = ({ onSelect }) =>
                                                 </div>
                                             </div>
                                             {isAlreadyAdded ? (
-                                                <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-muted-foreground shrink-0">추가됨</span>
+                                                <span className="text-[10px] bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-muted-foreground shrink-0">추가됨</span>
                                             ) : (
                                                 <button className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     추가
@@ -286,7 +286,11 @@ export const WatchlistWidget: React.FC<WatchlistWidgetProps> = ({ onSelect }) =>
                                     />
                                     <div className="flex flex-col truncate">
                                         <span className="font-bold text-[14px] truncate group-hover:text-primary transition-colors">{displayName}</span>
-                                        <span className="text-[11px] text-muted-foreground px-1.5 py-0.5 bg-white/5 w-fit rounded uppercase tracking-wider mt-0.5">{stock.symbol}</span>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                            <span className="text-[11px] text-muted-foreground px-1.5 py-0.5 bg-black/5 dark:bg-white/5 w-fit rounded uppercase tracking-wider">{stock.symbol}</span>
+                                            {liveData?.marketStatus === 'AFTER_HOURS' && <span className="text-[9px] text-blue-500 font-bold bg-blue-500/10 px-1 py-0.5 rounded">시간외</span>}
+                                            {liveData?.marketStatus === 'PRE_MARKET' && <span className="text-[9px] text-amber-500 font-bold bg-amber-500/10 px-1 py-0.5 rounded">프리장</span>}
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -311,8 +315,8 @@ export const WatchlistWidget: React.FC<WatchlistWidgetProps> = ({ onSelect }) =>
                                             </>
                                         ) : (
                                             <div className="animate-pulse flex flex-col items-end gap-1">
-                                                <div className="h-4 w-16 bg-white/10 rounded"></div>
-                                                <div className="h-3 w-12 bg-white/10 rounded"></div>
+                                                <div className="h-4 w-16 bg-black/10 dark:bg-white/10 rounded"></div>
+                                                <div className="h-3 w-12 bg-black/10 dark:bg-white/10 rounded"></div>
                                             </div>
                                         )}
                                     </div>
