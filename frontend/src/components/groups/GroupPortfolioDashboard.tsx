@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Plus, Share2, Send, Trash2, X, Sparkles, Activity, LogOut } from 'lucide-react';
+import { Users, Plus, Share2, Send, Trash2, X, Sparkles, Activity, LogOut, Lock, Rocket } from 'lucide-react';
 import { groupApi } from '../../api/group';
 import type { Group } from '../../api/group';
 import { portfolioApi } from '../../api/portfolio';
@@ -30,9 +30,48 @@ const PortfolioItemPrice = ({ symbol, market: _market }: { symbol: string, marke
     const isUp = !isDown && parseFloat(changeRateStr) > 0;
 
     return (
-        <div className={clsx("flex items-center text-sm font-bold tracking-tight", isUp ? "text-red-500" : isDown ? "text-blue-500" : "text-foreground")}>
-            {data.price}
-            <span className="ml-1.5 text-xs font-medium opacity-90">({data.changeRate}%)</span>
+        <div className={clsx("flex flex-col items-end leading-tight", isUp ? "text-red-500" : isDown ? "text-blue-500" : "text-foreground")}>
+            <span className="text-xs font-bold tracking-tight">{data.price}</span>
+            <span className="text-[10px] font-medium opacity-90">{data.changeRate > 0 ? '+' : ''}{data.changeRate}%</span>
+        </div>
+    );
+};
+
+const ReactionButtons = () => {
+    const [reactions, setReactions] = useState<Record<string, boolean>>({});
+
+    const toggleReaction = (type: string) => {
+        setReactions(prev => ({
+            ...prev,
+            [type]: !prev[type]
+        }));
+    };
+
+    const reactionTypes = [
+        { id: 'like', emoji: '👍', label: '유익해요' },
+        { id: 'rocket', emoji: '🚀', label: '가즈아' },
+        { id: 'eyes', emoji: '👀', label: '줍줍' },
+        { id: 'diamond', emoji: '💎', label: '다이아손' },
+        { id: 'clap', emoji: '👏', label: '멋진수익' }
+    ];
+
+    return (
+        <div className="flex flex-wrap gap-1.5 mt-2 mb-1">
+            {reactionTypes.map(r => (
+                <button
+                    key={r.id}
+                    onClick={() => toggleReaction(r.id)}
+                    className={clsx(
+                        "px-2.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1 active:scale-95 shadow-sm",
+                        reactions[r.id]
+                            ? "bg-primary text-primary-foreground border-transparent shadow-[0_2px_8px_rgba(36,99,235,0.3)]"
+                            : "bg-background border border-border/80 hover:border-border text-muted-foreground hover:text-foreground"
+                    )}
+                >
+                    <span className="text-sm">{r.emoji}</span>
+                    <span>{r.label}</span>
+                </button>
+            ))}
         </div>
     );
 };
@@ -239,7 +278,7 @@ export const GroupPortfolioDashboard: React.FC = () => {
     if (isLoading) return <div className="p-8 text-center text-muted-foreground animate-pulse">데이터를 불러오는 중입니다...</div>;
 
     return (
-        <div className="space-y-6 lg:space-y-8 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
+        <div className="space-y-6 lg:space-y-8 w-full max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 xl:px-10 py-6">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -387,14 +426,14 @@ export const GroupPortfolioDashboard: React.FC = () => {
                             </div>
 
                             {/* Portfolio Feed List */}
-                            <div className="flex flex-col gap-5">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6 items-start">
                                 {(() => {
                                     const verifiedMembers = selectedGroupForFeed.members.filter(m => m.status === 'ACCEPTED');
                                     const feedItems = verifiedMembers.filter(m => m.sharedPortfolioId && m.sharedPortfolioItems && m.sharedPortfolioItems.length > 0);
 
                                     if (feedItems.length === 0) {
                                         return (
-                                            <div className="py-20 flex flex-col items-center justify-center bg-card/30 border border-dashed border-border/80 rounded-3xl text-center">
+                                            <div className="xl:col-span-2 py-20 flex flex-col items-center justify-center bg-card/30 border border-dashed border-border/80 rounded-3xl text-center">
                                                 <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground/50">
                                                     <Share2 size={32} />
                                                 </div>
@@ -410,92 +449,152 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                         );
                                     }
 
-                                    return feedItems.map((feedMember) => {
-                                        const isPrivate = feedMember.sharedPortfolioIsPublic === false;
-                                        return (
-                                        <div key={feedMember.id} className="bg-card/60 backdrop-blur-sm border border-border/60 rounded-3xl p-6 md:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.05)] transition-all hover:border-primary/30 hover:shadow-[0_6px_30px_rgba(0,0,0,0.08)] group">
-                                            {/* Feed Card Header */}
-                                            <div className="flex items-center justify-between mb-6">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-secondary/80 to-secondary flex items-center justify-center text-secondary-foreground font-bold shadow-sm text-base shrink-0">
-                                                        {feedMember.member.nickname.charAt(0)}
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <div className="text-base">
-                                                            <strong className="text-foreground tracking-tight text-lg">{feedMember.member.nickname}</strong>
-                                                            <span className="text-muted-foreground mx-1.5">님의 포트폴리오</span>
+                                        return feedItems.map((feedMember) => {
+                                            const isPrivate = feedMember.sharedPortfolioIsPublic === false;
+                                            // Mock Hero Stock: Pick the first stock (or the only one)
+                                            const heroStock = feedMember.sharedPortfolioItems?.[0];
+                                            const remainingStocks = feedMember.sharedPortfolioItems?.slice(1) || [];
+
+                                            return (
+                                            <div key={feedMember.id} className="bg-card/90 backdrop-blur-md border border-border/60 rounded-[32px] p-5 lg:p-6 shadow-sm hover:shadow-xl hover:border-primary/40 transition-all group relative flex flex-col">
+                                                {/* Ambient Background Glow */}
+                                                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none -z-10 group-hover:bg-primary/10 transition-colors overflow-hidden rounded-tr-[32px]"></div>
+                                                
+                                                {/* Social Header (Oversized) */}
+                                                <div className="flex items-center gap-4 mb-6 relative z-10">
+                                                    <div className="relative shrink-0">
+                                                        <div className="absolute inset-0 bg-primary/40 rounded-full blur-md opacity-40 group-hover:opacity-70 transition-opacity"></div>
+                                                        <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-full bg-gradient-to-br from-indigo-500 to-primary border-2 border-background flex items-center justify-center font-black text-3xl text-white shadow-xl relative z-10 ring-4 ring-primary/10">
+                                                            {feedMember.member.nickname.charAt(0)}
                                                         </div>
-                                                        <div className="flex items-center gap-1.5 mt-0.5">
-                                                            <div className="text-sm font-bold text-primary">
-                                                                {feedMember.sharedPortfolioName}
-                                                            </div>
+                                                    </div>
+                                                    <div className="flex flex-col flex-1 min-w-0">
+                                                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                                                            <span className="px-2.5 py-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold text-[10px] rounded-full tracking-wider shadow-sm flex items-center gap-1">
+                                                                <Sparkles size={10} /> 인사이트 리더
+                                                            </span>
                                                             {isPrivate && (
-                                                                <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/50">
-                                                                    🔒 비공개
+                                                                <span className="px-2 py-0.5 bg-muted/80 text-muted-foreground font-bold text-[9px] rounded-full flex items-center gap-1 border border-border/50">
+                                                                    <Lock size={8} /> SECRET
                                                                 </span>
                                                             )}
                                                         </div>
+                                                        <strong className="text-foreground tracking-tight text-xl sm:text-2xl truncate">{feedMember.member.nickname}</strong>
+                                                        <div className="text-xs sm:text-sm font-bold text-primary truncate mt-0.5 max-w-[200px] sm:max-w-xs">
+                                                            {feedMember.sharedPortfolioName}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Stocks Masonry/Grid */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                                {feedMember.sharedPortfolioItems?.map(item => (
-                                                    <div
-                                                        key={item.id}
-                                                        className="flex justify-between items-center p-4 bg-background/50 border border-border/50 rounded-2xl hover:bg-muted/30 hover:border-primary/30 transition-all"
-                                                    >
-                                                        <div className="flex items-center gap-3">
-                                                            <StockIcon symbol={item.symbol} name={item.symbol} market={item.market as 'US'|'KR'} className="w-11 h-11 rounded-full shadow-sm bg-white shrink-0" />
-                                                            <div>
-                                                                <div className="font-extrabold text-base truncate max-w-[160px]">
-                                                                    {(item.market === 'KOSPI' || item.market === 'KOSDAQ') ? (item.nameKr || item.symbol) : item.symbol}
-                                                                </div>
-                                                                <div className="text-xs text-muted-foreground font-mono opacity-60">
-                                                                    {(item.market === 'KOSPI' || item.market === 'KOSDAQ') ? item.symbol : (item.nameEn || '')}
-                                                                </div>
-                                                                {isPrivate ? (
-                                                                    <div className="text-xs text-muted-foreground font-mono mt-1 tracking-wider">🔒 ••• 주 보유</div>
+                                                {/* The Hook (Hero Stock) */}
+                                                {heroStock && (
+                                                    <div className="mb-5 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent border border-indigo-500/20 rounded-3xl p-5 relative overflow-hidden z-10 shadow-inner group/hero">
+                                                        <div className="flex justify-between items-start mb-5 relative z-10">
+                                                            <div className="flex items-center gap-1.5 text-indigo-500 dark:text-indigo-400 font-black text-[11px] tracking-widest uppercase bg-indigo-500/10 px-3 py-1.5 rounded-full border border-indigo-500/20 shadow-sm">
+                                                                <Rocket size={14} className="text-indigo-500 dark:text-indigo-400" /> TOP PICK
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-end justify-between relative z-10 w-full">
+                                                            <div className="flex items-center gap-4 flex-1 min-w-0 pr-4">
+                                                                {heroStock.symbol === 'KRW' ? (
+                                                                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-3xl sm:text-4xl shadow-lg ring-4 ring-background shrink-0">💵</div>
                                                                 ) : (
-                                                                    <div className="text-xs text-muted-foreground font-mono mt-1">{item.quantity}주 보유</div>
+                                                                    <StockIcon symbol={heroStock.symbol} name={heroStock.symbol} market={heroStock.market as 'US'|'KR'} className="w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-lg ring-4 ring-background shrink-0" />
                                                                 )}
+                                                                <div className="flex flex-col min-w-0 group/tooltip relative">
+                                                                    <div className="text-3xl sm:text-4xl font-black text-foreground tracking-tighter drop-shadow-sm truncate">
+                                                                        {heroStock.symbol === 'KRW' ? '보유 현금 (KRW)' : ((heroStock.market === 'KOSPI' || heroStock.market === 'KOSDAQ') ? (heroStock.nameKr || heroStock.symbol) : heroStock.symbol)}
+                                                                    </div>
+                                                                    <div className="text-sm font-bold text-muted-foreground mt-1 truncate">
+                                                                        {heroStock.market} • {heroStock.symbol === 'KRW' ? '예수금' : heroStock.symbol}
+                                                                    </div>
+                                                                    {/* Custom Tooltip */}
+                                                                    <div className="absolute left-0 bottom-[110%] mb-1 bg-popover/95 backdrop-blur-sm text-popover-foreground text-[10px] sm:text-[11px] font-medium px-2.5 py-1 rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)] opacity-0 group-hover/tooltip:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-[100] transform translate-y-1 group-hover/tooltip:translate-y-0">
+                                                                        {heroStock.symbol === 'KRW' ? '보유 현금 (KRW)' : ((heroStock.market === 'KOSPI' || heroStock.market === 'KOSDAQ') ? (heroStock.nameKr || heroStock.symbol) : heroStock.symbol)}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex flex-col items-end shrink-0">
+                                                                {isPrivate ? (
+                                                                    <div className="mb-2 text-[10px] font-bold text-muted-foreground bg-card/80 border border-border/60 px-2.5 py-1 rounded-full flex items-center gap-1 backdrop-blur-sm shadow-sm">
+                                                                        <Lock size={10} /> 수량 비공개
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="mb-2 text-[12px] font-black text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full shadow-sm">
+                                                                        {heroStock.symbol === 'KRW' ? '현금 자산 비중' : `${heroStock.quantity}주 탑재`}
+                                                                    </div>
+                                                                )}
+                                                                <div className="transform scale-125 origin-bottom-right mt-1">
+                                                                    {heroStock.symbol !== 'KRW' && <PortfolioItemPrice symbol={heroStock.symbol} market={heroStock.market} />}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                        <div className="flex flex-col items-end gap-1.5 shrink-0">
-                                                            <div className="">
-                                                                <PortfolioItemPrice symbol={item.symbol} market={item.market} />
-                                                            </div>
-                                                            <button
-                                                                onClick={() => setQuickAddSymbol(item.symbol)}
-                                                                className="text-xs font-bold text-primary bg-primary/10 hover:bg-primary hover:text-primary-foreground px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
-                                                            >
-                                                                <Plus size={12} strokeWidth={2.5} /> 담기
-                                                            </button>
-                                                        </div>
                                                     </div>
-                                                ))}
-                                            </div>
-
-                                            {/* Feed Card Footer */}
-                                            <div className="border-t border-border/40 pt-4 mt-2">
-                                                {isPrivate ? (
-                                                    <div className="w-full py-2.5 text-muted-foreground/60 text-sm font-medium rounded-xl flex items-center justify-center gap-2">
-                                                        🔒 비공개 포트폴리오 — 수량·평단가는 숨겨져 있습니다
-                                                    </div>
-                                                ) : (
-                                                    <button
-                                                        className="w-full py-2.5 bg-muted/30 text-muted-foreground text-sm font-bold rounded-xl hover:bg-primary/10 hover:text-primary transition-colors flex items-center justify-center gap-2 group-hover:border-primary/20 border border-transparent"
-                                                        onClick={() => showToast(`해당 기능은 아직 준비 중입니다.`)}
-                                                    >
-                                                        <Share2 size={16} /> 이 포트폴리오 내용 관심종목에 복사
-                                                    </button>
                                                 )}
+
+                                                {/* Stocks Grid (Chunky Pills) */}
+                                                {remainingStocks.length > 0 && (
+                                                    <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-6 relative z-10">
+                                                        {remainingStocks.map(item => (
+                                                            <div
+                                                                key={item.id}
+                                                                className="flex items-center p-2.5 sm:p-3 bg-muted/30 border border-border/40 rounded-2xl hover:bg-muted/60 transition-colors gap-2.5 group/item cursor-pointer shadow-sm relative"
+                                                            >
+                                                                {item.symbol === 'KRW' ? (
+                                                                    <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-xl shadow-md shrink-0 ring-2 ring-background">💵</div>
+                                                                ) : (
+                                                                    <StockIcon symbol={item.symbol} name={item.symbol} market={item.market as 'US'|'KR'} className="w-10 h-10 rounded-full shadow-md shrink-0 ring-2 ring-background" />
+                                                                )}
+                                                                <div className="flex flex-col min-w-0 flex-1 group/tooltip relative">
+                                                                    <div className="font-extrabold text-xs sm:text-sm text-foreground truncate leading-tight">
+                                                                        {item.symbol === 'KRW' ? '원화 (KRW)' : ((item.market === 'KOSPI' || item.market === 'KOSDAQ') ? (item.nameKr || item.symbol) : item.symbol)}
+                                                                    </div>
+                                                                    {isPrivate ? (
+                                                                        <div className="text-[10px] text-muted-foreground/80 font-bold mt-0.5 flex items-center gap-1 truncate"><Lock size={10} /> 수량 비공개</div>
+                                                                    ) : (
+                                                                        <div className="text-[11px] font-bold text-muted-foreground mt-0.5">
+                                                                            {item.symbol === 'KRW' ? '보유 자산' : `${item.quantity}주`}
+                                                                        </div>
+                                                                    )}
+                                                                    {/* Custom Tooltip */}
+                                                                    <div className="absolute left-0 bottom-[110%] bg-popover/95 backdrop-blur-sm text-popover-foreground text-[10px] sm:text-[11px] font-medium px-2.5 py-1 rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)] opacity-0 group-hover/tooltip:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-[100] transform translate-y-1 group-hover/tooltip:translate-y-0">
+                                                                        {item.symbol === 'KRW' ? '원화 자산 (KRW)' : ((item.market === 'KOSPI' || item.market === 'KOSDAQ') ? (item.nameKr || item.symbol) : item.symbol)}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="pl-2 border-l border-border/40 flex items-center justify-end shrink-0 min-w-[60px]">
+                                                                    {item.symbol !== 'KRW' && <PortfolioItemPrice symbol={item.symbol} market={item.market} />}
+                                                                </div>
+                                                                {/* Hover Context Actions (Optional) */}
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); setQuickAddSymbol(item.symbol); }}
+                                                                    className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground p-1.5 rounded-full opacity-0 group-hover/item:opacity-100 transition-all shadow-lg hover:scale-110 active:scale-95 z-10"
+                                                                    title="관심종목 담기"
+                                                                >
+                                                                    <Plus size={12} strokeWidth={3} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Interactions & Clone Button */}
+                                                <div className="mt-auto pt-4 flex flex-col gap-4 relative z-10">
+                                                    <div className="flex justify-center scale-105 sm:scale-110 origin-center mb-1">
+                                                        <ReactionButtons />
+                                                    </div>
+                                                    
+                                                    <button
+                                                        className="w-full py-3.5 sm:py-4 rounded-[20px] font-black text-[15px] flex items-center justify-center gap-2 transition-all shadow-lg border border-transparent
+                                                        bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500 hover:shadow-indigo-500/25 active:scale-[0.98]"
+                                                        onClick={(_e) => showToast(`해당 덱(Deck) 클론 기능은 준비 중입니다.`)}
+                                                    >
+                                                        <Plus size={18} strokeWidth={3} /> 이 덱(Deck) 클론하기
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
-                                        );
-                                    });
-                                })()}
+                                            );
+                                        });
+                                    })()}
                             </div>
                         </div>
                     )}
