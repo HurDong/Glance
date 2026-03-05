@@ -243,17 +243,28 @@ export const MyPortfolioDashboard: React.FC = () => {
     }, [id, portfolios]);
 
     const loadPortfolios = async (showRefreshAnim = false) => {
+        if (!token) {
+            setPortfolios([]);
+            setIsLoading(false);
+            return;
+        }
+        
         if (showRefreshAnim) setIsRefreshing(true);
         try {
             const response = await apiClient.get<{ data: Portfolio[] }>('/portfolios', {
-                headers: token ? { Authorization: `Bearer ${token}` } : {}
+                headers: { Authorization: `Bearer ${token}` }
             });
             // API 응답 내의 items 배열이 없는 경우를 대비
             const loaded = response.data.data.map(p => ({ ...p, items: p.items || [] }));
             setPortfolios(loaded);
-        } catch (error) {
-            console.error('Failed to load portfolios:', error);
-            showAlert('포트폴리오 목록을 불러오지 못했습니다.', { type: 'error' });
+        } catch (error: any) {
+            if (error.response?.status === 404) {
+                // 사용자의 포트폴리오가 아직 없는 경우 에러 팝업을 띄우지 않고 빈 배열로 처리합니다.
+                setPortfolios([]);
+            } else {
+                console.error('Failed to load portfolios:', error);
+                showAlert('포트폴리오 목록을 불러오지 못했습니다.', { type: 'error' });
+            }
         } finally {
             setIsLoading(false);
             if (showRefreshAnim) setTimeout(() => setIsRefreshing(false), 500);
@@ -740,9 +751,15 @@ export const MyPortfolioDashboard: React.FC = () => {
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-border/50">
-                                                    {activePortfolio.items.map((item) => {
-                                                        const isCash = item.market === 'CASH';
-                                                        return (
+                                                    {[...activePortfolio.items]
+                                                        .sort((a, b) => {
+                                                            const valA = a.currency === 'USD' ? (a.quantity * a.averagePrice * 1350) : (a.quantity * a.averagePrice);
+                                                            const valB = b.currency === 'USD' ? (b.quantity * b.averagePrice * 1350) : (b.quantity * b.averagePrice);
+                                                            return valB - valA;
+                                                        })
+                                                        .map((item) => {
+                                                            const isCash = item.market === 'CASH';
+                                                            return (
                                                         <tr key={item.id} className={isCash ? 'hover:bg-accent/40 transition-colors group bg-emerald-500/5' : 'hover:bg-accent/40 transition-colors group'}>
                                                             <td className="px-6 py-4 whitespace-nowrap">
                                                                 <div className="flex items-center gap-3">

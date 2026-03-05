@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Plus, Share2, Send, Trash2, X, Sparkles, Activity, LogOut, Lock, Rocket } from 'lucide-react';
+import { Users, Plus, Share2, Send, Trash2, X, Sparkles, LogOut, Lock, Rocket, ChevronLeft, ChevronRight } from 'lucide-react';
 import { groupApi } from '../../api/group';
 import type { Group } from '../../api/group';
 import { portfolioApi } from '../../api/portfolio';
@@ -22,7 +22,12 @@ const PortfolioItemPrice = ({ symbol, market: _market }: { symbol: string, marke
 
     const data = getPrice(symbol);
 
-    if (!data) return <span className="text-xs text-muted-foreground">가격 정보 로딩중...</span>;
+    if (!data) return (
+        <div className="flex flex-col items-end gap-1">
+            <div className="h-3 w-10 bg-muted/60 rounded animate-pulse"></div>
+            <div className="h-2.5 w-8 bg-muted/40 rounded animate-pulse"></div>
+        </div>
+    );
 
     // Use changeRate string to deterministically check negative values (handles both numbers and string formats like "-1.49")
     const changeRateStr = String(data.changeRate);
@@ -32,7 +37,126 @@ const PortfolioItemPrice = ({ symbol, market: _market }: { symbol: string, marke
     return (
         <div className={clsx("flex flex-col items-end leading-tight", isUp ? "text-red-500" : isDown ? "text-blue-500" : "text-foreground")}>
             <span className="text-xs font-bold tracking-tight">{data.price}</span>
-            <span className="text-[10px] font-medium opacity-90">{data.changeRate > 0 ? '+' : ''}{data.changeRate}%</span>
+            <span className="text-[10px] font-medium opacity-90">{isUp ? '+' : ''}{data.changeRate}%</span>
+        </div>
+    );
+};
+
+const PortfolioStockList = ({ stocks, isPrivate }: { stocks: any[], isPrivate: boolean }) => {
+    const [currentPage, setCurrentPage] = useState(0);
+    const [quickAddSymbol, setQuickAddSymbol] = useState<string | null>(null);
+
+    const ITEMS_PER_PAGE = 4;
+    const totalPages = Math.ceil(stocks.length / ITEMS_PER_PAGE);
+    
+    // Ensure we don't end up on an empty page if data changes
+    useEffect(() => {
+        if (currentPage >= totalPages && totalPages > 0) {
+            setCurrentPage(totalPages - 1);
+        }
+    }, [stocks.length, currentPage, totalPages]);
+
+    if (stocks.length === 0) return null;
+
+    const currentStocks = stocks.slice(
+        currentPage * ITEMS_PER_PAGE,
+        (currentPage + 1) * ITEMS_PER_PAGE
+    );
+
+    const isCash = (symbol: string) => symbol === 'KRW' || symbol === 'USD' || symbol === 'CASH';
+
+    return (
+        <div className="flex flex-col gap-2 relative z-10 w-full mb-4 shrink-0 h-[120px]">
+            <div className="grid grid-cols-2 gap-2 flex-1 content-start">
+                {currentStocks.map(item => {
+                    const itemIsCash = isCash(item.symbol);
+                    return (
+                        <div
+                            key={item.id}
+                            className="flex items-center p-2.5 bg-muted/30 border border-border/40 rounded-[16px] hover:bg-muted/60 transition-colors gap-3 group/item cursor-pointer shadow-sm relative h-[52px]"
+                        >
+                            {itemIsCash ? (
+                                <div className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-lg shadow-md shrink-0 ring-2 ring-background">💵</div>
+                            ) : (
+                                <StockIcon symbol={item.symbol} name={item.symbol} market={item.market as 'US'|'KR'} className="w-9 h-9 rounded-full shadow-md shrink-0 ring-2 ring-background" />
+                            )}
+                            <div className="flex flex-col min-w-0 flex-1 group/tooltip relative justify-center">
+                                <div className="font-extrabold text-[12px] sm:text-[13px] text-foreground truncate leading-tight">
+                                    {itemIsCash ? `현금 (${item.symbol})` : ((item.market === 'KOSPI' || item.market === 'KOSDAQ') ? (item.nameKr || item.symbol) : item.symbol)}
+                                </div>
+                                {isPrivate ? (
+                                    <div className="text-[10px] text-muted-foreground/80 font-bold mt-0.5 flex items-center gap-1 truncate"><Lock size={9} /> 수량 비공개</div>
+                                ) : (
+                                    <div className="text-[11px] font-bold text-muted-foreground mt-0.5">
+                                        {itemIsCash 
+                                            ? `${item.currency === 'USD' ? '$' : '₩'}${item.averagePrice.toLocaleString()}` 
+                                            : `${item.quantity}주`}
+                                    </div>
+                                )}
+                                {/* Custom Tooltip */}
+                                <div className="absolute left-0 bottom-[110%] bg-popover/95 backdrop-blur-sm text-popover-foreground text-[10px] sm:text-[11px] font-medium px-2.5 py-1 rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)] opacity-0 group-hover/tooltip:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-[100] transform translate-y-1 group-hover/tooltip:translate-y-0">
+                                    {itemIsCash ? `현금 자산 (${item.symbol})` : ((item.market === 'KOSPI' || item.market === 'KOSDAQ') ? (item.nameKr || item.symbol) : item.symbol)}
+                                </div>
+                            </div>
+                            {!itemIsCash && (
+                                <div className="pl-1.5 border-l border-border/40 flex items-center justify-end shrink-0 min-w-[50px]">
+                                    <PortfolioItemPrice symbol={item.symbol} market={item.market} />
+                                </div>
+                            )}
+                            {/* Hover Context Actions */}
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setQuickAddSymbol(item.symbol); }}
+                                className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground p-1 rounded-full opacity-0 group-hover/item:opacity-100 transition-all shadow-lg hover:scale-110 active:scale-95 z-10"
+                                title="관심종목 담기"
+                            >
+                                <Plus size={10} strokeWidth={3} />
+                            </button>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-auto pt-1 h-[24px]">
+                    <button
+                        onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                        disabled={currentPage === 0}
+                        className="p-1 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                        <ChevronLeft size={14} />
+                    </button>
+                    
+                    <div className="flex gap-1.5">
+                        {Array.from({ length: totalPages }).map((_, idx) => (
+                            <div 
+                                key={idx}
+                                className={clsx(
+                                    "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                                    currentPage === idx ? "bg-primary w-3" : "bg-border"
+                                )}
+                            />
+                        ))}
+                    </div>
+
+                    <button
+                        onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                        disabled={currentPage === totalPages - 1}
+                        className="p-1 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                        <ChevronRight size={14} />
+                    </button>
+                </div>
+            )}
+            
+            {/* Quick Add Modal */}
+            {quickAddSymbol && (
+                <StockQuickAddModal
+                    symbol={quickAddSymbol}
+                    onClose={() => setQuickAddSymbol(null)}
+                    onSuccess={() => {}}
+                />
+            )}
         </div>
     );
 };
@@ -48,28 +172,27 @@ const ReactionButtons = () => {
     };
 
     const reactionTypes = [
-        { id: 'like', emoji: '👍', label: '유익해요' },
-        { id: 'rocket', emoji: '🚀', label: '가즈아' },
-        { id: 'eyes', emoji: '👀', label: '줍줍' },
-        { id: 'diamond', emoji: '💎', label: '다이아손' },
-        { id: 'clap', emoji: '👏', label: '멋진수익' }
+        { id: 'good', emoji: '👍', label: '잘 담았다' },
+        { id: 'metoo', emoji: '🙋', label: '나도 관심' },
+        { id: 'watch', emoji: '👀', label: '관망중' },
+        { id: 'pass', emoji: '😅', label: '이건 패스' }
     ];
 
     return (
-        <div className="flex flex-wrap gap-1.5 mt-2 mb-1">
+        <div className="flex flex-nowrap overflow-x-auto hide-scrollbar gap-1 mt-2 mb-1 w-full">
             {reactionTypes.map(r => (
                 <button
                     key={r.id}
                     onClick={() => toggleReaction(r.id)}
                     className={clsx(
-                        "px-2.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1 active:scale-95 shadow-sm",
+                        "px-2 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1 active:scale-95 shadow-sm shrink-0",
                         reactions[r.id]
                             ? "bg-primary text-primary-foreground border-transparent shadow-[0_2px_8px_rgba(36,99,235,0.3)]"
                             : "bg-background border border-border/80 hover:border-border text-muted-foreground hover:text-foreground"
                     )}
                 >
                     <span className="text-sm">{r.emoji}</span>
-                    <span>{r.label}</span>
+                    <span className="text-[10px] sm:text-[11px] whitespace-nowrap">{r.label}</span>
                 </button>
             ))}
         </div>
@@ -277,163 +400,230 @@ export const GroupPortfolioDashboard: React.FC = () => {
 
     if (isLoading) return <div className="p-8 text-center text-muted-foreground animate-pulse">데이터를 불러오는 중입니다...</div>;
 
-    return (
-        <div className="space-y-6 lg:space-y-8 w-full max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 xl:px-10 py-6">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-sm">
-                        <Users size={24} />
+    if (activeGroups.length === 0) {
+        return (
+            <div className="space-y-6 max-w-[1600px] mx-auto p-4 lg:p-8 w-full">
+                {/* Header Area aligned with MyPortfolioDashboard */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 bg-primary/10 rounded-xl text-primary">
+                            <Users size={24} />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-black tracking-tight">소셜 그룹</h1>
+                            <p className="text-muted-foreground mt-1">포트폴리오 공유 및 인사이트</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-2xl font-extrabold tracking-tight text-foreground">소셜 그룹</h1>
-                        <p className="text-sm text-muted-foreground mt-0.5">포트폴리오를 공유하고 인사이트를 나눠보세요</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="relative group bg-card/60 backdrop-blur-md border border-border/80 rounded-full p-1 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all shadow-sm flex items-center w-full sm:w-auto">
-                        <input 
-                            type="text" 
-                            placeholder="초대 코드 입력..." 
-                            value={joinGroupId}
-                            onChange={(e) => setJoinGroupId(e.target.value)}
-                            className="bg-transparent px-3 py-1.5 text-sm w-full sm:w-40 outline-none"
-                        />
+                    
+                    <div className="flex flex-col sm:flex-row items-center gap-3">
+                        {/* Compact Join Code Group for Header */}
+                        <div className="relative group bg-card border border-border/50 rounded-xl p-1 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all shadow-sm flex items-center min-w-[240px]">
+                            <input 
+                                type="text" 
+                                placeholder="초대 코드 입력..." 
+                                value={joinGroupId}
+                                onChange={(e) => setJoinGroupId(e.target.value)}
+                                className="bg-transparent px-3 py-1.5 text-sm font-medium w-full min-w-0 outline-none text-foreground placeholder:text-muted-foreground/60"
+                            />
+                            <button 
+                                onClick={handleJoinGroup} 
+                                className="px-4 py-1.5 bg-muted hover:bg-primary hover:text-white text-xs font-bold rounded-lg transition-all shrink-0 whitespace-nowrap active:scale-95"
+                            >
+                                참여
+                            </button>
+                        </div>
+
                         <button 
-                            onClick={handleJoinGroup} 
-                            className="px-4 py-1.5 bg-secondary text-secondary-foreground text-xs font-bold rounded-full hover:bg-secondary/80 transition-colors shrink-0"
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-primary to-indigo-600 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:scale-[1.02] transition-all shadow-md"
                         >
-                            참여
+                            <Plus size={18} />
+                            내 그룹 생성
                         </button>
                     </div>
-                    <button 
-                        onClick={() => {
-                            if (!token) {
-                                showAlert('로그인이 필요한 서비스입니다.', { type: 'warning' });
-                                return;
-                            }
-                            setIsCreateModalOpen(true);
-                        }}
-                        className="p-2 sm:px-4 sm:py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-full hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-sm shrink-0"
-                    >
-                        <Plus size={18} /> <span className="hidden sm:inline">그룹 만들기</span>
-                    </button>
                 </div>
-            </div>
 
-            {activeGroups.length === 0 ? (
-                <div className="py-24 text-center border border-dashed border-border/60 rounded-3xl bg-card/20 backdrop-blur-xl flex flex-col items-center justify-center">
-                    <div className="w-24 h-24 mb-6 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-                        <Activity size={40} className="opacity-80" />
+                {/* Empty State Illustration Center */}
+                <div className="flex flex-col items-center justify-center min-h-[50vh] bg-card/30 backdrop-blur-xl border border-white/10 rounded-3xl p-12 text-center">
+                    <div className="w-48 h-48 mb-8 opacity-80">
+                        <svg viewBox="0 0 200 200" className="w-full h-full text-indigo-500/20 fill-current">
+                            <path d="M166.7 58.3v100c0 4.6-3.7 8.3-8.3 8.3H41.7c-4.6 0-8.3-3.7-8.3-8.3v-100c0-4.6 3.7-8.3 8.3-8.3h116.7c4.5 0 8.3 3.8 8.3 8.3z" fill="currentColor"/>
+                            <path d="M150 41.7H50c-4.6 0-8.3-3.7-8.3-8.3s3.7-8.3 8.3-8.3h100c4.6 0 8.3 3.7 8.3 8.3s-3.7 8.3-8.3 8.3z" className="text-primary/40"/>
+                            <circle cx="100" cy="110" r="30" className="text-primary/60"/>
+                            <path d="M100 80L85 110h30l-15-30z" className="text-blue-400" fill="currentColor" />
+                        </svg>
                     </div>
-                    <h3 className="text-2xl font-bold mb-3">투자는 함께할 때 더 즐겁습니다</h3>
-                    <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                    <h2 className="text-2xl font-bold mb-3">투자는 함께할 때 더 즐겁습니다</h2>
+                    <p className="text-muted-foreground mb-4 max-w-md mx-auto">
                         동료들과 그룹을 맺고 수익률 챌린지에 도전해보세요. 서로의 포트폴리오를 공유하며 새로운 투자 아이디어를 얻을 수 있습니다.
                     </p>
-                    <div className="flex gap-4">
-                        <button onClick={() => setIsCreateModalOpen(true)} className="px-6 py-3 bg-primary text-primary-foreground font-bold rounded-full hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 transition-all">
-                            첫 그룹 생성하기
+                    <div className="pt-6">
+                        <button 
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="px-10 py-4 bg-primary text-primary-foreground font-bold rounded-2xl flex items-center gap-3 hover:shadow-[0_8px_30px_rgba(36,99,235,0.4)] transition-all hover:-translate-y-1 text-lg"
+                        >
+                            <Plus size={24} />
+                            지금 바로 시작하기
                         </button>
                     </div>
                 </div>
-            ) : (
-                <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
-                    {/* Left Sidebar (Compact Group List) */}
-                    <div className="w-full lg:w-64 shrink-0 flex flex-row lg:flex-col gap-3 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 hide-scrollbar sticky top-24">
-                        {activeGroups.map(group => {
-                            const isSelected = selectedGroupForFeed?.id === group.id;
-                            return (
-                                <div 
-                                    key={group.id} 
-                                    onClick={() => setSelectedGroupForFeed(group)}
-                                    className={clsx(
-                                        "flex-shrink-0 lg:flex-shrink-auto flex flex-col lg:flex-row items-center lg:items-center gap-2 lg:gap-3 p-3 lg:p-4 rounded-2xl cursor-pointer transition-all border",
-                                        isSelected 
-                                            ? "bg-card shadow-sm border-primary/30 ring-1 ring-primary/10 lg:translate-x-1" 
-                                            : "hover:bg-card/50 border-transparent text-muted-foreground hover:text-foreground"
-                                    )}
-                                >
-                                    <div className={clsx(
-                                        "w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center font-bold text-sm lg:text-base shadow-sm transition-colors shrink-0",
-                                        isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                                    )}>
-                                        {group.name.charAt(0)}
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-4 lg:space-y-5 w-full mx-auto px-2 sm:px-6 lg:px-10 xl:px-12 pt-2 md:pt-4 pb-6">
+                    <div className="flex flex-col lg:flex-row gap-5 lg:gap-8 items-start w-full">
+                        {/* Left Sidebar */}
+                        <div className="w-full lg:min-w-[320px] lg:w-[320px] xl:w-[380px] shrink-0 flex flex-col gap-4 lg:gap-6 sticky top-4 z-20">
+                            {/* Sidebar Header */}
+                            <div className="flex flex-row lg:flex-col items-center lg:items-start justify-between lg:justify-start gap-4 pr-1 lg:pr-0">
+                                <div className="flex items-center gap-2 lg:gap-3 shrink-0">
+                                    <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-sm shrink-0">
+                                        <Users size={20} className="lg:w-6 lg:h-6" />
                                     </div>
-                                    <div className="flex flex-col items-center lg:items-start max-w-[80px] lg:max-w-none">
-                                        <div className={clsx(
-                                            "text-xs lg:text-sm font-bold truncate w-full text-center lg:text-left transition-colors",
-                                            isSelected ? "text-primary" : "text-foreground"
-                                        )}>{group.name}</div>
-                                        <div className="hidden lg:block text-[11px] text-muted-foreground">멤버 {group.members.length}명</div>
+                                    <div className="shrink-0">
+                                        <h1 className="text-xl lg:text-2xl font-extrabold tracking-tight text-foreground">소셜 그룹</h1>
+                                        <p className="hidden lg:block text-[11px] text-muted-foreground mt-0.5">포트폴리오 공유 및 인사이트</p>
                                     </div>
                                 </div>
-                            );
-                        })}
-                    </div>
+                                
+                                <div className="flex flex-row lg:flex-col items-center lg:items-stretch gap-3 w-full overflow-x-auto hide-scrollbar shrink-[2] lg:shrink-0 justify-end lg:justify-start pt-2">
+                                    <div className="relative group bg-muted/80 hover:bg-muted border border-border/80 rounded-full lg:rounded-xl p-1.5 focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary transition-all shadow-sm flex items-center min-w-[150px] max-w-[200px] lg:w-full lg:max-w-none shrink-0">
+                                        <input 
+                                            type="text" 
+                                            placeholder="초대 코드 입력..." 
+                                            value={joinGroupId}
+                                            onChange={(e) => setJoinGroupId(e.target.value)}
+                                            className="bg-transparent px-3 py-1.5 text-sm font-medium w-full min-w-0 outline-none text-foreground placeholder:text-muted-foreground/70"
+                                        />
+                                        <button 
+                                            onClick={handleJoinGroup} 
+                                            className="px-4 py-1.5 bg-primary text-primary-foreground text-xs font-bold rounded-full lg:rounded-lg hover:bg-primary/90 hover:shadow-md transition-all shrink-0 whitespace-nowrap active:scale-95"
+                                        >
+                                            참여
+                                        </button>
+                                    </div>
+                                    <button 
+                                        onClick={() => {
+                                            if (!token) {
+                                                showAlert('로그인이 필요한 서비스입니다.', { type: 'warning' });
+                                                return;
+                                            }
+                                            setIsCreateModalOpen(true);
+                                        }}
+                                        className="px-4 py-2 lg:w-full lg:py-3 bg-gradient-to-r from-primary to-indigo-600 text-white text-xs lg:text-sm font-bold rounded-full lg:rounded-xl hover:shadow-[0_8px_20px_rgba(36,99,235,0.3)] hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-md min-w-max shrink-0"
+                                    >
+                                        <Plus size={16} className="lg:w-5 lg:h-5" /> <span className="hidden sm:inline">새 그룹 만들기</span>
+                                    </button>
+                                </div>
+                            </div>
+    
+                            {/* Group List */}
+                            <div className="flex flex-row lg:flex-col gap-3 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 hide-scrollbar w-full">
+                            {activeGroups.map(group => {
+                                const isSelected = selectedGroupForFeed?.id === group.id;
+                                return (
+                                    <div 
+                                        key={group.id} 
+                                        onClick={() => setSelectedGroupForFeed(group)}
+                                        className={clsx(
+                                            "flex-shrink-0 lg:flex-shrink-auto flex flex-col lg:flex-row items-center lg:items-center gap-3 p-3 lg:p-4 rounded-2xl cursor-pointer transition-all border duration-300",
+                                            isSelected 
+                                                ? "bg-primary/10 border-primary shadow-sm" 
+                                                : "bg-card border-border/60 hover:border-primary/40 hover:bg-muted/50 text-muted-foreground hover:text-foreground hover:shadow-sm"
+                                        )}
+                                    >
+                                        <div className={clsx(
+                                            "w-12 h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center font-black text-lg lg:text-xl shadow-inner transition-colors shrink-0 outline outline-2 outline-offset-2",
+                                            isSelected ? "bg-gradient-to-br from-primary to-indigo-600 text-white outline-primary/30" : "bg-muted text-muted-foreground outline-transparent"
+                                        )}>
+                                            {group.name.charAt(0)}
+                                        </div>
+                                        <div className="flex flex-col items-center lg:items-start min-w-0 flex-1 w-full pr-1">
+                                            <div className={clsx(
+                                                "text-sm lg:text-base font-bold truncate w-full text-center lg:text-left transition-colors",
+                                                isSelected ? "text-primary" : "text-foreground"
+                                            )}>{group.name}</div>
+                                            <div className="hidden lg:block text-xs font-medium text-muted-foreground mt-1 bg-background/50 px-2 py-0.5 rounded-full inline-flex border border-border/50">
+                                                <Users size={10} className="mr-1 inline align-baseline" />
+                                                멤버 {group.members.length}명
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            </div>
+                        </div>
 
                     {/* Main Feed (Shared Portfolios) */}
                     {selectedGroupForFeed && (
-                        <div className="flex-1 w-full min-w-0 flex flex-col gap-6">
+                        <div className="flex-1 w-full min-w-0 flex flex-col gap-4">
                             {/* Selected Group Header */}
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 md:p-6 bg-card/40 backdrop-blur-xl border border-border/60 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] pb-5">
-                                <div>
-                                    <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2">
-                                        <span className="text-muted-foreground truncate max-w-[120px] sm:max-w-[200px]">{selectedGroupForFeed.name}</span>
-                                        <span className="text-muted-foreground/30">/</span>
-                                        <span className="text-primary font-extrabold flex items-center gap-1.5">
-                                            <Sparkles size={18} /> 포트폴리오 피드
-                                        </span>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 md:p-5 bg-card/40 backdrop-blur-xl border border-border/60 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] pb-4">
+                                <div className="flex-1 min-w-0 pr-4">
+                                    <h2 className="text-xl md:text-2xl font-bold text-foreground truncate w-full">
+                                        {selectedGroupForFeed.name}
                                     </h2>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 shrink-0">
                                     <button 
                                         onClick={() => handleShareInviteCode(selectedGroupForFeed)}
-                                        className="p-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors border border-primary/20"
+                                        className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border/80 hover:border-primary/40 hover:bg-primary/5 hover:text-primary text-muted-foreground text-xs font-bold rounded-xl transition-all shadow-sm whitespace-nowrap"
                                         title={`초대 코드: ${selectedGroupForFeed.inviteCode} 공유하기`}
                                     >
-                                        <Send size={16} />
+                                        <Send size={14} />
+                                        <span>초대</span>
                                     </button>
                                     {selectedGroupForFeed.owner.email === user?.email ? (
                                         <button 
                                             onClick={() => handleDeleteGroup(selectedGroupForFeed.id, selectedGroupForFeed.name)}
-                                            className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20"
+                                            className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border/80 hover:border-red-500/40 hover:bg-red-500/5 hover:text-red-500 text-muted-foreground text-xs font-bold rounded-xl transition-all shadow-sm whitespace-nowrap"
                                             title="그룹 삭제 (방장)"
                                         >
-                                            <Trash2 size={16} />
+                                            <Trash2 size={14} />
+                                            <span>삭제</span>
                                         </button>
                                     ) : (
                                         <button 
                                             onClick={() => handleLeaveGroup(selectedGroupForFeed.id, selectedGroupForFeed.name)}
-                                            className="p-2 bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors border border-border/50"
+                                            className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border/80 hover:border-destructive/40 hover:bg-destructive/5 hover:text-destructive text-muted-foreground text-xs font-bold rounded-xl transition-all shadow-sm whitespace-nowrap"
                                             title="그룹 탈퇴"
                                         >
-                                            <LogOut size={16} />
+                                            <LogOut size={14} />
+                                            <span>나가기</span>
                                         </button>
                                     )}
                                     <button 
                                         onClick={() => setSelectedGroupDetails(selectedGroupForFeed)}
-                                        className="px-3 py-2 bg-muted/60 hover:bg-primary/10 hover:text-primary text-muted-foreground text-sm font-bold rounded-lg border border-border/50 text-center transition-colors shadow-sm whitespace-nowrap"
+                                        className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border/80 hover:border-primary/40 hover:bg-primary/5 hover:text-primary text-muted-foreground text-xs font-bold rounded-xl transition-all shadow-sm whitespace-nowrap"
                                     >
-                                        정보
+                                        <Users size={14} />
+                                        <span>정보</span>
                                     </button>
+
+                                    {/* Divider */}
+                                    <div className="w-px h-6 bg-border/60 mx-1" />
+
                                     <button 
                                         onClick={() => handleOpenShareModal(selectedGroupForFeed.id)}
-                                        className="px-4 py-2 bg-gradient-to-r from-primary to-primary text-primary-foreground text-sm font-bold rounded-xl hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all shadow-md flex items-center justify-center gap-2 whitespace-nowrap border border-primary/20"
+                                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-indigo-600 text-white text-sm font-bold rounded-xl hover:shadow-[0_8px_20px_rgba(36,99,235,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all shadow-md whitespace-nowrap"
                                     >
-                                        공유하기
+                                        <Share2 size={15} />
+                                        <span>공유하기</span>
                                     </button>
                                 </div>
                             </div>
 
                             {/* Portfolio Feed List */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6 items-start">
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 items-start">
                                 {(() => {
                                     const verifiedMembers = selectedGroupForFeed.members.filter(m => m.status === 'ACCEPTED');
                                     const feedItems = verifiedMembers.filter(m => m.sharedPortfolioId && m.sharedPortfolioItems && m.sharedPortfolioItems.length > 0);
 
                                     if (feedItems.length === 0) {
                                         return (
-                                            <div className="xl:col-span-2 py-20 flex flex-col items-center justify-center bg-card/30 border border-dashed border-border/80 rounded-3xl text-center">
+                                            <div className="col-span-full py-24 flex flex-col items-center justify-center bg-card/30 border border-dashed border-border/80 rounded-3xl text-center w-full">
                                                 <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground/50">
                                                     <Share2 size={32} />
                                                 </div>
@@ -451,36 +641,43 @@ export const GroupPortfolioDashboard: React.FC = () => {
 
                                         return feedItems.map((feedMember) => {
                                             const isPrivate = feedMember.sharedPortfolioIsPublic === false;
-                                            // Mock Hero Stock: Pick the first stock (or the only one)
-                                            const heroStock = feedMember.sharedPortfolioItems?.[0];
-                                            const remainingStocks = feedMember.sharedPortfolioItems?.slice(1) || [];
+                                            
+                                            // Sort items by total value (quantity * price) descending to pick the best Hero Stock
+                                            const sortedItems = [...(feedMember.sharedPortfolioItems || [])].sort((a, b) => {
+                                                const valA = a.currency === 'USD' ? (a.quantity * a.averagePrice * 1350) : (a.quantity * a.averagePrice);
+                                                const valB = b.currency === 'USD' ? (b.quantity * b.averagePrice * 1350) : (b.quantity * b.averagePrice);
+                                                return valB - valA;
+                                            });
+
+                                            const heroStock = sortedItems[0];
+                                            const remainingStocks = sortedItems.slice(1);
 
                                             return (
-                                            <div key={feedMember.id} className="bg-card/90 backdrop-blur-md border border-border/60 rounded-[32px] p-5 lg:p-6 shadow-sm hover:shadow-xl hover:border-primary/40 transition-all group relative flex flex-col">
+                                            <div key={feedMember.id} className="bg-card/90 backdrop-blur-md border border-border/60 rounded-[20px] p-4 shadow-sm hover:shadow-xl hover:border-primary/40 transition-all group relative flex flex-col h-full">
                                                 {/* Ambient Background Glow */}
-                                                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none -z-10 group-hover:bg-primary/10 transition-colors overflow-hidden rounded-tr-[32px]"></div>
+                                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-[60px] pointer-events-none -z-10 group-hover:bg-primary/10 transition-colors overflow-hidden rounded-tr-[20px]"></div>
                                                 
-                                                {/* Social Header (Oversized) */}
-                                                <div className="flex items-center gap-4 mb-6 relative z-10">
+                                                {/* Social Header (Compact) */}
+                                                <div className="flex items-center gap-2.5 mb-3 relative z-10">
                                                     <div className="relative shrink-0">
                                                         <div className="absolute inset-0 bg-primary/40 rounded-full blur-md opacity-40 group-hover:opacity-70 transition-opacity"></div>
-                                                        <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-full bg-gradient-to-br from-indigo-500 to-primary border-2 border-background flex items-center justify-center font-black text-3xl text-white shadow-xl relative z-10 ring-4 ring-primary/10">
+                                                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-indigo-500 to-primary border-2 border-background flex items-center justify-center font-black text-xl text-white shadow-xl relative z-10 ring-2 ring-primary/10">
                                                             {feedMember.member.nickname.charAt(0)}
                                                         </div>
                                                     </div>
                                                     <div className="flex flex-col flex-1 min-w-0">
-                                                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                                                            <span className="px-2.5 py-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold text-[10px] rounded-full tracking-wider shadow-sm flex items-center gap-1">
-                                                                <Sparkles size={10} /> 인사이트 리더
+                                                        <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                                                            <span className="px-2 py-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold text-[9px] rounded-full tracking-wider shadow-sm flex items-center gap-1">
+                                                                <Sparkles size={8} /> 인사이트 리더
                                                             </span>
                                                             {isPrivate && (
-                                                                <span className="px-2 py-0.5 bg-muted/80 text-muted-foreground font-bold text-[9px] rounded-full flex items-center gap-1 border border-border/50">
+                                                                <span className="px-1.5 py-0.5 bg-muted/80 text-muted-foreground font-bold text-[8px] rounded-full flex items-center gap-1 border border-border/50">
                                                                     <Lock size={8} /> SECRET
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <strong className="text-foreground tracking-tight text-xl sm:text-2xl truncate">{feedMember.member.nickname}</strong>
-                                                        <div className="text-xs sm:text-sm font-bold text-primary truncate mt-0.5 max-w-[200px] sm:max-w-xs">
+                                                        <strong className="text-foreground tracking-tight text-base sm:text-lg truncate">{feedMember.member.nickname}</strong>
+                                                        <div className="text-[11px] font-bold text-primary truncate mt-0.5 max-w-[140px] sm:max-w-[180px]">
                                                             {feedMember.sharedPortfolioName}
                                                         </div>
                                                     </div>
@@ -488,29 +685,29 @@ export const GroupPortfolioDashboard: React.FC = () => {
 
                                                 {/* The Hook (Hero Stock) */}
                                                 {heroStock && (
-                                                    <div className="mb-5 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent border border-indigo-500/20 rounded-3xl p-5 relative overflow-hidden z-10 shadow-inner group/hero">
-                                                        <div className="flex justify-between items-start mb-5 relative z-10">
-                                                            <div className="flex items-center gap-1.5 text-indigo-500 dark:text-indigo-400 font-black text-[11px] tracking-widest uppercase bg-indigo-500/10 px-3 py-1.5 rounded-full border border-indigo-500/20 shadow-sm">
+                                                    <div className="mb-4 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent border border-indigo-500/20 rounded-2xl p-4 relative overflow-hidden z-10 shadow-inner group/hero shrink-0">
+                                                        <div className="flex justify-between items-start mb-3 relative z-10">
+                                                            <div className="flex items-center gap-1.5 text-indigo-500 dark:text-indigo-400 font-extrabold text-[10px] tracking-widest uppercase bg-indigo-500/10 px-2.5 py-1 rounded-full border border-indigo-500/20 shadow-sm">
                                                                 <Rocket size={14} className="text-indigo-500 dark:text-indigo-400" /> TOP PICK
                                                             </div>
                                                         </div>
                                                         <div className="flex items-end justify-between relative z-10 w-full">
-                                                            <div className="flex items-center gap-4 flex-1 min-w-0 pr-4">
-                                                                {heroStock.symbol === 'KRW' ? (
-                                                                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-3xl sm:text-4xl shadow-lg ring-4 ring-background shrink-0">💵</div>
+                                                            <div className="flex items-center gap-3.5 flex-1 min-w-0 pr-2">
+                                                                {heroStock.symbol === 'KRW' || heroStock.symbol === 'USD' ? (
+                                                                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-3xl sm:text-4xl shadow-xl ring-4 ring-background shrink-0 transition-transform group-hover/hero:scale-110">💵</div>
                                                                 ) : (
-                                                                    <StockIcon symbol={heroStock.symbol} name={heroStock.symbol} market={heroStock.market as 'US'|'KR'} className="w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-lg ring-4 ring-background shrink-0" />
+                                                                    <StockIcon symbol={heroStock.symbol} name={heroStock.symbol} market={heroStock.market as 'US'|'KR'} className="w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-xl ring-4 ring-background shrink-0 transition-transform group-hover/hero:scale-110" />
                                                                 )}
                                                                 <div className="flex flex-col min-w-0 group/tooltip relative">
-                                                                    <div className="text-3xl sm:text-4xl font-black text-foreground tracking-tighter drop-shadow-sm truncate">
-                                                                        {heroStock.symbol === 'KRW' ? '보유 현금 (KRW)' : ((heroStock.market === 'KOSPI' || heroStock.market === 'KOSDAQ') ? (heroStock.nameKr || heroStock.symbol) : heroStock.symbol)}
+                                                                    <div className="text-2xl sm:text-3xl font-black text-foreground tracking-tighter drop-shadow-md truncate">
+                                                                        {heroStock.symbol === 'KRW' || heroStock.symbol === 'USD' ? `보유 현금 (${heroStock.symbol})` : ((heroStock.market === 'KOSPI' || heroStock.market === 'KOSDAQ') ? (heroStock.nameKr || heroStock.symbol) : heroStock.symbol)}
                                                                     </div>
-                                                                    <div className="text-sm font-bold text-muted-foreground mt-1 truncate">
-                                                                        {heroStock.market} • {heroStock.symbol === 'KRW' ? '예수금' : heroStock.symbol}
+                                                                    <div className="text-sm sm:text-base font-bold text-muted-foreground mt-1 truncate">
+                                                                        {heroStock.market} • {heroStock.symbol === 'KRW' || heroStock.symbol === 'USD' ? '예수금' : heroStock.symbol}
                                                                     </div>
                                                                     {/* Custom Tooltip */}
                                                                     <div className="absolute left-0 bottom-[110%] mb-1 bg-popover/95 backdrop-blur-sm text-popover-foreground text-[10px] sm:text-[11px] font-medium px-2.5 py-1 rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)] opacity-0 group-hover/tooltip:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-[100] transform translate-y-1 group-hover/tooltip:translate-y-0">
-                                                                        {heroStock.symbol === 'KRW' ? '보유 현금 (KRW)' : ((heroStock.market === 'KOSPI' || heroStock.market === 'KOSDAQ') ? (heroStock.nameKr || heroStock.symbol) : heroStock.symbol)}
+                                                                        {heroStock.symbol === 'KRW' || heroStock.symbol === 'USD' ? `보유 현금 (${heroStock.symbol})` : ((heroStock.market === 'KOSPI' || heroStock.market === 'KOSDAQ') ? (heroStock.nameKr || heroStock.symbol) : heroStock.symbol)}
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -521,70 +718,30 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                                                     </div>
                                                                 ) : (
                                                                     <div className="mb-2 text-[12px] font-black text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full shadow-sm">
-                                                                        {heroStock.symbol === 'KRW' ? '현금 자산 비중' : `${heroStock.quantity}주 탑재`}
+                                                                        {heroStock.symbol === 'KRW' || heroStock.symbol === 'USD' 
+                                                                            ? `${heroStock.currency === 'USD' ? '$' : '₩'}${heroStock.averagePrice.toLocaleString()}` 
+                                                                            : `${heroStock.quantity}주 탑재`}
                                                                     </div>
                                                                 )}
                                                                 <div className="transform scale-125 origin-bottom-right mt-1">
-                                                                    {heroStock.symbol !== 'KRW' && <PortfolioItemPrice symbol={heroStock.symbol} market={heroStock.market} />}
+                                                                    {heroStock.symbol !== 'KRW' && heroStock.symbol !== 'USD' && <PortfolioItemPrice symbol={heroStock.symbol} market={heroStock.market} />}
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 )}
 
-                                                {/* Stocks Grid (Chunky Pills) */}
-                                                {remainingStocks.length > 0 && (
-                                                    <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-6 relative z-10">
-                                                        {remainingStocks.map(item => (
-                                                            <div
-                                                                key={item.id}
-                                                                className="flex items-center p-2.5 sm:p-3 bg-muted/30 border border-border/40 rounded-2xl hover:bg-muted/60 transition-colors gap-2.5 group/item cursor-pointer shadow-sm relative"
-                                                            >
-                                                                {item.symbol === 'KRW' ? (
-                                                                    <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-xl shadow-md shrink-0 ring-2 ring-background">💵</div>
-                                                                ) : (
-                                                                    <StockIcon symbol={item.symbol} name={item.symbol} market={item.market as 'US'|'KR'} className="w-10 h-10 rounded-full shadow-md shrink-0 ring-2 ring-background" />
-                                                                )}
-                                                                <div className="flex flex-col min-w-0 flex-1 group/tooltip relative">
-                                                                    <div className="font-extrabold text-xs sm:text-sm text-foreground truncate leading-tight">
-                                                                        {item.symbol === 'KRW' ? '원화 (KRW)' : ((item.market === 'KOSPI' || item.market === 'KOSDAQ') ? (item.nameKr || item.symbol) : item.symbol)}
-                                                                    </div>
-                                                                    {isPrivate ? (
-                                                                        <div className="text-[10px] text-muted-foreground/80 font-bold mt-0.5 flex items-center gap-1 truncate"><Lock size={10} /> 수량 비공개</div>
-                                                                    ) : (
-                                                                        <div className="text-[11px] font-bold text-muted-foreground mt-0.5">
-                                                                            {item.symbol === 'KRW' ? '보유 자산' : `${item.quantity}주`}
-                                                                        </div>
-                                                                    )}
-                                                                    {/* Custom Tooltip */}
-                                                                    <div className="absolute left-0 bottom-[110%] bg-popover/95 backdrop-blur-sm text-popover-foreground text-[10px] sm:text-[11px] font-medium px-2.5 py-1 rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)] opacity-0 group-hover/tooltip:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-[100] transform translate-y-1 group-hover/tooltip:translate-y-0">
-                                                                        {item.symbol === 'KRW' ? '원화 자산 (KRW)' : ((item.market === 'KOSPI' || item.market === 'KOSDAQ') ? (item.nameKr || item.symbol) : item.symbol)}
-                                                                    </div>
-                                                                </div>
-                                                                <div className="pl-2 border-l border-border/40 flex items-center justify-end shrink-0 min-w-[60px]">
-                                                                    {item.symbol !== 'KRW' && <PortfolioItemPrice symbol={item.symbol} market={item.market} />}
-                                                                </div>
-                                                                {/* Hover Context Actions (Optional) */}
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); setQuickAddSymbol(item.symbol); }}
-                                                                    className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground p-1.5 rounded-full opacity-0 group-hover/item:opacity-100 transition-all shadow-lg hover:scale-110 active:scale-95 z-10"
-                                                                    title="관심종목 담기"
-                                                                >
-                                                                    <Plus size={12} strokeWidth={3} />
-                                                                </button>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
+                                                {/* Stocks Grid (Chunky Pills) with Pagination */}
+                                                <PortfolioStockList stocks={remainingStocks} isPrivate={isPrivate} />
 
                                                 {/* Interactions & Clone Button */}
-                                                <div className="mt-auto pt-4 flex flex-col gap-4 relative z-10">
-                                                    <div className="flex justify-center scale-105 sm:scale-110 origin-center mb-1">
+                                                <div className="mt-auto pt-3 flex flex-col gap-2.5 relative z-10 shrink-0">
+                                                    <div className="flex justify-center scale-95 sm:scale-100 origin-center mb-0.5">
                                                         <ReactionButtons />
                                                     </div>
                                                     
                                                     <button
-                                                        className="w-full py-3.5 sm:py-4 rounded-[20px] font-black text-[15px] flex items-center justify-center gap-2 transition-all shadow-lg border border-transparent
+                                                        className="w-full py-2.5 rounded-[12px] font-black text-sm flex items-center justify-center gap-2 transition-all shadow-sm border border-transparent
                                                         bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500 hover:shadow-indigo-500/25 active:scale-[0.98]"
                                                         onClick={(_e) => showToast(`해당 덱(Deck) 클론 기능은 준비 중입니다.`)}
                                                     >
@@ -599,7 +756,6 @@ export const GroupPortfolioDashboard: React.FC = () => {
                         </div>
                     )}
                 </div>
-            )}
 
             {/* Modals (Create, Share) - Keeping simplified versions for brevity in this initial implementation */}
             {isCreateModalOpen && (
