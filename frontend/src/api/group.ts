@@ -27,6 +27,16 @@ export interface GroupMember {
   joinedAt: string;
 }
 
+export interface GroupFeed {
+  id: number;
+  groupId: number;
+  memberId: number;
+  nickname: string;
+  actionType: 'CREATE_GROUP' | 'JOIN_GROUP' | 'SHARE_PORTFOLIO' | 'UPDATE_PORTFOLIO' | 'LEAVE_GROUP';
+  content: string;
+  createdAt: string;
+}
+
 export interface SharedPortfolioItem {
   id: number;
   symbol: string;
@@ -62,6 +72,11 @@ export const groupApi = {
     await apiClient.delete(`/groups/${groupId}`);
   },
   
+  getGroupFeeds: async (groupId: number): Promise<GroupFeed[]> => {
+    const response = await apiClient.get<{ data: GroupFeed[] }>(`/groups/${groupId}/feed`);
+    return response.data.data;
+  },
+
   leaveGroup: async (groupId: number): Promise<void> => {
     await apiClient.delete(`/groups/leave/${groupId}`);
   },

@@ -3,15 +3,38 @@ import { Users, PieChart } from 'lucide-react';
 import { groupApi } from '../../api/group';
 import { useAuthStore } from '../../stores/authStore';
 import { clsx } from 'clsx';
+import type { GroupFeed } from '../../api/group';
 
-export const GroupPortfolioWidget: React.FC = () => {
+export const GroupPortfolioWidget: React.FC<{ groupId: number }> = ({ groupId }) => {
     const { token } = useAuthStore();
+    const [feeds, setFeeds] = React.useState<GroupFeed[]>([]);
 
     useEffect(() => {
-        if (token) {
-            groupApi.getMyGroups().catch(console.error);
+        if (token && groupId) {
+            groupApi.getGroupFeeds(groupId)
+                .then(setFeeds)
+                .catch(console.error);
         }
-    }, [token]);
+    }, [token, groupId]);
+
+    const getActionIcon = (actionType: string) => {
+        switch (actionType) {
+            case 'CREATE_GROUP': return '👑';
+            case 'JOIN_GROUP': return '👋';
+            case 'SHARE_PORTFOLIO': return '💼';
+            default: return '📢';
+        }
+    };
+
+    const getTimeAgo = (dateStr: string) => {
+        const diff = Date.now() - new Date(dateStr).getTime();
+        const minutes = Math.floor(diff / 60000);
+        if (minutes < 1) return '방금 전';
+        if (minutes < 60) return `${minutes}분 전`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}시간 전`;
+        return `${Math.floor(hours / 24)}일 전`;
+    };
 
     return (
         <div className="flex flex-col gap-6 h-full">
@@ -65,26 +88,32 @@ export const GroupPortfolioWidget: React.FC = () => {
                 </div>
 
                 <div className="flex-1 space-y-4 overflow-y-auto pr-1 custom-scrollbar z-10">
-                    {/* Mock Feed Items */}
-                    {[
-                        { id: 1, user: '투자왕김존버', action: 'NVIDIA 매수', time: '10분 전', icon: '📈' },
-                        { id: 2, user: '워렌버핏조카', action: '새 포트폴리오 공유', time: '1시간 전', icon: '💼' },
-                        { id: 3, user: '테슬람', action: '테슬라 목표가 달성!', time: '2시간 전', icon: '🚀' },
-                        { id: 4, user: '단타의신', action: '삼성전자 수익 실현', time: '5시간 전', icon: '💰' },
-                    ].map(item => (
-                        <div key={item.id} className="flex gap-3 pb-4 border-b border-white/5 last:border-0 last:pb-0">
-                            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-lg flex-shrink-0 border border-white/10">
-                                {item.icon}
-                            </div>
-                            <div>
-                                <div className="text-sm">
-                                    <span className="font-bold text-primary">{item.user}</span>님이
-                                    <span className="font-medium text-foreground ml-1">{item.action}</span>
-                                </div>
-                                <div className="text-xs text-muted-foreground mt-1">{item.time}</div>
-                            </div>
+                    {feeds.length === 0 ? (
+                        <div className="text-center text-sm text-muted-foreground py-4">
+                            아직 활동 내역이 없습니다.
                         </div>
-                    ))}
+                    ) : (
+                        feeds.map(feed => (
+                            <div key={feed.id} className="flex gap-3 pb-4 border-b border-white/5 last:border-0 last:pb-0">
+                                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-lg flex-shrink-0 border border-white/10">
+                                    {getActionIcon(feed.actionType)}
+                                </div>
+                                <div>
+                                    <div className="text-sm">
+                                        <span className="font-bold text-primary">{feed.nickname}</span>님이
+                                        <span className="font-medium text-foreground ml-1">
+                                            {feed.actionType === 'CREATE_GROUP' && '새로운 그룹을 생성했습니다'}
+                                            {feed.actionType === 'JOIN_GROUP' && '그룹에 합류했습니다'}
+                                            {feed.actionType === 'SHARE_PORTFOLIO' && '새 포트폴리오 공유'}
+                                            {feed.actionType === 'LEAVE_GROUP' && '그룹을 떠났습니다'}
+                                            {!['CREATE_GROUP', 'JOIN_GROUP', 'SHARE_PORTFOLIO', 'LEAVE_GROUP'].includes(feed.actionType) && feed.content}
+                                        </span>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground mt-1">{getTimeAgo(feed.createdAt)}</div>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
                 
                 <button className="w-full mt-4 bg-white/5 hover:bg-white/10 text-foreground py-2.5 rounded-xl text-sm font-bold transition-colors border border-white/5 z-10">
