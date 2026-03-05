@@ -2,6 +2,7 @@ package com.glance.domain.group.controller;
 
 import com.glance.common.dto.ApiResponse;
 import com.glance.domain.group.dto.GroupCreateRequest;
+import com.glance.domain.group.dto.GroupFeedResponse;
 import com.glance.domain.group.dto.GroupShareRequest;
 import com.glance.domain.group.dto.PortfolioGroupResponse;
 import com.glance.domain.group.entity.PortfolioGroup;
@@ -113,5 +114,14 @@ public class PortfolioGroupController {
         Long userId = Long.parseLong(userDetails.getUsername());
         List<PortfolioGroupResponse> responses = groupService.getMyGroups(userId);
         return ApiResponse.success(responses);
+    }
+
+    @GetMapping("/{groupId}/feed")
+    public ApiResponse<List<GroupFeedResponse>> getGroupFeeds(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long groupId) {
+        Long userId = Long.parseLong(userDetails.getUsername());
+        List<GroupFeedResponse> feeds = groupService.getGroupFeeds(groupId, userId);
+        return ApiResponse.success(feeds);
     }
 }

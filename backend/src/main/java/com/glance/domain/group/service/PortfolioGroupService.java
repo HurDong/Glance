@@ -13,6 +13,10 @@ import com.glance.domain.member.repository.MemberRepository;
 import com.glance.domain.member.service.MemberService;
 import com.glance.domain.portfolio.entity.Portfolio;
 import com.glance.domain.portfolio.repository.PortfolioRepository;
+import com.glance.domain.group.entity.GroupFeed;
+import com.glance.domain.group.entity.GroupFeedActionType;
+import com.glance.domain.group.repository.GroupFeedRepository;
+import com.glance.domain.group.dto.GroupFeedResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +33,7 @@ public class PortfolioGroupService {
         private final MemberRepository memberRepository;
         private final MemberService memberService;
         private final PortfolioRepository portfolioRepository;
+        private final GroupFeedRepository groupFeedRepository;
 
         @Transactional
         public PortfolioGroup createGroup(Long ownerId, String name, String description) {
@@ -49,6 +54,13 @@ public class PortfolioGroupService {
                                 .status(GroupMemberStatus.ACCEPTED)
                                 .build());
 
+                groupFeedRepository.save(GroupFeed.builder()
+                                .group(savedGroup)
+                                .member(owner)
+                                .actionType(GroupFeedActionType.CREATE_GROUP)
+                                .content(owner.getNickname() + "님이 새로운 그룹을 생성했습니다.")
+                                .build());
+
                 return savedGroup;
         }
 
@@ -64,6 +76,13 @@ public class PortfolioGroupService {
                 }
 
                 groupMemberRepository.deleteByGroupAndMember(group, member);
+
+                groupFeedRepository.save(GroupFeed.builder()
+                                .group(group)
+                                .member(member)
+                                .actionType(GroupFeedActionType.LEAVE_GROUP)
+                                .content(member.getNickname() + "님이 그룹에서 탈퇴했습니다.")
+                                .build());
         }
 
         @Transactional
@@ -75,9 +94,9 @@ public class PortfolioGroupService {
                         throw new BusinessException("그룹장만 그룹을 삭제할 수 있습니다.", ErrorCode.HANDLE_ACCESS_DENIED);
                 }
 
-                // Delete all group members first (since it's a manual many-to-one mapped entity
-                // without CascadeType.ALL on group's side)
+                // Delete all group members and active feeds first
                 groupMemberRepository.deleteAllByGroup(group);
+                groupFeedRepository.deleteAllByGroup(group);
 
                 // Then delete the group
                 groupRepository.delete(group);
@@ -115,6 +134,13 @@ public class PortfolioGroupService {
                                 .group(group)
                                 .member(member)
                                 .status(GroupMemberStatus.ACCEPTED)
+                                .build());
+
+                groupFeedRepository.save(GroupFeed.builder()
+                                .group(group)
+                                .member(member)
+                                .actionType(GroupFeedActionType.JOIN_GROUP)
+                                .content(member.getNickname() + "님이 초대 코드로 그룹에 가입했습니다.")
                                 .build());
         }
 
@@ -158,6 +184,12 @@ public class PortfolioGroupService {
 
                 if (accept) {
                         membership.accept();
+                        groupFeedRepository.save(GroupFeed.builder()
+                                        .group(group)
+                                        .member(membership.getMember())
+                                        .actionType(GroupFeedActionType.JOIN_GROUP)
+                                        .content(membership.getMember().getNickname() + "님이 그룹에 가입했습니다.")
+                                        .build());
                 } else {
                         membership.reject();
                 }
@@ -178,6 +210,12 @@ public class PortfolioGroupService {
 
                 if (accept) {
                         membership.accept();
+                        groupFeedRepository.save(GroupFeed.builder()
+                                        .group(membership.getGroup())
+                                        .member(membership.getMember())
+                                        .actionType(GroupFeedActionType.JOIN_GROUP)
+                                        .content(membership.getMember().getNickname() + "님이 초대를 수락하여 그룹에 가입했습니다.")
+                                        .build());
                 } else {
                         membership.reject();
                 }
@@ -200,6 +238,13 @@ public class PortfolioGroupService {
                                                 ErrorCode.HANDLE_ACCESS_DENIED));
 
                 groupMember.sharePortfolio(portfolio);
+
+                groupFeedRepository.save(GroupFeed.builder()
+                                .group(group)
+                                .member(member)
+                                .actionType(GroupFeedActionType.SHARE_PORTFOLIO)
+                                .content(member.getNickname() + "님이 새 포트폴리오를 공유했습니다.")
+                                .build());
         }
 
         public List<PortfolioGroupResponse> getMyGroups(Long userId) {
@@ -216,6 +261,25 @@ public class PortfolioGroupService {
                                                         .findAllByGroup(group);
                                         return PortfolioGroupResponse.from(group, members);
                                 })
+                                .toList();
+        }
+
+        public List<GroupFeedResponse> getGroupFeeds(Long groupId, Long userId) {
+                PortfolioGroup group = groupRepository.findById(groupId)
+                                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+                Member member = memberService.getMember(userId);
+
+                // Ensure the user is an accepted member of the group
+                PortfolioGroupMember groupMember = groupMemberRepository.findByGroupAndMember(group, member)
+                                .orElseThrow(() -> new BusinessException("그룹 멤버가 아닙니다.",
+                                                ErrorCode.HANDLE_ACCESS_DENIED));
+
+                if (groupMember.getStatus() != GroupMemberStatus.ACCEPTED) {
+                        throw new BusinessException("승인된 그룹 멤버만 피드를 조회할 수 있습니다.", ErrorCode.HANDLE_ACCESS_DENIED);
+                }
+
+                return groupFeedRepository.findTop50ByGroupOrderByCreatedAtDesc(group).stream()
+                                .map(GroupFeedResponse::from)
                                 .toList();
         }
 }
