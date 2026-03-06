@@ -49,16 +49,10 @@ public class FinnhubService { // Re-using the class name to maintain Dependency 
 
             switch (range) {
                 case "1m":
-                    yfRange = "1d";
-                    interval = "1m";
-                    break;
                 case "5m":
-                    yfRange = "5d"; // Max 5 days for 5m interval usually
-                    interval = "5m";
-                    break;
                 case "15m":
-                    yfRange = "5d";
-                    interval = "15m";
+                    yfRange = "7d"; // Unified range for all short-term intraday
+                    interval = range;
                     break;
                 case "1h":
                     yfRange = "1mo";
@@ -105,16 +99,23 @@ public class FinnhubService { // Re-using the class name to maintain Dependency 
             JsonNode quote = result.path("indicators").path("quote").get(0);
             JsonNode closePrices = quote.path("close");
             JsonNode volumes = quote.path("volume");
+            
+            // Get the very latest price from meta to append as the last point
+            JsonNode meta = result.path("meta");
+            double currentPrice = meta.path("regularMarketPrice").asDouble();
+            long currentPriceTs = meta.path("regularMarketTime").asLong();
 
             List<ChartPoint> points = new ArrayList<>();
             boolean isIntraday = interval.endsWith("m");
+            long lastTs = 0;
 
             if (timestamps != null && timestamps.isArray() && closePrices != null && closePrices.isArray()) {
                 for (int i = 0; i < timestamps.size(); i++) {
                     if (closePrices.get(i).isNull())
-                        continue; // Skip points with null closing price
+                        continue; 
 
                     long ts = timestamps.get(i).asLong();
+                    lastTs = ts;
                     Instant instant = Instant.ofEpochSecond(ts);
                     String dateStr;
 
@@ -136,6 +137,27 @@ public class FinnhubService { // Re-using the class name to maintain Dependency 
                             .price(closePrices.get(i).asDouble())
                             .volume(volume)
                             .build());
+                }
+            }
+            
+            // Append or update the real-time price to ensure all intervals show the same current price
+            if (currentPrice > 0) {
+                String dateStr = isIntraday 
+                    ? DateTimeFormatter.ofPattern("yyyyMMddHHmm").withZone(ZoneId.of("Asia/Seoul")).format(Instant.ofEpochSecond(currentPriceTs))
+                    : DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneId.of("Asia/Seoul")).format(Instant.ofEpochSecond(currentPriceTs));
+
+                if (currentPriceTs > lastTs) {
+                    // Append as a new point if it's newer
+                    points.add(ChartPoint.builder()
+                            .date(dateStr)
+                            .price(currentPrice)
+                            .volume(0L)
+                            .build());
+                } else if (!points.isEmpty()) {
+                    // CRITICAL: Update the price of the very last point to match real-time price
+                    // This ensures 1m, 5m, 15m all end with the exact same price value.
+                    ChartPoint lastPoint = points.get(points.size() - 1);
+                    lastPoint.setPrice(currentPrice);
                 }
             }
 
