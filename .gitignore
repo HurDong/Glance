@@ -53,3 +53,7 @@ docker/*/data/
 docker/*/logs/
 !docker/**/init/
 .idea/
+
+### Build/IDE Output
+bin/
+backend/bin/
