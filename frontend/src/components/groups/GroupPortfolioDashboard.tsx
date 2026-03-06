@@ -484,7 +484,9 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                     </div>
                                     <div className="shrink-0">
                                         <h1 className="text-xl lg:text-2xl font-extrabold tracking-tight text-foreground">소셜 그룹</h1>
-                                        <p className="hidden lg:block text-[11px] text-muted-foreground mt-0.5">포트폴리오 공유 및 인사이트</p>
+                                        <p className="hidden lg:block text-muted-foreground mt-1 text-sm sm:text-base">
+                                            포트폴리오 공유 및 인사이트
+                                        </p>
                                     </div>
                                 </div>
                                 

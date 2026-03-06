@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { MainLayout } from './components/layout/MainLayout';
-// import { StockCard } from './components/stocks/StockCard'; // Unused
-// import { GroupFeed } from './components/groups/GroupFeed'; // Deprecated
 import { GroupPortfolioDashboard } from './components/groups/GroupPortfolioDashboard';
 import { StockListPage } from './components/stocks/StockListPage';
 import { MyPortfolioDashboard } from './components/portfolio/MyPortfolioDashboard';
