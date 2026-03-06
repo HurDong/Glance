@@ -14,8 +14,15 @@ import {
 } from 'lucide-react';
 import { ProfilePopover } from '../user/ProfilePopover';
 import { LoginPopover } from '../auth/LoginPopover';
+import { NotificationBell } from './NotificationBell';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { useAuthStore } from '../../stores/authStore';
+import { useNotificationStore } from '../../stores/useNotificationStore';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
+
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:8080/ws-glance';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -27,13 +34,36 @@ interface MainLayoutProps {
   onTabChange: (tab: string) => void;
 }
 
-
-import { useAuthStore } from '../../stores/authStore';
-
 export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, onTabChange }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
-  const { user } = useAuthStore();
+  const { user, token } = useAuthStore();
+  const { addNotification } = useNotificationStore();
+
+  // Notification WebSocket Connection
+  React.useEffect(() => {
+    if (!token || !user) return;
+
+    const client = new Client({
+      webSocketFactory: () => new SockJS(SOCKET_URL),
+      connectHeaders: { Authorization: `Bearer ${token}` },
+      onConnect: () => {
+        // Subscribe to user-specific notification topic
+        client.subscribe(`/api/v1/sub/notifications/${user.id}`, (message) => {
+          try {
+            const notification = JSON.parse(message.body);
+            addNotification(notification);
+          } catch (e) {
+            console.error('Failed to parse notification', e);
+          }
+        });
+      },
+      reconnectDelay: 5000,
+    });
+
+    client.activate();
+    return () => { client.deactivate(); };
+  }, [token, user, addNotification]);
 
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -158,10 +188,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, onT
             >
               {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
             </button>
-            <button className="p-2 hover:bg-white/10 rounded-full text-muted-foreground hover:text-foreground transition-all duration-300 hover:scale-110 relative">
-              <Bell size={20} />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-primary rounded-full shadow-[0_0_8px_var(--primary)]" />
-            </button>
+            
+            <NotificationBell />
             
             {user ? (
                <button 
