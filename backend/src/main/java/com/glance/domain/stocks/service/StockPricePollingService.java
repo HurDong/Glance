@@ -27,29 +27,62 @@ public class StockPricePollingService {
     private final KisService kisService;
     private final RedisStockService redisStockService;
 
-    // 폴링 대상 해외주식 심볼 목록 (KisWebSocketService의 subscribedSymbols 중 US만 필터링)
+    // 폴링 대상 해외주식 및 가상화폐 심볼 목록
     private final Set<String> pollingSymbols = ConcurrentHashMap.newKeySet();
+    private final Set<String> cryptoSymbols = ConcurrentHashMap.newKeySet();
 
-    private static final Duration FALLBACK_THRESHOLD = Duration.ofSeconds(30);
+    private static final Duration FALLBACK_THRESHOLD = Duration.ofSeconds(10); // Reduced from 30s to 10s
 
     /**
-     * 외부에서 폴링 대상 심볼을 등록합니다 (해외주식 구독 시 호출).
+     * 외부에서 폴링 대상 심볼을 등록합니다 (구독 시 호출).
      */
     public void registerUssSymbol(String symbol) {
-        // 영문자로만 이루어진 심볼 = 해외주식
+        if (symbol == null) return;
+        String upperSymbol = symbol.toUpperCase();
+        
+        // Binance/Crypto symbols check
+        if (upperSymbol.startsWith("BINANCE:") || upperSymbol.contains("BTC") || upperSymbol.contains("ETH")) {
+            cryptoSymbols.add(upperSymbol);
+            return;
+        }
+
+        // Other Global stocks
         if (com.glance.domain.stocks.utils.MarketUtils.isGlobalSymbol(symbol)) {
-            pollingSymbols.add(symbol.toUpperCase());
+            pollingSymbols.add(upperSymbol);
         }
     }
 
     public void unregisterSymbol(String symbol) {
-        pollingSymbols.remove(symbol != null ? symbol.toUpperCase() : null);
+        if (symbol == null) return;
+        String upperSymbol = symbol.toUpperCase();
+        pollingSymbols.remove(upperSymbol);
+        cryptoSymbols.remove(upperSymbol);
     }
 
     /**
-     * 20초마다 실행: KIS WS 수신이 30초 이상 없는 해외주식을 Yahoo Finance로 폴링
+     * 2초마다 실행: 가상화폐(Crypto) 시세를 실시간으로 폴링
      */
-    @Scheduled(fixedRate = 20000)
+    @Scheduled(fixedRate = 2000)
+    public void pollCryptoPrices() {
+        if (cryptoSymbols.isEmpty()) return;
+
+        for (String symbol : cryptoSymbols) {
+            try {
+                StockPriceMessage msg = kisService.getCurrentPrice(symbol);
+                if (msg != null) {
+                    redisStockService.publish(symbol, msg);
+                    // log.debug("[Crypto Polling] {} price={} rate={}%", symbol, msg.price(), msg.changeRate());
+                }
+            } catch (Exception e) {
+                log.warn("[Crypto Polling] Failed for {}: {}", symbol, e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 5초마다 실행: KIS WS 수신이 10초 이상 없는 해외주식을 Yahoo Finance로 폴링
+     */
+    @Scheduled(fixedRate = 5000)
     public void pollFallbackPrices() {
         if (pollingSymbols.isEmpty())
             return;
@@ -59,7 +92,7 @@ public class StockPricePollingService {
         for (String symbol : pollingSymbols) {
             Instant last = kisWebSocketService.getLastReceivedTime(symbol);
             if (last.isBefore(threshold)) {
-                // KIS WS 30초 이상 무수신 → 폴백 조회
+                // KIS WS 10초 이상 무수신 -> 폴백 조회
                 try {
                     StockPriceMessage msg = kisService.getCurrentPrice(symbol);
                     if (msg != null) {

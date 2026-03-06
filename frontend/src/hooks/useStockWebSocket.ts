@@ -62,15 +62,18 @@ export const useStockWebSocket = () => {
             debug: (_str) => {
                 // console.log('STOMP: ' + str);
             },
-            reconnectDelay: 5000,
-            heartbeatIncoming: 10000,
-            heartbeatOutgoing: 10000,
+            reconnectDelay: 3000,
+            heartbeatIncoming: 5000,
+            heartbeatOutgoing: 5000,
             onConnect: () => {
                 isConnectedRef.current = true;
+                // console.log('WebSocket Connected. Processing subscriptions:', subscriptionsRef.current);
 
-                // Process queued subscriptions
+                // Process all tracked subscriptions upon (re)connection
                 subscriptionsRef.current.forEach(symbol => {
-                    subscribeToSymbol(client, symbol);
+                    if (clientRef.current) {
+                        subscribeToSymbol(clientRef.current, symbol);
+                    }
                 });
             },
             onStompError: (frame) => {

@@ -49,15 +49,6 @@ public class PortfolioGroupController {
         return ApiResponse.success("그룹에서 탈퇴하였습니다.");
     }
 
-    @PostMapping("/{groupId}/join")
-    public ApiResponse<Void> joinGroup(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long groupId) {
-        Long userId = Long.parseLong(userDetails.getUsername());
-        groupService.joinGroup(groupId, userId);
-        return ApiResponse.success("그룹 가입 신청이 완료되었습니다.");
-    }
-
     @PostMapping("/join-by-code")
     public ApiResponse<Void> joinGroupByCode(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -75,17 +66,6 @@ public class PortfolioGroupController {
         Long ownerId = Long.parseLong(userDetails.getUsername());
         groupService.inviteMember(groupId, ownerId, memberId);
         return ApiResponse.success("그룹 초대가 완료되었습니다.");
-    }
-
-    @PostMapping("/{groupId}/requests/{membershipId}")
-    public ApiResponse<Void> handleJoinRequest(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long groupId,
-            @PathVariable Long membershipId,
-            @RequestParam boolean accept) {
-        Long ownerId = Long.parseLong(userDetails.getUsername());
-        groupService.handleJoinRequest(groupId, ownerId, membershipId, accept);
-        return ApiResponse.success(accept ? "가입 신청을 승인했습니다." : "가입 신청을 거절했습니다.");
     }
 
     @PostMapping("/invitations/{membershipId}")

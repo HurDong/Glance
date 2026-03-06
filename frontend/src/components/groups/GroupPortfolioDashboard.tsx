@@ -300,14 +300,16 @@ export const GroupPortfolioDashboard: React.FC = () => {
         e.preventDefault();
         if (!joinGroupId) return;
 
-        let success = false;
-        // If it's pure numbers, try joining by ID, otherwise join by code
-        if (/^\d+$/.test(joinGroupId)) {
-            success = await handleAction(() => groupApi.joinGroup(parseInt(joinGroupId)), '그룹에 성공적으로 가입되었습니다!', '존재하지 않는 그룹 ID이거나 이미 가입된 그룹입니다.');
-        } else {
-            success = await handleAction(() => groupApi.joinGroupByCode(joinGroupId), '초대 코드로 그룹에 성공적으로 가입되었습니다!', '유효하지 않은 초대 코드이거나 이미 가입된 그룹입니다.');
+        try {
+            await groupApi.joinGroupByCode(joinGroupId);
+            showToast('✅ 그룹에 성공적으로 가입되었습니다!');
+            setJoinGroupId('');
+            fetchGroups();
+        } catch (error: any) {
+            console.error('Join failed:', error);
+            const message = error.response?.data?.message || '유효하지 않은 초대 코드이거나 가입에 실패했습니다.';
+            showAlert(message, { type: 'error' });
         }
-        if (success) setJoinGroupId('');
     };
 
     const handleShareInviteCode = async (group: Group) => {

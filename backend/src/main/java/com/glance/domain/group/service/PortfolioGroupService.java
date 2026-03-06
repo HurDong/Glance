@@ -17,6 +17,8 @@ import com.glance.domain.group.entity.GroupFeed;
 import com.glance.domain.group.entity.GroupFeedActionType;
 import com.glance.domain.group.repository.GroupFeedRepository;
 import com.glance.domain.group.dto.GroupFeedResponse;
+import com.glance.domain.notification.entity.NotificationType;
+import com.glance.domain.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +36,7 @@ public class PortfolioGroupService {
         private final MemberService memberService;
         private final PortfolioRepository portfolioRepository;
         private final GroupFeedRepository groupFeedRepository;
+        private final NotificationService notificationService;
 
         @Transactional
         public PortfolioGroup createGroup(Long ownerId, String name, String description) {
@@ -103,38 +106,31 @@ public class PortfolioGroupService {
         }
 
         @Transactional
-        public void joinGroup(Long groupId, Long memberId) {
-                PortfolioGroup group = groupRepository.findById(groupId)
-                                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
-                Member member = memberService.getMember(memberId);
-
-                if (groupMemberRepository.findByGroupAndMember(group, member).isPresent()) {
-                        throw new BusinessException("이미 그룹에 가입된 멤버이거나 요청 중입니다.", ErrorCode.INVALID_INPUT_VALUE);
+        public void joinGroupByCode(String inviteCode, Long memberId) {
+                if (inviteCode == null || inviteCode.isBlank()) {
+                        throw new BusinessException("초대 코드를 입력해주세요.", ErrorCode.INVALID_INPUT_VALUE);
                 }
 
-                groupMemberRepository.save(PortfolioGroupMember.builder()
-                                .group(group)
-                                .member(member)
-                                .status(GroupMemberStatus.PENDING)
-                                .build());
-        }
-
-        @Transactional
-        public void joinGroupByCode(String inviteCode, Long memberId) {
-                PortfolioGroup group = groupRepository.findByInviteCode(inviteCode)
+                // 대소문자 구분 없이 검색 가능하도록 개선
+                PortfolioGroup group = groupRepository.findByInviteCode(inviteCode.trim().toUpperCase())
                                 .orElseThrow(() -> new BusinessException("유효하지 않은 초대 코드입니다.",
                                                 ErrorCode.ENTITY_NOT_FOUND));
                 Member member = memberService.getMember(memberId);
 
-                if (groupMemberRepository.findByGroupAndMember(group, member).isPresent()) {
-                        throw new BusinessException("이미 그룹에 가입된 멤버이거나 요청 중입니다.", ErrorCode.INVALID_INPUT_VALUE);
+                // 기존 멤버십 확인 및 처리
+                PortfolioGroupMember groupMember = groupMemberRepository.findByGroupAndMember(group, member)
+                                .orElseGet(() -> PortfolioGroupMember.builder()
+                                                .group(group)
+                                                .member(member)
+                                                .build());
+
+                if (groupMember.getStatus() == GroupMemberStatus.ACCEPTED) {
+                        throw new BusinessException("이미 이 그룹의 멤버입니다.", ErrorCode.INVALID_INPUT_VALUE);
                 }
 
-                groupMemberRepository.save(PortfolioGroupMember.builder()
-                                .group(group)
-                                .member(member)
-                                .status(GroupMemberStatus.ACCEPTED)
-                                .build());
+                // 상태를 ACCEPTED로 설정 (신규든 기존 대기자든)
+                groupMember.accept();
+                groupMemberRepository.save(groupMember);
 
                 groupFeedRepository.save(GroupFeed.builder()
                                 .group(group)
@@ -142,6 +138,17 @@ public class PortfolioGroupService {
                                 .actionType(GroupFeedActionType.JOIN_GROUP)
                                 .content(member.getNickname() + "님이 초대 코드로 그룹에 가입했습니다.")
                                 .build());
+
+                // 알림 생성: 그룹장에게 새 멤버 합류 알림 전송
+                if (!group.getOwner().getId().equals(memberId)) {
+                        notificationService.sendNotification(
+                                        group.getOwner(),
+                                        member,
+                                        NotificationType.GROUP_JOIN,
+                                        String.format("'%s' 그룹에 새로운 멤버 %s님이 합류했습니다!", group.getName(),
+                                                        member.getNickname()),
+                                        group.getId().toString());
+                }
         }
 
         @Transactional
@@ -245,6 +252,21 @@ public class PortfolioGroupService {
                                 .actionType(GroupFeedActionType.SHARE_PORTFOLIO)
                                 .content(member.getNickname() + "님이 새 포트폴리오를 공유했습니다.")
                                 .build());
+
+                // 알림 생성: 그룹의 모든 멤버에게 포트폴리오 공유 알림 전송 (본인 제외)
+                List<PortfolioGroupMember> members = groupMemberRepository.findAllByGroup(group);
+                for (PortfolioGroupMember groupMemberEntity : members) {
+                        Member recipient = groupMemberEntity.getMember();
+                        if (!recipient.getId().equals(memberId) && groupMemberEntity.getStatus() == GroupMemberStatus.ACCEPTED) {
+                                notificationService.sendNotification(
+                                                recipient,
+                                                member,
+                                                NotificationType.PORTFOLIO_SHARE,
+                                                String.format("'%s' 그룹의 %s님이 새로운 포트폴리오를 공유했습니다!", group.getName(),
+                                                                member.getNickname()),
+                                                group.getId().toString());
+                        }
+                }
         }
 
         public List<PortfolioGroupResponse> getMyGroups(Long userId) {
