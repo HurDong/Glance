@@ -87,7 +87,10 @@ const PortfolioStockList = ({ stocks, isPrivate }: { stocks: any[], isPrivate: b
 
     return (
         <div className="flex flex-col gap-2 relative z-10 w-full mb-4 shrink-0 h-[120px]">
-            <div className="grid grid-cols-2 gap-2 flex-1 content-start">
+            <div className={clsx(
+                "grid grid-cols-2 gap-2 content-start",
+                totalPages > 1 ? "min-h-[106px]" : "flex-1"
+            )}>
                 {currentStocks.map(item => {
                     const itemIsCash = isCashAsset(item.symbol);
                     return (
