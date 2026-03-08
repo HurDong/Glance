@@ -184,40 +184,102 @@ const PortfolioStockList = ({ stocks, isPrivate }: { stocks: any[], isPrivate: b
     );
 };
 
-const ReactionButtons = () => {
-    const [reactions, setReactions] = useState<Record<string, boolean>>({});
+const ReactionButtons = ({ membershipId, initialReactions, onRefresh }: { 
+    membershipId: number, 
+    initialReactions?: any[],
+    onRefresh: (silent?: boolean) => void 
+}) => {
+    const [localReactions, setLocalReactions] = useState(initialReactions || []);
+    const [animatingId, setAnimatingId] = useState<string | null>(null);
+    const { token } = useAuthStore();
+    const { showAlert } = useAlertStore();
 
-    const toggleReaction = (type: string) => {
-        setReactions(prev => ({
-            ...prev,
-            [type]: !prev[type]
-        }));
+    useEffect(() => {
+        if (initialReactions) {
+            setLocalReactions(initialReactions);
+        }
+    }, [initialReactions]);
+
+    const handleToggleReaction = async (type: string) => {
+        if (!token) {
+            showAlert('로그인이 필요한 서비스입니다.', { type: 'warning' });
+            return;
+        }
+
+        setAnimatingId(type);
+        setTimeout(() => setAnimatingId(null), 400);
+
+        const updated = localReactions.map(r => {
+            if (r.type === type) {
+                const newReactedByMe = !r.reactedByMe;
+                return {
+                    ...r,
+                    count: newReactedByMe ? r.count + 1 : Math.max(0, r.count - 1),
+                    reactedByMe: newReactedByMe
+                };
+            }
+            return r;
+        });
+        setLocalReactions(updated);
+
+        try {
+            await groupApi.toggleReaction(membershipId, type);
+            onRefresh(true);
+        } catch (error) {
+            console.error('Reaction toggle failed:', error);
+            setLocalReactions(initialReactions || []);
+        }
     };
 
     const reactionTypes = [
-        { id: 'good', emoji: '👍', label: '잘 담았다' },
-        { id: 'metoo', emoji: '🙋', label: '나도 관심' },
-        { id: 'watch', emoji: '👀', label: '관망중' },
-        { id: 'pass', emoji: '😅', label: '이건 패스' }
+        { id: 'GOOD', emoji: '👍', label: '잘 샀다', activeColor: 'bg-amber-500 text-white' },
+        { id: 'METOO', emoji: '🙋', label: '나도 관심', activeColor: 'bg-rose-500 text-white' },
+        { id: 'WATCH', emoji: '👀', label: '관망중', activeColor: 'bg-blue-500 text-white' },
+        { id: 'PASS', emoji: '😅', label: '패스', activeColor: 'bg-slate-500 text-white' }
     ];
 
     return (
-        <div className="flex flex-nowrap overflow-x-auto hide-scrollbar gap-1 mt-2 mb-1 w-full">
-            {reactionTypes.map(r => (
-                <button
-                    key={r.id}
-                    onClick={() => toggleReaction(r.id)}
-                    className={clsx(
-                        "px-2 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1 active:scale-95 shadow-sm shrink-0",
-                        reactions[r.id]
-                            ? "bg-primary text-primary-foreground border-transparent shadow-[0_2px_8px_rgba(36,99,235,0.3)]"
-                            : "bg-background border border-border/80 hover:border-border text-muted-foreground hover:text-foreground"
-                    )}
-                >
-                    <span className="text-sm">{r.emoji}</span>
-                    <span className="text-[10px] sm:text-[11px] whitespace-nowrap">{r.label}</span>
-                </button>
-            ))}
+        <div className="grid grid-cols-4 gap-1.5 mt-3 mb-1 w-full px-0.5">
+            {reactionTypes.map(r => {
+                const data = localReactions.find(lr => lr.type === r.id) || { count: 0, reactedByMe: false };
+                const isAnimating = animatingId === r.id;
+                
+                return (
+                    <button
+                        key={r.id}
+                        onClick={() => handleToggleReaction(r.id)}
+                        className={clsx(
+                            "group relative py-2 px-1 rounded-xl transition-all duration-300 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 border-[1.5px] active:scale-95 appearance-none shadow-none outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0",
+                            data.reactedByMe
+                                ? `${r.activeColor} border-transparent z-10 shadow-none`
+                                : `bg-card border-border/60 text-muted-foreground hover:border-primary/40 hover:bg-muted/40 hover:text-foreground`,
+                            isAnimating && "animate-bounce"
+                        )}
+                    >
+                        <span className={clsx(
+                            "text-sm transition-transform duration-300 shrink-0",
+                            data.reactedByMe ? "scale-110" : "group-hover:scale-110"
+                        )}>
+                            {r.emoji}
+                        </span>
+                        
+                        <span className="text-[10px] sm:text-[11px] font-black whitespace-nowrap tracking-tighter leading-none">
+                            {r.label}
+                        </span>
+
+                        {data.count > 0 && (
+                            <span className={clsx(
+                                "min-w-[15px] h-[15px] flex items-center justify-center rounded-full text-[9px] font-black shrink-0",
+                                data.reactedByMe 
+                                    ? "bg-white/30 text-white" 
+                                    : "bg-primary/10 text-primary border border-primary/20"
+                            )}>
+                                {data.count}
+                            </span>
+                        )}
+                    </button>
+                );
+            })}
         </div>
     );
 };
@@ -266,15 +328,15 @@ export const GroupPortfolioDashboard: React.FC = () => {
         }
     };
 
-    const fetchGroups = async () => {
+    const fetchGroups = async (silent = false) => {
         try {
-            setIsLoading(true);
+            if (!silent) setIsLoading(true);
             const data = await groupApi.getMyGroups();
             setGroups(data);
         } catch (error) {
             console.error('Failed to fetch groups:', error);
         } finally {
-            setIsLoading(false);
+            if (!silent) setIsLoading(false);
         }
     };
 
@@ -764,7 +826,11 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                                 {/* Interactions & Clone Button */}
                                                 <div className="mt-auto pt-3 flex flex-col gap-2.5 relative z-10 shrink-0">
                                                     <div className="flex justify-center scale-95 sm:scale-100 origin-center mb-0.5">
-                                                        <ReactionButtons />
+                                                        <ReactionButtons 
+                                                            membershipId={feedMember.id} 
+                                                            initialReactions={feedMember.reactions}
+                                                            onRefresh={fetchGroups}
+                                                        />
                                                     </div>
                                                     
                                                     <button

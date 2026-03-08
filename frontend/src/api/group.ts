@@ -13,6 +13,12 @@ export interface Group {
   createdAt: string;
 }
 
+export interface ReactionCount {
+  type: 'GOOD' | 'METOO' | 'WATCH' | 'PASS';
+  count: number;
+  reactedByMe: boolean;
+}
+
 export interface GroupMember {
   id: number;
   member: {
@@ -23,6 +29,7 @@ export interface GroupMember {
   sharedPortfolioName?: string;
   sharedPortfolioIsPublic?: boolean;
   sharedPortfolioItems?: SharedPortfolioItem[];
+  reactions?: ReactionCount[];
   status: 'PENDING' | 'INVITED' | 'ACCEPTED' | 'REJECTED';
   joinedAt: string;
 }
@@ -71,11 +78,6 @@ export const groupApi = {
   deleteGroup: async (groupId: number): Promise<void> => {
     await apiClient.delete(`/groups/${groupId}`);
   },
-  
-  getGroupFeeds: async (groupId: number): Promise<GroupFeed[]> => {
-    const response = await apiClient.get<{ data: GroupFeed[] }>(`/groups/${groupId}/feed`);
-    return response.data.data;
-  },
 
   leaveGroup: async (groupId: number): Promise<void> => {
     await apiClient.delete(`/groups/leave/${groupId}`);
@@ -85,8 +87,16 @@ export const groupApi = {
     await apiClient.post(`/groups/${groupId}/share`, { portfolioId });
   },
 
-  joinGroup: async (groupId: number): Promise<void> => {
-    await apiClient.post(`/groups/${groupId}/join`);
+  toggleReaction: async (membershipId: number, type: string): Promise<void> => {
+    // Using Axios params option for safer query string handling
+    await apiClient.post(`/groups/reactions/${membershipId}`, null, {
+      params: { type }
+    });
+  },
+
+  getGroupFeeds: async (groupId: number): Promise<GroupFeed[]> => {
+    const response = await apiClient.get<{ data: GroupFeed[] }>(`/groups/${groupId}/feed`);
+    return response.data.data;
   },
 
   joinGroupByCode: async (code: string): Promise<void> => {

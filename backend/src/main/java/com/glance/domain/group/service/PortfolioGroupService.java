@@ -17,6 +17,8 @@ import com.glance.domain.group.entity.GroupFeed;
 import com.glance.domain.group.entity.GroupFeedActionType;
 import com.glance.domain.group.repository.GroupFeedRepository;
 import com.glance.domain.group.dto.GroupFeedResponse;
+import com.glance.domain.group.entity.GroupPortfolioReaction;
+import com.glance.domain.group.repository.GroupPortfolioReactionRepository;
 import com.glance.domain.notification.entity.NotificationType;
 import com.glance.domain.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +41,7 @@ public class PortfolioGroupService {
         private final PortfolioRepository portfolioRepository;
         private final GroupFeedRepository groupFeedRepository;
         private final NotificationService notificationService;
+        private final GroupPortfolioReactionRepository reactionRepository;
 
         @Transactional
         public PortfolioGroup createGroup(Long ownerId, String name, String description) {
@@ -271,7 +276,7 @@ public class PortfolioGroupService {
 
         public List<PortfolioGroupResponse> getMyGroups(Long userId) {
                 Member member = memberRepository.findById(userId)
-                                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+                                .orElseThrow(() -> new BusinessException("회원 ID: " + userId + "을(를) 찾을 수 없습니다.", ErrorCode.ENTITY_NOT_FOUND));
 
                 List<PortfolioGroupMember> memberships = groupMemberRepository.findAllByMember(member);
 
@@ -281,7 +286,15 @@ public class PortfolioGroupService {
                                 .map(group -> {
                                         List<PortfolioGroupMember> members = groupMemberRepository
                                                         .findAllByGroup(group);
-                                        return PortfolioGroupResponse.from(group, members);
+                                        
+                                        // 해당 그룹의 모든 멤버십에 대한 리액션 조회
+                                        Map<Long, List<GroupPortfolioReaction>> reactionsMap = members.stream()
+                                                .collect(Collectors.toMap(
+                                                        PortfolioGroupMember::getId,
+                                                        reactionRepository::findAllByTargetMembership
+                                                ));
+
+                                        return PortfolioGroupResponse.from(group, members, userId, reactionsMap);
                                 })
                                 .toList();
         }
