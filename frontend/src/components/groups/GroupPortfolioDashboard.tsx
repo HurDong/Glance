@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Plus, Share2, Send, Trash2, X, Sparkles, LogOut, Lock, Rocket, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, Plus, Share2, Send, Trash2, X, LogOut, Lock, Rocket, ChevronLeft, ChevronRight } from 'lucide-react';
 import { groupApi } from '../../api/group';
 import type { Group } from '../../api/group';
 import { portfolioApi } from '../../api/portfolio';
@@ -84,7 +84,6 @@ const PortfolioStockList = ({ stocks, isPrivate }: { stocks: any[], isPrivate: b
         (currentPage + 1) * ITEMS_PER_PAGE
     );
 
-
     return (
         <div className="flex flex-col gap-2 relative z-10 w-full mb-4 shrink-0 h-[120px]">
             <div className={clsx(
@@ -108,11 +107,13 @@ const PortfolioStockList = ({ stocks, isPrivate }: { stocks: any[], isPrivate: b
                                     {itemIsCash ? `현금 (${item.symbol})` : getPortfolioItemDisplayName(item)}
                                 </div>
                                 {isPrivate ? (
-                                    <div className="text-[10px] text-muted-foreground/80 font-bold mt-0.5 flex items-center gap-1 truncate"><Lock size={9} /> 수량 비공개</div>
+                                    <div className="text-[10px] text-muted-foreground/80 font-bold mt-0.5 flex items-center gap-1 truncate">
+                                        <Lock size={9} /> 비공개 종목
+                                    </div>
                                 ) : (
                                     <div className="text-[11px] font-bold text-muted-foreground mt-0.5">
-                                        {itemIsCash 
-                                            ? `${item.currency === 'USD' ? '$' : '₩'}${item.averagePrice.toLocaleString()}` 
+                                        {itemIsCash
+                                            ? `${item.currency === 'USD' ? '$' : '₩'}${item.averagePrice.toLocaleString()}`
                                             : `${item.quantity}주`}
                                     </div>
                                 )}
@@ -130,7 +131,7 @@ const PortfolioStockList = ({ stocks, isPrivate }: { stocks: any[], isPrivate: b
                             <button
                                 onClick={(e) => { e.stopPropagation(); setQuickAddSymbol(item.symbol); }}
                                 className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground p-1 rounded-full opacity-0 group-hover/item:opacity-100 transition-all shadow-lg hover:scale-110 active:scale-95 z-10"
-                                title="관심종목 담기"
+                                title="관심 종목 담기"
                             >
                                 <Plus size={10} strokeWidth={3} />
                             </button>
@@ -313,7 +314,7 @@ export const GroupPortfolioDashboard: React.FC = () => {
         }
         try {
             await action();
-            if (successMsg) showToast(`✅ ${successMsg}`);
+            if (successMsg) showToast(successMsg);
             fetchGroups();
             return true;
         } catch (error: any) {
@@ -369,14 +370,14 @@ export const GroupPortfolioDashboard: React.FC = () => {
             setIsCreateModalOpen(false);
             setNewGroup({ name: '', description: '' });
             fetchGroups();
-            showToast('✅ 새 그룹이 생성되었습니다!');
+            showToast('새 그룹을 만들었습니다.');
         } catch (error: any) {
             console.error('Failed to create group:', error);
             const status = error.response?.status;
             if (status === 401 || status === 403) {
                 showAlert('로그인이 필요한 서비스입니다.', { type: 'error' });
             } else {
-                showToast('❌ 그룹 생성에 실패했습니다. (이름이 중복될 수 있습니다)', true);
+                showToast('그룹 생성에 실패했습니다. 이름이 중복되었는지 확인해 주세요.', true);
             }
         }
     };
@@ -387,31 +388,31 @@ export const GroupPortfolioDashboard: React.FC = () => {
 
         try {
             await groupApi.joinGroupByCode(joinGroupId);
-            showToast('✅ 그룹에 성공적으로 가입되었습니다!');
+            showToast('그룹에 성공적으로 참여했습니다.');
             setJoinGroupId('');
             fetchGroups();
         } catch (error: any) {
             console.error('Join failed:', error);
-            const message = error.response?.data?.message || '유효하지 않은 초대 코드이거나 가입에 실패했습니다.';
+            const message = error.response?.data?.message || '유효하지 않은 초대 코드이거나 참여에 실패했습니다.';
             showAlert(message, { type: 'error' });
         }
     };
 
     const handleShareInviteCode = async (group: Group) => {
         const joinUrl = `${window.location.origin}/groups?code=${group.inviteCode}`;
-        const textToShare = `[Glance] '${group.name}' 주식 포트폴리오 그룹에 초대합니다!\n초대 코드: ${group.inviteCode}\n\nGlance에서 위 코드를 입력하고 바로 합류하세요!`;
+        const textToShare = `[Glance] '${group.name}' 그룹에 초대합니다.\n초대 코드: ${group.inviteCode}\n\nGlance에서 이 코드를 입력하고 바로 참여해 보세요.`;
         
-        // PC 카카오톡 안드로이드/윈도우 이슈 우회: 무조건 클립보드에 먼저 복사
+        // PC 移댁뭅?ㅽ넚 ?덈뱶濡쒖씠???덈룄???댁뒋 ?고쉶: 臾댁“嫄??대┰蹂대뱶??癒쇱? 蹂듭궗
         try {
             await navigator.clipboard.writeText(`${textToShare}\n링크: ${joinUrl}`);
-            showToast(`✅ 클립보드에 초대 코드가 복사되었습니다! 카카오톡 등에서 바로 붙여넣기(Ctrl+V) 하세요.`);
+            showToast('클립보드에 초대 코드와 링크를 복사했습니다. 원하는 곳에 바로 붙여넣기 하세요.');
         } catch (err) {
             console.error('클립보드 복사 실패:', err);
         }
 
         if (navigator.share) {
             try {
-                // 약간의 딜레이 후 네이티브 공유창 띄우기 (토스트 메시지가 보일 시간 확보)
+                // ?쎄컙???쒕젅?????ㅼ씠?곕툕 怨듭쑀李??꾩슦湲?(?좎뒪??硫붿떆吏媛 蹂댁씪 ?쒓컙 ?뺣낫)
                 setTimeout(async () => {
                     await navigator.share({
                         title: `${group.name} 그룹 공유`,
@@ -420,22 +421,22 @@ export const GroupPortfolioDashboard: React.FC = () => {
                     });
                 }, 500);
             } catch (error) {
-                console.log('공유 취소됨 또는 실패', error);
+                console.log('공유 취소 또는 실패', error);
             }
         }
     };
 
     const handleDeleteGroup = async (groupId: number, groupName: string) => {
-        const isConfirmed = await showConfirm(`'${groupName}' 그룹을 정말 삭제하시겠습니까?\n\n⚠️ 그룹 자체가 완전히 폐쇄되며, 모든 멤버와 공유 데이터가 즉시 사라집니다. 이 작업은 되돌릴 수 없습니다.`);
+        const isConfirmed = await showConfirm(`'${groupName}' 그룹을 정말 삭제하시겠습니까?\n\n삭제하면 그룹 자체가 사라지고, 모든 멤버와 공유 데이터가 즉시 삭제됩니다. 이 작업은 되돌릴 수 없습니다.`);
         if (isConfirmed) {
-            await handleAction(() => groupApi.deleteGroup(groupId), '그룹이 삭제되었습니다.', '방장만 그룹을 삭제할 수 있습니다.');
+            await handleAction(() => groupApi.deleteGroup(groupId), '그룹을 삭제했습니다.', '방장만 그룹을 삭제할 수 있습니다.');
         }
     };
 
     const handleLeaveGroup = async (groupId: number, groupName: string) => {
-        const isConfirmed = await showConfirm(`'${groupName}' 그룹에서 정말 탈퇴하시겠습니까?\n\n본인의 공유 데이터만 제거되며, 그룹은 계속 유지됩니다.`);
+        const isConfirmed = await showConfirm(`'${groupName}' 그룹에서 정말 나가시겠습니까?\n\n내가 공유한 데이터만 제거되며 그룹은 계속 유지됩니다.`);
         if (isConfirmed) {
-            await handleAction(() => groupApi.leaveGroup(groupId), '그룹에서 탈퇴하였습니다.', '그룹 탈퇴 중 오류가 발생했습니다.');
+            await handleAction(() => groupApi.leaveGroup(groupId), '그룹에서 나갔습니다.', '그룹 나가기 중 오류가 발생했습니다.');
         }
     };
 
@@ -449,17 +450,17 @@ export const GroupPortfolioDashboard: React.FC = () => {
         if (!selectedGroupId || !selectedPortfolioId) return;
         const success = await handleAction(
             () => groupApi.sharePortfolio(selectedGroupId, selectedPortfolioId),
-            '포트폴리오가 그룹에 성공적으로 공유되었습니다.',
+            '포트폴리오를 그룹에 공유했습니다.',
             '포트폴리오 공유에 실패했습니다.'
         );
         if (success) {
             setIsShareModalOpen(false);
             setSelectedPortfolioId(null);
-            // 공유 후 현재 보고 있는 그룹 피드를 즉시 갱신
+            // 怨듭쑀 ???꾩옱 蹂닿퀬 ?덈뒗 洹몃９ ?쇰뱶瑜?利됱떆 媛깆떊
             try {
                 const updatedGroups = await groupApi.getMyGroups();
                 setGroups(updatedGroups);
-                // 현재 피드에 표시 중인 그룹도 최신 데이터로 교체
+                // ?꾩옱 ?쇰뱶???쒖떆 以묒씤 洹몃９??理쒖떊 ?곗씠?곕줈 援먯껜
                 if (selectedGroupForFeed) {
                     const updated = updatedGroups.find(g => g.id === selectedGroupForFeed.id);
                     if (updated) setSelectedGroupForFeed(updated);
@@ -497,8 +498,8 @@ export const GroupPortfolioDashboard: React.FC = () => {
                             <Users size={24} />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-black tracking-tight">소셜 그룹</h1>
-                            <p className="text-muted-foreground mt-1">포트폴리오 공유 및 인사이트</p>
+                            <h1 className="text-3xl font-black tracking-tight">그룹 피드</h1>
+                            <p className="text-muted-foreground mt-1">포트폴리오 공유와 인사이트를 한곳에서</p>
                         </div>
                     </div>
                     
@@ -525,7 +526,7 @@ export const GroupPortfolioDashboard: React.FC = () => {
                             className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-primary to-indigo-600 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:scale-[1.02] transition-all shadow-md"
                         >
                             <Plus size={18} />
-                            내 그룹 생성
+                            새 그룹 만들기
                         </button>
                     </div>
                 </div>
@@ -540,9 +541,9 @@ export const GroupPortfolioDashboard: React.FC = () => {
                             <path d="M100 80L85 110h30l-15-30z" className="text-blue-400" fill="currentColor" />
                         </svg>
                     </div>
-                    <h2 className="text-2xl font-bold mb-3">투자는 함께할 때 더 즐겁습니다</h2>
+                    <h2 className="text-2xl font-bold mb-3">아직 참여 중인 그룹이 없습니다</h2>
                     <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-                        동료들과 그룹을 맺고 수익률 챌린지에 도전해보세요. 서로의 포트폴리오를 공유하며 새로운 투자 아이디어를 얻을 수 있습니다.
+                        동료와 그룹을 만들고 포트폴리오를 함께 살펴보세요. 서로의 포트폴리오를 공유하고 새로운 투자 아이디어를 얻을 수 있습니다.
                     </p>
                     <div className="pt-6">
                         <button 
@@ -570,7 +571,7 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                         <Users size={20} className="lg:w-6 lg:h-6" />
                                     </div>
                                     <div className="shrink-0">
-                                        <h1 className="text-xl lg:text-2xl font-extrabold tracking-tight text-foreground">소셜 그룹</h1>
+                                        <h1 className="text-xl lg:text-2xl font-extrabold tracking-tight text-foreground">그룹 피드</h1>
                                         <p className="hidden lg:block text-muted-foreground mt-1 text-sm sm:text-base">
                                             포트폴리오 공유 및 인사이트
                                         </p>
@@ -677,7 +678,7 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                         <button 
                                             onClick={() => handleLeaveGroup(selectedGroupForFeed.id, selectedGroupForFeed.name)}
                                             className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border/80 hover:border-destructive/40 hover:bg-destructive/5 hover:text-destructive text-muted-foreground text-xs font-bold rounded-xl transition-all shadow-sm whitespace-nowrap"
-                                            title="그룹 탈퇴"
+                                            title="그룹 나가기"
                                         >
                                             <LogOut size={14} />
                                             <span>나가기</span>
@@ -717,7 +718,7 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                                     <Share2 size={32} />
                                                 </div>
                                                 <p className="text-lg font-bold text-foreground mb-2">공유된 포트폴리오가 없습니다</p>
-                                                <p className="text-sm text-muted-foreground mb-6">내 포트폴리오를 가장 먼저 공유하여 그룹의 피드를 채워보세요!</p>
+                                                <p className="text-sm text-muted-foreground mb-6">내 포트폴리오를 먼저 공유해서 그룹 피드를 채워보세요.</p>
                                                 <button 
                                                     onClick={() => handleOpenShareModal(selectedGroupForFeed.id)}
                                                     className="px-5 py-2.5 bg-card border border-border/80 shadow-sm text-foreground text-sm font-bold rounded-xl hover:bg-muted/80 transition-colors"
@@ -756,9 +757,6 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                                     </div>
                                                     <div className="flex flex-col flex-1 min-w-0">
                                                         <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-                                                            <span className="px-2 py-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold text-[9px] rounded-full tracking-wider shadow-sm flex items-center gap-1">
-                                                                <Sparkles size={8} /> 인사이트 리더
-                                                            </span>
                                                             {isPrivate && (
                                                                 <span className="px-1.5 py-0.5 bg-muted/80 text-muted-foreground font-bold text-[8px] rounded-full flex items-center gap-1 border border-border/50">
                                                                     <Lock size={8} /> SECRET
@@ -796,20 +794,20 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                                                     </div>
                                                                     {/* Custom Tooltip */}
                                                                     <div className="absolute left-0 bottom-[110%] mb-1 bg-popover/95 backdrop-blur-sm text-popover-foreground text-[10px] sm:text-[11px] font-medium px-2.5 py-1 rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)] opacity-0 group-hover/tooltip:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-[100] transform translate-y-1 group-hover/tooltip:translate-y-0">
-                                                                        {getPortfolioItemDisplayName(heroStock)}
+                                                                        {getPortfolioItemTooltipName(heroStock)}
                                                                     </div>
                                                                 </div>
                                                             </div>
                                                             <div className="flex flex-col items-end shrink-0">
                                                                 {isPrivate ? (
                                                                     <div className="mb-2 text-[10px] font-bold text-muted-foreground bg-card/80 border border-border/60 px-2.5 py-1 rounded-full flex items-center gap-1 backdrop-blur-sm shadow-sm">
-                                                                        <Lock size={10} /> 수량 비공개
+                                                                        <Lock size={10} /> 비공개 종목
                                                                     </div>
                                                                 ) : (
                                                                     <div className="mb-2 text-[12px] font-black text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full shadow-sm">
-                                                                        {heroStock.symbol === 'KRW' || heroStock.symbol === 'USD' 
-                                                                            ? `${heroStock.currency === 'USD' ? '$' : '₩'}${heroStock.averagePrice.toLocaleString()}` 
-                                                                            : `${heroStock.quantity}주 탑재`}
+                                                                        {heroStock.symbol === 'KRW' || heroStock.symbol === 'USD'
+                                                                            ? `${heroStock.currency === 'USD' ? '$' : '₩'}${heroStock.averagePrice.toLocaleString()}`
+                                                                            : `${heroStock.quantity}주 보유`}
                                                                     </div>
                                                                 )}
                                                                 <div className="transform scale-125 origin-bottom-right mt-1">
@@ -836,9 +834,9 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                                     <button
                                                         className="w-full py-2.5 rounded-[12px] font-black text-sm flex items-center justify-center gap-2 transition-all shadow-sm border border-transparent
                                                         bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500 hover:shadow-indigo-500/25 active:scale-[0.98]"
-                                                        onClick={(_e) => showToast(`해당 덱(Deck) 클론 기능은 준비 중입니다.`)}
+                                                        onClick={(_e) => showToast('해당 포트폴리오 복제 기능은 준비 중입니다.')}
                                                     >
-                                                        <Plus size={18} strokeWidth={3} /> 이 덱(Deck) 클론하기
+                                                        <Plus size={18} strokeWidth={3} /> 포트폴리오 복제하기
                                                     </button>
                                                 </div>
                                             </div>
@@ -863,7 +861,7 @@ export const GroupPortfolioDashboard: React.FC = () => {
                         <h3 className="text-lg font-bold mb-4">새 그룹 만들기</h3>
                         <form onSubmit={handleCreateGroup}>
                             <input className="w-full bg-muted border-none p-3 rounded-lg mb-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all" placeholder="그룹 이름" value={newGroup.name} onChange={e => setNewGroup({...newGroup, name: e.target.value})} required autoFocus />
-                            <textarea className="w-full bg-muted border-none p-3 rounded-lg mb-5 text-sm h-24 resize-none focus:ring-2 focus:ring-primary outline-none transition-all" placeholder="모임에 대한 짧은 소개를 적어주세요." value={newGroup.description} onChange={e => setNewGroup({...newGroup, description: e.target.value})} />
+                            <textarea className="w-full bg-muted border-none p-3 rounded-lg mb-5 text-sm h-24 resize-none focus:ring-2 focus:ring-primary outline-none transition-all" placeholder="모임 소개나 투자 방향을 적어보세요" value={newGroup.description} onChange={e => setNewGroup({...newGroup, description: e.target.value})} />
                             <div className="flex justify-end gap-2">
                                 <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted rounded-lg transition-colors">취소</button>
                                 <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground font-bold rounded-lg shadow-sm hover:bg-primary/90 transition-all">만들기</button>
@@ -905,7 +903,7 @@ export const GroupPortfolioDashboard: React.FC = () => {
                     symbol={quickAddSymbol}
                     onClose={() => setQuickAddSymbol(null)}
                     onSuccess={() => {
-                        showToast(`✅ ${quickAddSymbol} 종목이 내 포트폴리오에 성공적으로 담겼습니다!`);
+                        showToast(`${quickAddSymbol} 종목을 내 포트폴리오에 담았습니다.`);
                     }}
                 />
             )}
@@ -967,9 +965,9 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                                     )}
                                                 </div>
                                                 <div className="text-xs text-muted-foreground mt-1">
-                                                    {member.status === 'ACCEPTED' ? (
-                                                        member.sharedPortfolioId ? '포트폴리오 공유 중' : '참여 중'
-                                                    ) : '초대 대기 중'}
+                                                    {member.status === 'ACCEPTED'
+                                                        ? (member.sharedPortfolioId ? '포트폴리오 공유 중' : '참여 중')
+                                                        : '초대 대기 중'}
                                                 </div>
                                             </div>
                                         </div>
