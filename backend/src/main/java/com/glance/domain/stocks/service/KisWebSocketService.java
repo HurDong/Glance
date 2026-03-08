@@ -113,11 +113,7 @@ public class KisWebSocketService extends TextWebSocketHandler {
                         log.warn("[KIS WS Error] TR_ID={} tr_key={} msg={}", trId, trKey, msg);
                     }
                 } else {
-                    if ("H0NXMKO0".equals(trId)) {
-                        log.info("[NXT] ACK OK: tr_key={}, msg={}", trKey, msg);
-                    } else {
-                        log.debug("[KIS WS ACK] TR_ID={} msg={}", trId, msg);
-                    }
+                    log.debug("[KIS WS ACK] TR_ID={} msg={}", trId, msg);
                 }
             } catch (Exception ex) {
                 log.debug("KIS WS Response (non-JSON parseable): {}", payload);
@@ -139,7 +135,6 @@ public class KisWebSocketService extends TextWebSocketHandler {
             if ("H0STCNT0".equals(trId)) { // 국내주식 실시간 체결 (KRX)
                 parseAndBroadcastKorea(parts[3], "KRX");
             } else if ("H0NXMKO0".equals(trId)) { // 국내주식 실시간 체결 (Nextrade ATS)
-                log.info("[NXT] RAW message received: {}", parts[3].substring(0, Math.min(200, parts[3].length())));
                 parseAndBroadcastKorea(parts[3], "ATS");
             } else if ("HDFSASP0".equals(trId) || "HDFSCNT0".equals(trId)) { // 해외주식 실시간 호가 or 체결
                 parseAndBroadcastUS(parts[3]);
@@ -190,11 +185,6 @@ public class KisWebSocketService extends TextWebSocketHandler {
                 else if (time.compareTo("080000") >= 0 && time.compareTo("090000") < 0)
                     marketStatus = "PRE_MARKET";
             }
-        }
-
-        if ("ATS".equals(exchangeHint)) {
-            log.info("[NXT] Parsed: symbol={}, price={}, change={}, rate={}, time={}, marketStatus={}",
-                    symbol, price, change, changeRate, time, marketStatus);
         }
 
         broadcast(symbol, price, change, changeRate, time, marketStatus);
@@ -282,7 +272,6 @@ public class KisWebSocketService extends TextWebSocketHandler {
             // For Korean stocks, subscribe to KRX and also Nextrade (ATS)
             // H0NXMKO0 uses plain stock code (strip Q-prefix if present)
             String nxtKey = symbol.startsWith("Q") ? symbol.substring(1) : symbol;
-            log.info("[NXT] Subscribing symbol={} (nxtKey={}) to H0NXMKO0 (Nextrade ATS)", symbol, nxtKey);
             sendSingleSubscribeRequest("H0STCNT0", symbol, subscribe);
             sendSingleSubscribeRequest("H0NXMKO0", nxtKey, subscribe);
             return;
