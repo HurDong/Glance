@@ -42,6 +42,27 @@ const PortfolioItemPrice = ({ symbol, market: _market }: { symbol: string, marke
     );
 };
 
+const isCashAsset = (symbol: string) => symbol === 'KRW' || symbol === 'USD' || symbol === 'CASH';
+
+const isKoreanMarket = (market: string) => market === 'KOSPI' || market === 'KOSDAQ';
+
+const getPortfolioItemDisplayName = (item: { symbol: string; market: string; nameKr?: string; nameEn?: string }) => {
+    if (isCashAsset(item.symbol)) return `보유 현금 (${item.symbol})`;
+    if (isKoreanMarket(item.market)) return item.nameKr || item.symbol;
+    return item.nameKr || item.nameEn || item.symbol;
+};
+
+const getPortfolioItemTooltipName = (item: { symbol: string; market: string; nameKr?: string; nameEn?: string }) => {
+    if (isCashAsset(item.symbol)) return `보유 현금 (${item.symbol})`;
+    if (isKoreanMarket(item.market)) return item.nameKr || item.symbol;
+    return item.nameKr || item.nameEn || item.symbol;
+};
+
+const getPortfolioItemMeta = (item: { symbol: string; market: string }) => {
+    if (isCashAsset(item.symbol)) return '현금 자산';
+    return `${item.market} · ${item.symbol}`;
+};
+
 const PortfolioStockList = ({ stocks, isPrivate }: { stocks: any[], isPrivate: boolean }) => {
     const [currentPage, setCurrentPage] = useState(0);
     const [quickAddSymbol, setQuickAddSymbol] = useState<string | null>(null);
@@ -63,13 +84,12 @@ const PortfolioStockList = ({ stocks, isPrivate }: { stocks: any[], isPrivate: b
         (currentPage + 1) * ITEMS_PER_PAGE
     );
 
-    const isCash = (symbol: string) => symbol === 'KRW' || symbol === 'USD' || symbol === 'CASH';
 
     return (
         <div className="flex flex-col gap-2 relative z-10 w-full mb-4 shrink-0 h-[120px]">
             <div className="grid grid-cols-2 gap-2 flex-1 content-start">
                 {currentStocks.map(item => {
-                    const itemIsCash = isCash(item.symbol);
+                    const itemIsCash = isCashAsset(item.symbol);
                     return (
                         <div
                             key={item.id}
@@ -78,11 +98,11 @@ const PortfolioStockList = ({ stocks, isPrivate }: { stocks: any[], isPrivate: b
                             {itemIsCash ? (
                                 <div className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-lg shadow-md shrink-0 ring-2 ring-background">💵</div>
                             ) : (
-                                <StockIcon symbol={item.symbol} name={item.symbol} market={item.market as 'US'|'KR'} className="w-9 h-9 rounded-full shadow-md shrink-0 ring-2 ring-background" />
+                                <StockIcon symbol={item.symbol} name={getPortfolioItemDisplayName(item)} market={item.market as 'US'|'KR'} className="w-9 h-9 rounded-full shadow-md shrink-0 ring-2 ring-background" />
                             )}
                             <div className="flex flex-col min-w-0 flex-1 group/tooltip relative justify-center">
                                 <div className="font-extrabold text-[12px] sm:text-[13px] text-foreground truncate leading-tight">
-                                    {itemIsCash ? `현금 (${item.symbol})` : ((item.market === 'KOSPI' || item.market === 'KOSDAQ') ? (item.nameKr || item.symbol) : item.symbol)}
+                                    {itemIsCash ? `현금 (${item.symbol})` : getPortfolioItemDisplayName(item)}
                                 </div>
                                 {isPrivate ? (
                                     <div className="text-[10px] text-muted-foreground/80 font-bold mt-0.5 flex items-center gap-1 truncate"><Lock size={9} /> 수량 비공개</div>
@@ -95,7 +115,7 @@ const PortfolioStockList = ({ stocks, isPrivate }: { stocks: any[], isPrivate: b
                                 )}
                                 {/* Custom Tooltip */}
                                 <div className="absolute left-0 bottom-[110%] bg-popover/95 backdrop-blur-sm text-popover-foreground text-[10px] sm:text-[11px] font-medium px-2.5 py-1 rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)] opacity-0 group-hover/tooltip:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-[100] transform translate-y-1 group-hover/tooltip:translate-y-0">
-                                    {itemIsCash ? `현금 자산 (${item.symbol})` : ((item.market === 'KOSPI' || item.market === 'KOSDAQ') ? (item.nameKr || item.symbol) : item.symbol)}
+                                    {itemIsCash ? `현금 자산 (${item.symbol})` : getPortfolioItemTooltipName(item)}
                                 </div>
                             </div>
                             {!itemIsCash && (
@@ -700,18 +720,18 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                                                 {heroStock.symbol === 'KRW' || heroStock.symbol === 'USD' ? (
                                                                     <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-3xl sm:text-4xl shadow-xl ring-4 ring-background shrink-0 transition-transform group-hover/hero:scale-110">💵</div>
                                                                 ) : (
-                                                                    <StockIcon symbol={heroStock.symbol} name={heroStock.symbol} market={heroStock.market as 'US'|'KR'} className="w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-xl ring-4 ring-background shrink-0 transition-transform group-hover/hero:scale-110" />
+                                                                    <StockIcon symbol={heroStock.symbol} name={getPortfolioItemDisplayName(heroStock)} market={heroStock.market as 'US'|'KR'} className="w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-xl ring-4 ring-background shrink-0 transition-transform group-hover/hero:scale-110" />
                                                                 )}
                                                                 <div className="flex flex-col min-w-0 group/tooltip relative">
                                                                     <div className="text-2xl sm:text-3xl font-black text-foreground tracking-tighter drop-shadow-md truncate">
-                                                                        {heroStock.symbol === 'KRW' || heroStock.symbol === 'USD' ? `보유 현금 (${heroStock.symbol})` : ((heroStock.market === 'KOSPI' || heroStock.market === 'KOSDAQ') ? (heroStock.nameKr || heroStock.symbol) : heroStock.symbol)}
+                                                                        {getPortfolioItemDisplayName(heroStock)}
                                                                     </div>
                                                                     <div className="text-sm sm:text-base font-bold text-muted-foreground mt-1 truncate">
-                                                                        {heroStock.market} • {heroStock.symbol === 'KRW' || heroStock.symbol === 'USD' ? '예수금' : heroStock.symbol}
+                                                                        {getPortfolioItemMeta(heroStock)}
                                                                     </div>
                                                                     {/* Custom Tooltip */}
                                                                     <div className="absolute left-0 bottom-[110%] mb-1 bg-popover/95 backdrop-blur-sm text-popover-foreground text-[10px] sm:text-[11px] font-medium px-2.5 py-1 rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)] opacity-0 group-hover/tooltip:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-[100] transform translate-y-1 group-hover/tooltip:translate-y-0">
-                                                                        {heroStock.symbol === 'KRW' || heroStock.symbol === 'USD' ? `보유 현금 (${heroStock.symbol})` : ((heroStock.market === 'KOSPI' || heroStock.market === 'KOSDAQ') ? (heroStock.nameKr || heroStock.symbol) : heroStock.symbol)}
+                                                                        {getPortfolioItemDisplayName(heroStock)}
                                                                     </div>
                                                                 </div>
                                                             </div>
