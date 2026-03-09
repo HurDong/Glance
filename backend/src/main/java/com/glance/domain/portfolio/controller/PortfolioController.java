@@ -85,6 +85,15 @@ public class PortfolioController {
         return ApiResponse.success("포트폴리오가 수정되었습니다.", response);
     }
 
+    @DeleteMapping("/{portfolioId}")
+    public ApiResponse<Void> deletePortfolio(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long portfolioId) {
+        Long userId = Long.parseLong(userDetails.getUsername());
+        portfolioService.deletePortfolio(portfolioId, userId);
+        return ApiResponse.success("?ы듃?대━?ㅺ? ??젣?섏뿀?듬땲??");
+    }
+
     @PatchMapping("/{portfolioId}/primary")
     public ApiResponse<PortfolioResponse> setPrimaryPortfolio(
             @AuthenticationPrincipal UserDetails userDetails,

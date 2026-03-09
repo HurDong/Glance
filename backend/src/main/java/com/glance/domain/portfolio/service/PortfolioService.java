@@ -2,6 +2,8 @@ package com.glance.domain.portfolio.service;
 
 import com.glance.common.exception.BusinessException;
 import com.glance.common.exception.ErrorCode;
+import com.glance.domain.group.entity.PortfolioGroupMember;
+import com.glance.domain.group.repository.PortfolioGroupMemberRepository;
 import com.glance.domain.member.entity.Member;
 import com.glance.domain.member.service.MemberService;
 import com.glance.domain.portfolio.dto.PortfolioItemRequest;
@@ -33,6 +35,7 @@ public class PortfolioService {
     private final PortfolioItemRepository portfolioItemRepository;
     private final StockSymbolRepository stockSymbolRepository;
     private final MemberService memberService;
+    private final PortfolioGroupMemberRepository portfolioGroupMemberRepository;
 
     @Transactional
     public PortfolioResponse createPortfolio(Long userId, PortfolioRequest request) {
@@ -58,7 +61,7 @@ public class PortfolioService {
 
     public PortfolioResponse getPortfolio(Long portfolioId) {
         Portfolio portfolio = portfolioRepository.findById(portfolioId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.PORTFOLIO_NOT_FOUND));
         return PortfolioResponse.from(portfolio);
     }
 
@@ -71,11 +74,8 @@ public class PortfolioService {
                 .ifPresent(existing -> existing.setPrimary(false));
 
         Portfolio target = portfolioRepository.findById(portfolioId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
-
-        if (!target.getMember().getId().equals(userId)) {
-            throw new BusinessException(ErrorCode.HANDLE_ACCESS_DENIED);
-        }
+                .orElseThrow(() -> new BusinessException(ErrorCode.PORTFOLIO_NOT_FOUND));
+        validateOwner(userId, target);
 
         target.setPrimary(true);
         return PortfolioResponse.from(target);
@@ -96,11 +96,8 @@ public class PortfolioService {
     @Transactional
     public void addPortfolioItem(Long portfolioId, Long userId, PortfolioItemRequest request) {
         Portfolio portfolio = portfolioRepository.findById(portfolioId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
-
-        if (!portfolio.getMember().getId().equals(userId)) {
-            throw new BusinessException(ErrorCode.HANDLE_ACCESS_DENIED);
-        }
+                .orElseThrow(() -> new BusinessException(ErrorCode.PORTFOLIO_NOT_FOUND));
+        validateOwner(userId, portfolio);
 
         // market이 제공된 경우 (e.g. CASH) 정확히 일치하는 심볼을 조회
         StockSymbol stockSymbol;
@@ -154,11 +151,8 @@ public class PortfolioService {
     @Transactional
     public void updatePortfolioItem(Long portfolioId, Long itemId, Long userId, PortfolioItemRequest request) {
         Portfolio portfolio = portfolioRepository.findById(portfolioId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
-
-        if (!portfolio.getMember().getId().equals(userId)) {
-            throw new BusinessException(ErrorCode.HANDLE_ACCESS_DENIED);
-        }
+                .orElseThrow(() -> new BusinessException(ErrorCode.PORTFOLIO_NOT_FOUND));
+        validateOwner(userId, portfolio);
 
         PortfolioItem item = portfolioItemRepository.findById(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
@@ -173,11 +167,8 @@ public class PortfolioService {
     @Transactional
     public void deletePortfolioItem(Long portfolioId, Long itemId, Long userId) {
         Portfolio portfolio = portfolioRepository.findById(portfolioId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
-
-        if (!portfolio.getMember().getId().equals(userId)) {
-            throw new BusinessException(ErrorCode.HANDLE_ACCESS_DENIED);
-        }
+                .orElseThrow(() -> new BusinessException(ErrorCode.PORTFOLIO_NOT_FOUND));
+        validateOwner(userId, portfolio);
 
         PortfolioItem item = portfolioItemRepository.findById(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
@@ -193,13 +184,32 @@ public class PortfolioService {
     @Transactional
     public PortfolioResponse updatePortfolio(Long portfolioId, Long userId, PortfolioRequest request) {
         Portfolio portfolio = portfolioRepository.findById(portfolioId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
-
-        if (!portfolio.getMember().getId().equals(userId)) {
-            throw new BusinessException(ErrorCode.HANDLE_ACCESS_DENIED);
-        }
+                .orElseThrow(() -> new BusinessException(ErrorCode.PORTFOLIO_NOT_FOUND));
+        validateOwner(userId, portfolio);
 
         portfolio.update(request.name(), request.description(), request.isPublic());
         return PortfolioResponse.from(portfolio);
+    }
+
+    @Transactional
+    public void deletePortfolio(Long portfolioId, Long userId) {
+        Portfolio portfolio = portfolioRepository.findById(portfolioId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PORTFOLIO_NOT_FOUND));
+        validateOwner(userId, portfolio);
+        unsharePortfolio(portfolio);
+        portfolioRepository.delete(portfolio);
+    }
+
+    private void validateOwner(Long userId, Portfolio portfolio) {
+        if (!portfolio.getMember().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.HANDLE_ACCESS_DENIED);
+        }
+    }
+
+    private void unsharePortfolio(Portfolio portfolio) {
+        List<PortfolioGroupMember> groupMembers = portfolioGroupMemberRepository.findAllBySharedPortfolio(portfolio);
+        for (PortfolioGroupMember groupMember : groupMembers) {
+            groupMember.unsharePortfolio();
+        }
     }
 }

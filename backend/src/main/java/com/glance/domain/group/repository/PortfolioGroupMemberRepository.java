@@ -3,6 +3,7 @@ package com.glance.domain.group.repository;
 import com.glance.domain.group.entity.PortfolioGroup;
 import com.glance.domain.group.entity.PortfolioGroupMember;
 import com.glance.domain.member.entity.Member;
+import com.glance.domain.portfolio.entity.Portfolio;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -12,6 +13,8 @@ public interface PortfolioGroupMemberRepository extends JpaRepository<PortfolioG
     List<PortfolioGroupMember> findAllByGroup(PortfolioGroup group);
 
     List<PortfolioGroupMember> findAllByMember(Member member);
+
+    List<PortfolioGroupMember> findAllBySharedPortfolio(Portfolio portfolio);
 
     Optional<PortfolioGroupMember> findByGroupAndMember(PortfolioGroup group, Member member);
 
