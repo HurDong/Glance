@@ -1,0 +1,133 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --text-main: #f8fafc;
+  --text-sub: #94a3b8;
+  --brand-accent: rgba(125, 211, 252, 0.88);
+  --brand-solid: #3b82f6;
+
+  --shell-bg: rgba(2, 6, 23, 0.72);
+  --shell-border: rgba(255, 255, 255, 0.1);
+  --shell-highlight: rgba(255, 255, 255, 0.3);
+  --shell-button-bg: rgba(255, 255, 255, 0.05);
+  --shell-button-hover: rgba(255, 255, 255, 0.08);
+
+  --nav-bg: rgba(2, 6, 23, 0.82);
+  --nav-active-bg: rgba(59, 130, 246, 0.18);
+  --nav-active-text: #bae6fd;
+  --nav-inactive-text: #94a3b8;
+  --nav-hover-bg: rgba(255, 255, 255, 0.05);
+
+  --card-bg: rgba(2, 6, 23, 0.58);
+  --card-border: rgba(255, 255, 255, 0.1);
+  --empty-bg: rgba(15, 23, 42, 0.65);
+  --toast-info-bg: rgba(2, 6, 23, 0.88);
+
+  --glow-primary: rgba(59, 130, 246, 0.2);
+  --glow-secondary: rgba(34, 211, 238, 0.1);
+  --glow-tertiary: rgba(226, 232, 240, 0.1);
+
+  color: var(--text-main);
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 32%),
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.16), transparent 28%),
+    linear-gradient(180deg, #020817 0%, #071226 45%, #0b1220 100%);
+  font-family: 'Pretendard Variable', 'Pretendard', system-ui, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+}
+
+html[data-theme='light'] {
+  --text-main: #0f172a;
+  --text-sub: #475569;
+  --brand-accent: rgba(37, 99, 235, 0.88);
+  --brand-solid: #2563eb;
+
+  --shell-bg: rgba(255, 255, 255, 0.82);
+  --shell-border: rgba(148, 163, 184, 0.24);
+  --shell-highlight: rgba(148, 163, 184, 0.38);
+  --shell-button-bg: rgba(241, 245, 249, 0.9);
+  --shell-button-hover: rgba(226, 232, 240, 0.95);
+
+  --nav-bg: rgba(255, 255, 255, 0.9);
+  --nav-active-bg: rgba(37, 99, 235, 0.12);
+  --nav-active-text: #1d4ed8;
+  --nav-inactive-text: #64748b;
+  --nav-hover-bg: rgba(226, 232, 240, 0.75);
+
+  --card-bg: rgba(255, 255, 255, 0.78);
+  --card-border: rgba(148, 163, 184, 0.2);
+  --empty-bg: rgba(248, 250, 252, 0.92);
+  --toast-info-bg: rgba(255, 255, 255, 0.96);
+
+  --glow-primary: rgba(96, 165, 250, 0.22);
+  --glow-secondary: rgba(125, 211, 252, 0.16);
+  --glow-tertiary: rgba(148, 163, 184, 0.16);
+
+  color: var(--text-main);
+  background:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.24), transparent 30%),
+    radial-gradient(circle at top right, rgba(125, 211, 252, 0.2), transparent 26%),
+    linear-gradient(180deg, #f8fbff 0%, #eef4ff 50%, #f8fafc 100%);
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.18), transparent 24%),
+    radial-gradient(circle at 85% 0%, rgba(45, 212, 191, 0.12), transparent 20%),
+    linear-gradient(180deg, #020817 0%, #08101f 50%, #0b1220 100%);
+  color: var(--text-main);
+  transition:
+    background 180ms ease,
+    color 180ms ease;
+}
+
+html[data-theme='light'] body {
+  background:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.16), transparent 24%),
+    radial-gradient(circle at 85% 0%, rgba(14, 165, 233, 0.1), transparent 18%),
+    linear-gradient(180deg, #f8fbff 0%, #eef4ff 50%, #f8fafc 100%);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.3);
+  color: #f8fafc;
+}
+
+html[data-theme='light'] ::selection {
+  color: #eff6ff;
+}
