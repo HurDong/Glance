@@ -57,3 +57,8 @@ docker/*/logs/
 ### Build/IDE Output
 bin/
 backend/bin/
+frontend/node_modules/
+frontend/dist/
+mobile/node_modules/
+mobile/dist/
+mobile/.pnpm-store/
