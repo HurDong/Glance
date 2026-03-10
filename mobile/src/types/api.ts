@@ -113,6 +113,7 @@ export interface PortfolioRequest {
 
 export interface PortfolioItemRequest {
   symbol: string;
+  market?: string;
   quantity: number;
   averagePrice: number;
   currency: string;

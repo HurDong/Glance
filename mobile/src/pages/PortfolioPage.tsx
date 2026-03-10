@@ -1,6 +1,6 @@
 import { FormEvent, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Eye, Pencil, Plus, Settings2, Sparkles, Trash2 } from 'lucide-react';
+import { Eye, Pencil, PieChart, Plus, Settings2, Sparkles, Trash2 } from 'lucide-react';
 import {
   addPortfolioItem,
   createPortfolio,
@@ -11,32 +11,196 @@ import {
   updatePortfolio,
   updatePortfolioItem,
 } from '@/api/portfolio';
-import { getStocks } from '@/api/stocks';
+import { getStockPrice, getStocks } from '@/api/stocks';
 import { EmptyState } from '@/components/common/EmptyState';
 import { EntryModeSelector, EntryModeTabs, type EntryMode } from '@/components/common/EntryModeSelector';
 import { SectionCard } from '@/components/common/SectionCard';
+import { useStockWebSocket } from '@/hooks/useStockWebSocket';
 import { formatCurrency, formatNumber } from '@/lib/format';
+import { useStockStore } from '@/stores/useStockStore';
 import { useToastStore } from '@/stores/toastStore';
+import type { PortfolioItem, PortfolioItemRequest, StockItem } from '@/types/api';
+
+type ItemFormState = {
+  symbol: string;
+  quantity: string;
+  averagePrice: string;
+  currency: string;
+};
+
+type SelectedPriceState = {
+  symbol: string;
+  price: string;
+};
+
+type CashFormState = {
+  amount: string;
+  currency: 'KRW' | 'USD';
+};
+
+const EMPTY_ITEM_FORM: ItemFormState = {
+  symbol: '',
+  quantity: '1',
+  averagePrice: '',
+  currency: 'KRW',
+};
+
+const QUICK_ADJUST_STEPS = [-100, -10, -1, 1, 10, 100] as const;
+const USD_TO_KRW_RATE = 1_350;
+const PORTFOLIO_ALLOCATION_COLORS = [
+  '#2563eb',
+  '#0f766e',
+  '#ea580c',
+  '#dc2626',
+  '#7c3aed',
+  '#db2777',
+  '#0891b2',
+  '#65a30d',
+] as const;
+const CASH_AMOUNT_BUTTONS = {
+  KRW: [
+    { label: '-100만', value: -1_000_000 },
+    { label: '-10만', value: -100_000 },
+    { label: '-1만', value: -10_000 },
+    { label: '+1만', value: 10_000 },
+    { label: '+10만', value: 100_000 },
+    { label: '+100만', value: 1_000_000 },
+  ],
+  USD: [
+    { label: '-$100', value: -100 },
+    { label: '-$10', value: -10 },
+    { label: '-$1', value: -1 },
+    { label: '+$1', value: 1 },
+    { label: '+$10', value: 10 },
+    { label: '+$100', value: 100 },
+  ],
+} as const;
+
+function formatAdjustLabel(step: number) {
+  return step > 0 ? `+${step}` : `${step}`;
+}
+
+function parseNumericInput(rawValue: string, fallback = 0) {
+  const parsed = Number(rawValue.replace(/,/g, '').trim());
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function adjustNumericValue(rawValue: string, step: number, minimum: number, integerOnly: boolean) {
+  const baseValue = parseNumericInput(rawValue, minimum);
+  const nextValue = Math.max(minimum, baseValue + step);
+
+  if (integerOnly) {
+    return String(Math.round(nextValue));
+  }
+
+  const roundedValue = Math.round(nextValue * 100) / 100;
+  return Number.isInteger(roundedValue) ? String(roundedValue) : String(roundedValue);
+}
+
+function createEmptyItemForm(): ItemFormState {
+  return { ...EMPTY_ITEM_FORM };
+}
+
+function createEmptyCashForm(): CashFormState {
+  return { amount: '', currency: 'KRW' };
+}
+
+function getCurrencyByMarket(market: string) {
+  return market === 'KOSPI' || market === 'KOSDAQ' ? 'KRW' : 'USD';
+}
+
+function normalizePriceInput(price: string) {
+  const parsed = Number(price.replace(/,/g, '').trim());
+  if (!Number.isFinite(parsed)) {
+    return '';
+  }
+
+  const roundedValue = Math.round(parsed * 100) / 100;
+  return Number.isInteger(roundedValue) ? String(roundedValue) : String(roundedValue);
+}
+
+function formatCurrentPriceLabel(price: string | undefined, currency: string) {
+  if (!price) {
+    return '-';
+  }
+
+  const normalizedPrice = normalizePriceInput(price);
+  if (!normalizedPrice) {
+    return '-';
+  }
+
+  return formatCurrency(Number(normalizedPrice), currency);
+}
+
+function getStockSearchLabel(stock: {
+  symbol: string;
+  nameKr?: string;
+  nameEn?: string;
+}) {
+  return `${stock.nameKr || stock.nameEn || stock.symbol} (${stock.symbol})`;
+}
+
+function isCashAsset(item: Pick<PortfolioItem, 'symbol' | 'market'>) {
+  return item.market === 'CASH' || item.symbol === 'KRW' || item.symbol === 'USD';
+}
+
+function getPortfolioItemBaseValue(item: Pick<PortfolioItem, 'quantity' | 'averagePrice'>) {
+  return item.quantity * item.averagePrice;
+}
+
+function getCashAssetAmount(item: Pick<PortfolioItem, 'quantity' | 'averagePrice'>) {
+  return Math.round(getPortfolioItemBaseValue(item) * 100) / 100;
+}
+
+function formatCompactKrw(value: number) {
+  const abs = Math.abs(value);
+
+  if (abs >= 1_0000_0000_0000) {
+    return `₩${(value / 1_0000_0000_0000).toFixed(1)}조`;
+  }
+
+  if (abs >= 1_0000_0000) {
+    return `₩${(value / 1_0000_0000).toFixed(1)}억`;
+  }
+
+  if (abs >= 1_0000) {
+    return `₩${(value / 1_0000).toFixed(1)}만`;
+  }
+
+  return formatCurrency(value, 'KRW');
+}
+
+function getPortfolioItemDisplayName(item: Pick<PortfolioItem, 'symbol' | 'market' | 'nameKr' | 'nameEn'>) {
+  if (isCashAsset(item)) {
+    return item.symbol === 'USD' ? '달러 현금' : '원화 현금';
+  }
+
+  return item.nameKr || item.nameEn || item.symbol;
+}
 
 export function PortfolioPage() {
   const queryClient = useQueryClient();
   const pushToast = useToastStore((state) => state.push);
+  const { subscribe } = useStockWebSocket();
+  const livePrices = useStockStore((state) => state.prices);
   const [entryMode, setEntryMode] = useState<EntryMode | null>(null);
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<number | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
-  const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [deleteItemTargetId, setDeleteItemTargetId] = useState<number | null>(null);
+  const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null);
+  const [isAddItemSheetOpen, setIsAddItemSheetOpen] = useState(false);
+  const [isAddCashSheetOpen, setIsAddCashSheetOpen] = useState(false);
+  const [selectedAddStock, setSelectedAddStock] = useState<StockItem | null>(null);
+  const [selectedAddPrice, setSelectedAddPrice] = useState<SelectedPriceState | null>(null);
+  const [loadingAddPriceSymbol, setLoadingAddPriceSymbol] = useState<string | null>(null);
   const [portfolioForm, setPortfolioForm] = useState({
     name: '',
     description: '',
     isPublic: true,
   });
-  const [itemForm, setItemForm] = useState({
-    symbol: '',
-    quantity: '1',
-    averagePrice: '',
-    currency: 'KRW',
-  });
+  const [addItemForm, setAddItemForm] = useState<ItemFormState>(createEmptyItemForm);
+  const [cashForm, setCashForm] = useState<CashFormState>(createEmptyCashForm);
+  const [editItemForm, setEditItemForm] = useState<ItemFormState>(createEmptyItemForm);
   const [stockSearch, setStockSearch] = useState('');
   const deferredSearch = useDeferredValue(stockSearch);
 
@@ -48,32 +212,155 @@ export function PortfolioPage() {
   const stockSearchQuery = useQuery({
     queryKey: ['stock-search', deferredSearch],
     queryFn: () => getStocks({ query: deferredSearch, page: 0, size: 8 }),
-    enabled: deferredSearch.trim().length > 0,
+    enabled: isAddItemSheetOpen && deferredSearch.trim().length > 0,
   });
 
+  const sortedPortfolios = useMemo(
+    () =>
+      [...(portfoliosQuery.data ?? [])].sort((left, right) => {
+        const leftTime = new Date(left.createdAt).getTime();
+        const rightTime = new Date(right.createdAt).getTime();
+
+        if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
+          return leftTime - rightTime;
+        }
+
+        return left.id - right.id;
+      }),
+    [portfoliosQuery.data],
+  );
+
   useEffect(() => {
-    if (!selectedPortfolioId && portfoliosQuery.data?.length) {
-      const primary = portfoliosQuery.data.find((portfolio) => portfolio.isPrimary);
-      setSelectedPortfolioId(primary?.id ?? portfoliosQuery.data[0].id);
+    if (!selectedPortfolioId && sortedPortfolios.length > 0) {
+      const primary = sortedPortfolios.find((portfolio) => portfolio.isPrimary);
+      setSelectedPortfolioId(primary?.id ?? sortedPortfolios[0].id);
     }
-  }, [portfoliosQuery.data, selectedPortfolioId]);
+  }, [selectedPortfolioId, sortedPortfolios]);
 
-  const selectedPortfolio =
-    portfoliosQuery.data?.find((portfolio) => portfolio.id === selectedPortfolioId) || null;
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
 
+    if (entryMode !== null) {
+      return;
+    }
+
+    const htmlStyle = document.documentElement.style;
+    const bodyStyle = document.body.style;
+    const prevHtmlOverflow = htmlStyle.overflow;
+    const prevBodyOverflow = bodyStyle.overflow;
+    const prevBodyTouchAction = bodyStyle.touchAction;
+    const prevBodyOverscroll = bodyStyle.overscrollBehavior;
+
+    htmlStyle.overflow = 'hidden';
+    bodyStyle.overflow = 'hidden';
+    bodyStyle.touchAction = 'none';
+    bodyStyle.overscrollBehavior = 'none';
+
+    return () => {
+      htmlStyle.overflow = prevHtmlOverflow;
+      bodyStyle.overflow = prevBodyOverflow;
+      bodyStyle.touchAction = prevBodyTouchAction;
+      bodyStyle.overscrollBehavior = prevBodyOverscroll;
+    };
+  }, [entryMode]);
+
+  const selectedPortfolio = useMemo(
+    () => sortedPortfolios.find((item) => item.id === selectedPortfolioId) || null,
+    [selectedPortfolioId, sortedPortfolios],
+  );
+  const isEditingCash = editingItem ? isCashAsset(editingItem) : false;
+  const isViewMode = entryMode === 'view';
+
+  function getPortfolioItemDisplayUnitPrice(item: PortfolioItem) {
+    if (isCashAsset(item) || !isViewMode) {
+      return item.averagePrice;
+    }
+
+    const livePrice = livePrices[item.symbol]?.price;
+    const parsedLivePrice = livePrice ? parseNumericInput(livePrice, item.averagePrice) : item.averagePrice;
+    return Number.isFinite(parsedLivePrice) ? parsedLivePrice : item.averagePrice;
+  }
+
+  function getPortfolioItemDisplayValue(item: PortfolioItem) {
+    if (isCashAsset(item)) {
+      return getCashAssetAmount(item);
+    }
+
+    return item.quantity * getPortfolioItemDisplayUnitPrice(item);
+  }
+
+  function getPortfolioItemDisplayEstimatedValue(item: PortfolioItem) {
+    const displayValue = getPortfolioItemDisplayValue(item);
+    return item.currency === 'USD' ? displayValue * USD_TO_KRW_RATE : displayValue;
+  }
+
+  const portfolioSymbols = useMemo(
+    () => selectedPortfolio?.items.filter((item) => !isCashAsset(item)).map((item) => item.symbol) ?? [],
+    [selectedPortfolio],
+  );
+
+  useEffect(() => {
+    if (!isViewMode) {
+      return;
+    }
+
+    portfolioSymbols.forEach((symbol) => subscribe(symbol));
+  }, [isViewMode, portfolioSymbols, subscribe]);
+
+  const displayedPortfolioItems = useMemo(() => {
+    if (!selectedPortfolio) {
+      return [];
+    }
+
+    return [...selectedPortfolio.items].sort((left, right) => {
+      const valueDiff = getPortfolioItemDisplayEstimatedValue(right) - getPortfolioItemDisplayEstimatedValue(left);
+      if (valueDiff !== 0) {
+        return valueDiff;
+      }
+
+      return right.id - left.id;
+    });
+  }, [selectedPortfolio, isViewMode, livePrices]);
+ 
   const portfolioSummary = useMemo(() => {
     if (!selectedPortfolio) {
       return { totalItems: 0, totalValue: 0 };
     }
 
-    return selectedPortfolio.items.reduce(
+    return displayedPortfolioItems.reduce(
       (acc, item) => ({
         totalItems: acc.totalItems + item.quantity,
-        totalValue: acc.totalValue + item.quantity * item.averagePrice,
+        totalValue: acc.totalValue + getPortfolioItemDisplayEstimatedValue(item),
       }),
       { totalItems: 0, totalValue: 0 },
     );
-  }, [selectedPortfolio]);
+  }, [displayedPortfolioItems, selectedPortfolio, isViewMode, livePrices]);
+
+  const portfolioAllocation = useMemo(() => {
+    if (!selectedPortfolio) {
+      return [];
+    }
+
+    const items = displayedPortfolioItems
+      .map((item) => ({
+        id: item.id,
+        label: getPortfolioItemDisplayName(item),
+        symbol: item.symbol,
+        currency: item.currency,
+        displayValue: getPortfolioItemDisplayValue(item),
+        estimatedValue: getPortfolioItemDisplayEstimatedValue(item),
+      }))
+      .filter((item) => item.estimatedValue > 0);
+
+    const totalEstimatedValue = items.reduce((sum, item) => sum + item.estimatedValue, 0);
+
+    return items.map((item) => ({
+      ...item,
+      weight: totalEstimatedValue <= 0 ? 0 : (item.estimatedValue * 100) / totalEstimatedValue,
+    }));
+  }, [displayedPortfolioItems, selectedPortfolio, isViewMode, livePrices]);
 
   const createMutation = useMutation({
     mutationFn: createPortfolio,
@@ -141,21 +428,10 @@ export function PortfolioPage() {
     },
   });
 
-  const saveItemMutation = useMutation({
-    mutationFn: async () => {
+  const addItemMutation = useMutation({
+    mutationFn: (payload: PortfolioItemRequest) => {
       if (!selectedPortfolioId) {
         throw new Error('포트폴리오가 없습니다.');
-      }
-
-      const payload = {
-        symbol: itemForm.symbol,
-        quantity: Number(itemForm.quantity),
-        averagePrice: Number(itemForm.averagePrice),
-        currency: itemForm.currency,
-      };
-
-      if (editingItemId) {
-        return updatePortfolioItem(selectedPortfolioId, editingItemId, payload);
       }
 
       return addPortfolioItem(selectedPortfolioId, payload);
@@ -163,42 +439,55 @@ export function PortfolioPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['portfolios'] });
       queryClient.invalidateQueries({ queryKey: ['primary-portfolio'] });
-      setItemForm({
-        symbol: '',
-        quantity: '1',
-        averagePrice: '',
-        currency: 'KRW',
-      });
-      setStockSearch('');
-      setEditingItemId(null);
-      pushToast(editingItemId ? '종목 정보를 바꿨어요.' : '종목을 담았어요.', 'success');
+      handleCloseAddItemSheet();
+      handleCloseAddCashSheet();
+      pushToast('종목을 담았어요.', 'success');
     },
     onError: (error) => {
       console.error(error);
-      pushToast(editingItemId ? '종목 정보를 바꾸지 못했어요.' : '종목을 담지 못했어요.', 'error');
+      pushToast('종목을 담지 못했어요.', 'error');
     },
   });
 
-  const deleteItemMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedPortfolioId || !deleteItemTargetId) {
-        throw new Error('삭제할 종목이 없습니다.');
+  const editItemMutation = useMutation({
+    mutationFn: ({
+      itemId,
+      payload,
+    }: {
+      itemId: number;
+      payload: PortfolioItemRequest;
+    }) => {
+      if (!selectedPortfolioId) {
+        throw new Error('포트폴리오가 없습니다.');
       }
 
-      return deletePortfolioItem(selectedPortfolioId, deleteItemTargetId);
+      return updatePortfolioItem(selectedPortfolioId, itemId, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['portfolios'] });
       queryClient.invalidateQueries({ queryKey: ['primary-portfolio'] });
-      if (editingItemId === deleteItemTargetId) {
-        setEditingItemId(null);
-        setItemForm({
-          symbol: '',
-          quantity: '1',
-          averagePrice: '',
-          currency: 'KRW',
-        });
-        setStockSearch('');
+      handleCloseEditItemSheet();
+      pushToast('종목 정보를 바꿨어요.', 'success');
+    },
+    onError: (error) => {
+      console.error(error);
+      pushToast('종목 정보를 바꾸지 못했어요.', 'error');
+    },
+  });
+
+  const deleteItemMutation = useMutation({
+    mutationFn: (itemId: number) => {
+      if (!selectedPortfolioId) {
+        throw new Error('삭제할 종목이 없습니다.');
+      }
+
+      return deletePortfolioItem(selectedPortfolioId, itemId);
+    },
+    onSuccess: (_, deletedItemId) => {
+      queryClient.invalidateQueries({ queryKey: ['portfolios'] });
+      queryClient.invalidateQueries({ queryKey: ['primary-portfolio'] });
+      if (editingItem?.id === deletedItemId) {
+        handleCloseEditItemSheet();
       }
       pushToast('종목을 삭제했어요.', 'success');
     },
@@ -208,6 +497,107 @@ export function PortfolioPage() {
     },
   });
 
+  function buildItemPayload(form: ItemFormState, requireSymbol = true) {
+    if (requireSymbol && !form.symbol.trim()) {
+      pushToast('종목을 먼저 골라 주세요.', 'error');
+      return null;
+    }
+
+    const quantity = parseNumericInput(form.quantity);
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      pushToast('수량은 1 이상으로 입력해 주세요.', 'error');
+      return null;
+    }
+
+    const averagePrice = parseNumericInput(form.averagePrice);
+    if (!Number.isFinite(averagePrice) || averagePrice < 0) {
+      pushToast('평균단가는 0 이상으로 입력해 주세요.', 'error');
+      return null;
+    }
+
+    return {
+      symbol: form.symbol,
+      quantity,
+      averagePrice,
+      currency: form.currency,
+    } satisfies PortfolioItemRequest;
+  }
+
+  function handleOpenAddItemSheet() {
+    handleCloseEditItemSheet();
+    handleCloseAddCashSheet();
+    setIsAddItemSheetOpen(true);
+    setSelectedAddStock(null);
+    setSelectedAddPrice(null);
+    setLoadingAddPriceSymbol(null);
+    setAddItemForm(createEmptyItemForm());
+    setStockSearch('');
+  }
+
+  function handleCloseAddItemSheet() {
+    setIsAddItemSheetOpen(false);
+    setSelectedAddStock(null);
+    setSelectedAddPrice(null);
+    setLoadingAddPriceSymbol(null);
+    setAddItemForm(createEmptyItemForm());
+    setStockSearch('');
+  }
+
+  function handleOpenAddCashSheet() {
+    handleCloseEditItemSheet();
+    handleCloseAddItemSheet();
+    setIsAddCashSheetOpen(true);
+    setCashForm(createEmptyCashForm());
+  }
+
+  function handleCloseAddCashSheet() {
+    setIsAddCashSheetOpen(false);
+    setCashForm(createEmptyCashForm());
+  }
+
+  async function handleSelectAddStock(stock: StockItem) {
+    const currency = getCurrencyByMarket(stock.market);
+
+    setSelectedAddStock(stock);
+    setSelectedAddPrice(null);
+    setLoadingAddPriceSymbol(stock.symbol);
+    setAddItemForm({
+      symbol: stock.symbol,
+      quantity: '1',
+      averagePrice: '',
+      currency,
+    });
+    setStockSearch(getStockSearchLabel(stock));
+
+    try {
+      const priceData = await queryClient.fetchQuery({
+        queryKey: ['stock-price', stock.symbol],
+        queryFn: () => getStockPrice(stock.symbol),
+        staleTime: 15_000,
+      });
+
+      const initialAveragePrice = normalizePriceInput(priceData.price);
+      setSelectedAddPrice({
+        symbol: stock.symbol,
+        price: priceData.price,
+      });
+      setAddItemForm((current) =>
+        current.symbol !== stock.symbol
+          ? current
+          : {
+              ...current,
+              averagePrice: initialAveragePrice || current.averagePrice,
+              currency,
+            },
+      );
+    } catch (error) {
+      console.error(error);
+      pushToast('현재가를 불러오지 못했어요. 평균단가를 직접 입력해 주세요.', 'error');
+    } finally {
+      setLoadingAddPriceSymbol((current) => (current === stock.symbol ? null : current));
+    }
+  }
+
   function handleCreatePortfolio(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     createMutation.mutate(portfolioForm);
@@ -216,46 +606,125 @@ export function PortfolioPage() {
   function handleAddItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!itemForm.symbol) {
-      pushToast('추가할 종목을 먼저 선택해 주세요.', 'error');
+    const payload = buildItemPayload(addItemForm);
+    if (!payload) {
       return;
     }
 
-    saveItemMutation.mutate();
+    addItemMutation.mutate(payload);
+  }
+
+  function handleAddCash(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const amount = parseNumericInput(cashForm.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      pushToast('현금 금액을 먼저 입력해 주세요.', 'error');
+      return;
+    }
+
+    const payload = {
+      symbol: cashForm.currency,
+      market: 'CASH' as const,
+      quantity: 1,
+      averagePrice: amount,
+      currency: cashForm.currency,
+    } satisfies PortfolioItemRequest;
+
+    addItemMutation.mutate(payload);
+  }
+
+  function handleSaveEditedItem(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editingItem) {
+      return;
+    }
+
+    if (isCashAsset(editingItem)) {
+      const amount = parseNumericInput(editItemForm.averagePrice);
+      if (!Number.isFinite(amount) || amount < 0) {
+        pushToast('현금 금액은 0 이상으로 입력해 주세요.', 'error');
+        return;
+      }
+
+      editItemMutation.mutate({
+        itemId: editingItem.id,
+        payload: {
+          symbol: editingItem.symbol,
+          market: 'CASH',
+          quantity: 1,
+          averagePrice: amount,
+          currency: editItemForm.currency,
+        },
+      });
+      return;
+    }
+
+    const payload = buildItemPayload(editItemForm, false);
+    if (!payload) {
+      return;
+    }
+
+    editItemMutation.mutate({
+      itemId: editingItem.id,
+      payload,
+    });
   }
 
   function handleDeletePortfolio(portfolioId: number) {
     setDeleteTargetId(portfolioId);
   }
 
-  function handleStartEditItem(item: {
-    id: number;
-    symbol: string;
-    quantity: number;
-    averagePrice: number;
-    currency: string;
-    nameKr?: string;
-    nameEn?: string;
-  }) {
-    setEditingItemId(item.id);
-    setItemForm({
+  function handleStartEditItem(item: PortfolioItem) {
+    handleCloseAddItemSheet();
+    handleCloseAddCashSheet();
+
+    const initialAveragePrice = isCashAsset(item)
+      ? normalizePriceInput(String(getCashAssetAmount(item)))
+      : String(item.averagePrice);
+
+    setEditingItem(item);
+    setEditItemForm({
       symbol: item.symbol,
-      quantity: String(item.quantity),
-      averagePrice: String(item.averagePrice),
+      quantity: isCashAsset(item) ? '1' : String(item.quantity),
+      averagePrice: initialAveragePrice,
       currency: item.currency,
     });
-    setStockSearch(`${item.nameKr || item.nameEn || item.symbol} (${item.symbol})`);
   }
 
-  function handleCancelEditItem() {
-    setEditingItemId(null);
-    setItemForm({
-      symbol: '',
+  function handleCloseEditItemSheet() {
+    setEditingItem(null);
+    setEditItemForm(createEmptyItemForm());
+  }
+
+  function handleAdjustCashAmount(step: number) {
+    setCashForm((current) => ({
+      ...current,
+      amount: adjustNumericValue(current.amount, step, 0, false),
+    }));
+  }
+
+  function handleAdjustEditCashAmount(step: number) {
+    setEditItemForm((current) => ({
+      ...current,
       quantity: '1',
-      averagePrice: '',
-      currency: 'KRW',
-    });
-    setStockSearch('');
+      averagePrice: adjustNumericValue(current.averagePrice, step, 0, false),
+    }));
+  }
+
+  function handleAdjustAddItem(field: 'quantity' | 'averagePrice', step: number) {
+    setAddItemForm((current) => ({
+      ...current,
+      [field]: adjustNumericValue(current[field], step, field === 'quantity' ? 1 : 0, field === 'quantity'),
+    }));
+  }
+
+  function handleAdjustEditItem(field: 'quantity' | 'averagePrice', step: number) {
+    setEditItemForm((current) => ({
+      ...current,
+      [field]: adjustNumericValue(current[field], step, field === 'quantity' ? 1 : 0, field === 'quantity'),
+    }));
   }
 
   function handleToggleVisibility() {
@@ -284,18 +753,22 @@ export function PortfolioPage() {
   }
 
   function confirmDeleteItem() {
-    deleteItemMutation.mutate(undefined, {
+    if (!deleteItemTargetId) {
+      return;
+    }
+
+    deleteItemMutation.mutate(deleteItemTargetId, {
       onSettled: () => setDeleteItemTargetId(null),
     });
   }
 
   function renderPortfolioChips() {
-    return (
+  return (
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-        {portfoliosQuery.data?.map((portfolio) => {
+        {sortedPortfolios.map((portfolio) => {
           const isSelected = selectedPortfolioId === portfolio.id;
 
-          return (
+  return (
             <button
               key={portfolio.id}
               type="button"
@@ -318,6 +791,25 @@ export function PortfolioPage() {
     if (!selectedPortfolio) {
       return null;
     }
+
+    const donutSize = 168;
+    const donutStrokeWidth = 18;
+    const donutRadius = (donutSize - donutStrokeWidth) / 2;
+    const donutCircumference = 2 * Math.PI * donutRadius;
+    let accumulatedLength = 0;
+
+    const donutSegments = portfolioAllocation.map((item, index) => {
+      const dashLength = donutCircumference * (item.weight / 100);
+      const segment = {
+        ...item,
+        color: PORTFOLIO_ALLOCATION_COLORS[index % PORTFOLIO_ALLOCATION_COLORS.length],
+        dashArray: `${dashLength} ${Math.max(donutCircumference - dashLength, 0)}`,
+        dashOffset: -accumulatedLength,
+      };
+
+      accumulatedLength += dashLength;
+      return segment;
+    });
 
     return (
       <div className="mobile-soft-card rounded-[24px] border px-4 py-4">
@@ -395,10 +887,7 @@ export function PortfolioPage() {
                 ? selectedPortfolio.isPublic
                   ? '상세 공개'
                   : '비중만 공개'
-                : formatCurrency(
-                    portfolioSummary.totalValue,
-                    selectedPortfolio.items[0]?.currency || 'KRW',
-                  )}
+                : formatCurrency(portfolioSummary.totalValue, 'KRW')}
             </p>
           </div>
         </div>
@@ -409,7 +898,96 @@ export function PortfolioPage() {
               ? '현재 공개 상태예요. 그룹에서 비중과 상세 정보까지 보여줘요.'
               : '현재 비공개 상태예요. 그룹에서는 종목과 비중만 보여줘요.'}
           </div>
-        ) : null}
+        ) : (
+          <div className="mobile-soft-card mt-3 rounded-[22px] border px-4 py-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-sky-400/20 bg-sky-500/12 text-sky-700 dark:text-sky-200">
+                <PieChart size={18} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[color:var(--text-main)]">자산 비중</p>
+                <p className="mt-1 text-xs leading-5 text-[color:var(--text-sub)]">
+                  보유대금 기준으로 큰 자산부터 비중을 바로 볼 수 있어요.
+                </p>
+                {!selectedPortfolio.isPublic ? (
+                  <p className="mt-2 text-[11px] font-semibold text-[color:var(--brand-solid)]">
+                    내 조회 화면이라 전체 비중을 그대로 보여줘요.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            {portfolioAllocation.length > 0 ? (
+              <div className="mt-4 space-y-4">
+                <div className="flex justify-center">
+                  <div className="relative h-44 w-44">
+                    <svg viewBox={`0 0 ${donutSize} ${donutSize}`} className="h-full w-full -rotate-90">
+                      <circle
+                        cx={donutSize / 2}
+                        cy={donutSize / 2}
+                        r={donutRadius}
+                        fill="none"
+                        stroke="rgba(148, 163, 184, 0.20)"
+                        strokeWidth={donutStrokeWidth}
+                      />
+                      {donutSegments.map((segment) => (
+                        <circle
+                          key={segment.id}
+                          cx={donutSize / 2}
+                          cy={donutSize / 2}
+                          r={donutRadius}
+                          fill="none"
+                          stroke={segment.color}
+                          strokeWidth={donutStrokeWidth}
+                          strokeDasharray={segment.dashArray}
+                          strokeDashoffset={segment.dashOffset}
+                          strokeLinecap="round"
+                        />
+                      ))}
+                    </svg>
+
+                    <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+                      <p className="text-[11px] font-semibold text-[color:var(--text-sub)]">총 평가금액</p>
+                      <p className="mt-1 text-base font-black text-[color:var(--text-main)]">
+                        {formatCompactKrw(portfolioSummary.totalValue)}
+                      </p>
+                      <p className="mt-1 text-[11px] text-[color:var(--text-sub)]">{portfolioAllocation.length}개 자산</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {portfolioAllocation.map((allocation, index) => (
+                    <div
+                      key={allocation.id}
+                      className="mobile-soft-card flex items-center justify-between rounded-[18px] border px-3 py-3"
+                    >
+                      <div className="min-w-0 flex items-center gap-3">
+                        <span
+                          className="h-3 w-3 shrink-0 rounded-full"
+                          style={{ backgroundColor: PORTFOLIO_ALLOCATION_COLORS[index % PORTFOLIO_ALLOCATION_COLORS.length] }}
+                        />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-[color:var(--text-main)]">{allocation.label}</p>
+                          <p className="mt-1 truncate text-xs text-[color:var(--text-sub)]">
+                            {allocation.symbol} · {formatCurrency(allocation.displayValue, allocation.currency)}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="ml-3 shrink-0 text-sm font-bold text-[color:var(--text-main)]">
+                        {allocation.weight.toFixed(1)}%
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="mobile-soft-card mt-4 rounded-[18px] border px-4 py-4 text-sm leading-6 text-[color:var(--text-sub)]">
+                아직 비중을 계산할 자산이 없어요.
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -421,57 +999,124 @@ export function PortfolioPage() {
 
     return (
       <div className="space-y-2">
-        {selectedPortfolio.items.length > 0 ? (
-          selectedPortfolio.items.map((item) => (
-            <div
-              key={item.id}
-              className="mobile-soft-card flex items-center justify-between rounded-[20px] border px-4 py-3"
-            >
-              <div className="min-w-0">
-                <p className="font-bold text-[color:var(--text-main)]">{item.nameKr || item.nameEn || item.symbol}</p>
-                <p className="text-sm text-[color:var(--text-sub)]">
-                  {item.symbol} · {formatNumber(item.quantity)}주
-                </p>
+        {displayedPortfolioItems.length > 0 ? (
+          displayedPortfolioItems.map((item) => {
+            const isCash = isCashAsset(item);
+            const priceCaption = isCash ? '보유 금액' : showManageAction ? '평균단가' : '현재가';
+            const priceValue = isCash
+              ? getCashAssetAmount(item)
+              : showManageAction
+                ? item.averagePrice
+                : getPortfolioItemDisplayUnitPrice(item);
+
+            return (
+              <div
+                key={item.id}
+                className="mobile-soft-card flex items-center justify-between rounded-[20px] border px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-[color:var(--text-main)]">{getPortfolioItemDisplayName(item)}</p>
+                    {isCash ? (
+                      <span className="shrink-0 rounded-full border border-emerald-400/30 bg-emerald-500/12 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-200">
+                        현금
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="text-sm text-[color:var(--text-sub)]">
+                    {isCash ? `현금 자산 · ${item.symbol}` : `${item.symbol} · ${formatNumber(item.quantity)}주`}
+                  </p>
+                </div>
+                <div className="ml-3 flex shrink-0 items-center gap-2">
+                  <div className="text-right">
+                    <p className="text-[11px] text-[color:var(--text-sub)]">{priceCaption}</p>
+                    <p className="mt-1 text-sm font-semibold text-[color:var(--text-main)]">
+                      {formatCurrency(priceValue, item.currency)}
+                    </p>
+                  </div>
+                  {showManageAction ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleStartEditItem(item)}
+                        className="mobile-icon-surface flex h-8 w-8 items-center justify-center rounded-full border"
+                        aria-label="종목 수정"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteItemTargetId(item.id)}
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-rose-300/60 bg-rose-500/14 text-rose-700 shadow-[0_8px_18px_rgba(244,63,94,0.10)] dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200 dark:shadow-none"
+                        aria-label="종목 삭제"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </>
+                  ) : null}
+                </div>
               </div>
-              <div className="ml-3 flex shrink-0 items-center gap-2">
-                <p className="text-sm font-semibold text-[color:var(--text-main)]">
-                  {formatCurrency(item.averagePrice, item.currency)}
-                </p>
-                {showManageAction ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => handleStartEditItem(item)}
-                      className="mobile-icon-surface flex h-8 w-8 items-center justify-center rounded-full border"
-                      aria-label="종목 수정"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleteItemTargetId(item.id)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-rose-300/60 bg-rose-500/14 text-rose-700 shadow-[0_8px_18px_rgba(244,63,94,0.10)] dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200 dark:shadow-none"
-                      aria-label="종목 삭제"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </>
-                ) : null}
-              </div>
-            </div>
-          ))
+            );
+          })
         ) : (
-          <EmptyState
-            title="아직 담긴 종목이 없어요"
-            description={emptyDescription}
-          />
+          <EmptyState title="아직 담긴 종목이 없어요" description={emptyDescription} />
         )}
       </div>
     );
   }
 
+  function renderQuickAdjustButtons(
+    field: 'quantity' | 'averagePrice',
+    onAdjust: (field: 'quantity' | 'averagePrice', step: number) => void,
+  ) {
+    return (
+      <div className="mt-2 flex flex-wrap gap-2">
+        {QUICK_ADJUST_STEPS.map((step) => (
+          <button
+            key={`${field}-${step}`}
+            type="button"
+            onClick={() => onAdjust(field, step)}
+            className="mobile-chip-idle rounded-xl border px-3 py-2 text-xs font-semibold"
+          >
+            {formatAdjustLabel(step)}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  function renderCashAdjustButtons(currency: string, onAdjust: (step: number) => void) {
+    const cashCurrency = currency === 'USD' ? 'USD' : 'KRW';
+
+    return (
+      <div className="mt-2 flex flex-wrap gap-2">
+        {CASH_AMOUNT_BUTTONS[cashCurrency].map((button) => (
+          <button
+            key={`${cashCurrency}-${button.label}`}
+            type="button"
+            onClick={() => onAdjust(button.value)}
+            className="mobile-chip-idle rounded-xl border px-3 py-2 text-xs font-semibold"
+          >
+            {button.label}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  const selectedAddPriceLabel =
+    selectedAddPrice?.symbol === selectedAddStock?.symbol
+      ? formatCurrentPriceLabel(selectedAddPrice?.price, addItemForm.currency)
+      : '-';
+
   return (
-    <div className="space-y-5">
+    <div
+      className={
+        entryMode === null
+          ? 'flex h-[calc(100dvh-11.5rem)] flex-col overflow-hidden'
+          : 'space-y-5'
+      }
+    >
       {entryMode === null ? (
         <EntryModeSelector
           eyebrow="Portfolio Entry"
@@ -585,116 +1230,44 @@ export function PortfolioPage() {
 
                     {selectedPortfolio ? (
                       <>
-                        <form
-                          className="mobile-soft-card space-y-3 rounded-[24px] border p-4"
-                          onSubmit={handleAddItem}
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="text-sm font-bold text-[color:var(--text-main)]">
-                              {editingItemId ? '종목 수정' : '종목 담기'}
-                            </p>
-                            {editingItemId ? (
-                              <button
-                                type="button"
-                                onClick={handleCancelEditItem}
-                                className="mobile-chip-idle whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold"
-                              >
-                                수정 취소
-                              </button>
-                            ) : null}
-                          </div>
-                          <input
-                            value={stockSearch}
-                            onChange={(event) => setStockSearch(event.target.value)}
-                            className="mobile-field w-full rounded-2xl border px-4 py-3 outline-none placeholder:text-slate-400 focus:border-sky-400/40"
-                            placeholder="종목 이름이나 티커로 찾아보세요."
-                          />
-
-                          {stockSearchQuery.data?.content?.length ? (
-                            <div className="space-y-2">
-                              {stockSearchQuery.data.content.slice(0, 5).map((stock) => (
-                                <button
-                                  key={`${stock.market}-${stock.symbol}`}
-                                  type="button"
-                                  onClick={() => {
-                                    setItemForm((current) => ({
-                                      ...current,
-                                      symbol: stock.symbol,
-                                      currency:
-                                        stock.market === 'KOSPI' || stock.market === 'KOSDAQ' ? 'KRW' : 'USD',
-                                    }));
-                                    setStockSearch(
-                                      `${stock.nameKr || stock.nameEn || stock.symbol} (${stock.symbol})`,
-                                    );
-                                  }}
-                                  className="mobile-soft-card flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left"
-                                >
-                                  <div className="min-w-0">
-                                    <p className="font-bold text-[color:var(--text-main)]">
-                                      {stock.nameKr || stock.nameEn || stock.symbol}
-                                    </p>
-                                    <p className="text-sm text-[color:var(--text-sub)]">{stock.symbol}</p>
-                                  </div>
-                                  <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-[color:var(--text-sub)]">
-                                    {stock.market}
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
-                          ) : null}
-
-                          <div className="grid grid-cols-2 gap-3">
-                            <input
-                              type="number"
-                              min="1"
-                              value={itemForm.quantity}
-                              onChange={(event) =>
-                                setItemForm((current) => ({ ...current, quantity: event.target.value }))
-                              }
-                              className="mobile-field w-full rounded-2xl border px-4 py-3 outline-none placeholder:text-slate-400 focus:border-sky-400/40"
-                              placeholder="수량"
-                            />
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={itemForm.averagePrice}
-                              onChange={(event) =>
-                                setItemForm((current) => ({ ...current, averagePrice: event.target.value }))
-                              }
-                              className="mobile-field w-full rounded-2xl border px-4 py-3 outline-none placeholder:text-slate-400 focus:border-sky-400/40"
-                              placeholder="평균단가"
-                            />
-                          </div>
-
-                          <select
-                            value={itemForm.currency}
-                            onChange={(event) =>
-                              setItemForm((current) => ({ ...current, currency: event.target.value }))
-                            }
-                            className="mobile-field w-full rounded-2xl border px-4 py-3 outline-none focus:border-sky-400/40"
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={handleOpenAddItemSheet}
+                            className="mobile-soft-card flex w-full items-center justify-between gap-4 rounded-[24px] border px-4 py-4 text-left transition hover:border-sky-400/30"
                           >
-                            <option value="KRW">KRW</option>
-                            <option value="USD">USD</option>
-                          </select>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-[color:var(--text-main)]">종목 담기</p>
+                              <p className="mt-1 text-xs leading-5 text-[color:var(--text-sub)]">
+                                검색 후 현재가를 평균단가로 먼저 채워 드려요.
+                              </p>
+                            </div>
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-500 text-[color:var(--text-main)] shadow-sm">
+                              <Plus size={18} />
+                            </div>
+                          </button>
 
                           <button
-                            type="submit"
-                            disabled={saveItemMutation.isPending}
-                            className="flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-sky-500 px-4 py-3 text-sm font-semibold text-[color:var(--text-main)] disabled:opacity-60"
+                            type="button"
+                            onClick={handleOpenAddCashSheet}
+                            className="mobile-soft-card flex w-full items-center justify-between gap-4 rounded-[24px] border px-4 py-4 text-left transition hover:border-emerald-400/30"
                           >
-                            <Plus size={18} />
-                            {saveItemMutation.isPending
-                              ? editingItemId
-                                ? '수정 중...'
-                                : '추가 중...'
-                              : editingItemId
-                                ? '종목 수정하기'
-                                : '포트폴리오에 담기'}
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-[color:var(--text-main)]">현금 담기</p>
+                              <p className="mt-1 text-xs leading-5 text-[color:var(--text-sub)]">
+                                KRW 또는 USD 현금을 바로 추가할 수 있어요.
+                              </p>
+                            </div>
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-[color:var(--text-main)] shadow-sm">
+                              <Plus size={18} />
+                            </div>
                           </button>
-                        </form>
+                        </div>
 
-                        {renderPortfolioItems('검색으로 종목을 고르고 수량과 평균단가를 넣으면 바로 추가돼요.', true)}
+                        {renderPortfolioItems(
+                          '종목 또는 현금을 추가하면 여기서 바로 자산 구성을 확인할 수 있어요.',
+                          true,
+                        )}
                       </>
                     ) : null}
                   </div>
@@ -727,6 +1300,352 @@ export function PortfolioPage() {
           )}
         </>
       )}
+
+      {isAddCashSheetOpen ? (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/60 px-4 pb-4 pt-10 backdrop-blur-sm">
+          <div className="mobile-soft-card mx-auto w-full max-w-md overflow-hidden rounded-[32px] border shadow-card">
+            <div className="border-b border-[color:var(--soft-panel-border)] px-5 py-5">
+              <p className="text-sm font-semibold text-[color:var(--brand-accent)]">현금 담기</p>
+              <h3 className="mt-2 text-xl font-black tracking-tight text-[color:var(--text-main)]">
+                보유 현금을 추가해 주세요
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-[color:var(--text-sub)]">
+                KRW 또는 USD 현금을 바로 담을 수 있어요.
+              </p>
+            </div>
+
+            <form className="space-y-4 px-5 py-5" onSubmit={handleAddCash}>
+              <div className="grid grid-cols-2 gap-3">
+                {(['KRW', 'USD'] as const).map((currency) => {
+                  const isSelected = cashForm.currency === currency;
+
+                  return (
+                    <button
+                      key={currency}
+                      type="button"
+                      onClick={() => setCashForm((current) => ({ ...current, currency }))}
+                      className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                        isSelected ? 'mobile-chip-active' : 'mobile-chip-idle'
+                      }`}
+                    >
+                      {currency === 'KRW' ? '원화 (KRW)' : '달러 (USD)'}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mobile-soft-card rounded-[24px] border px-4 py-4">
+                <p className="text-xs text-[color:var(--text-sub)]">추가 금액</p>
+                <input
+                  type="number"
+                  min="0"
+                  step={cashForm.currency === 'KRW' ? '10000' : '10'}
+                  value={cashForm.amount}
+                  onChange={(event) => setCashForm((current) => ({ ...current, amount: event.target.value }))}
+                  className="mobile-field mt-3 w-full rounded-2xl border px-4 py-3 outline-none placeholder:text-slate-400 focus:border-sky-400/40"
+                  placeholder={cashForm.currency === 'KRW' ? '예: 5000000' : '예: 3000'}
+                />
+                {renderCashAdjustButtons(cashForm.currency, handleAdjustCashAmount)}
+                <p className="mt-3 text-sm font-semibold text-[color:var(--text-main)]">
+                  {cashForm.amount ? formatCurrency(Number(cashForm.amount), cashForm.currency) : '-'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={handleCloseAddCashSheet}
+                  className="mobile-chip-idle rounded-2xl border px-4 py-3 font-semibold"
+                >
+                  닫기
+                </button>
+                <button
+                  type="submit"
+                  disabled={addItemMutation.isPending}
+                  className="rounded-2xl bg-emerald-500 px-4 py-3 font-semibold text-[color:var(--text-main)] disabled:opacity-60"
+                >
+                  {addItemMutation.isPending ? '추가 중...' : '현금 추가'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+      {isAddItemSheetOpen ? (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/60 px-4 pb-4 pt-10 backdrop-blur-sm">
+          <div className="mobile-soft-card mx-auto w-full max-w-md overflow-hidden rounded-[32px] border shadow-card">
+            <div className="border-b border-[color:var(--soft-panel-border)] px-5 py-5">
+              <p className="text-sm font-semibold text-[color:var(--brand-accent)]">종목 담기</p>
+              <h3 className="mt-2 text-xl font-black tracking-tight text-[color:var(--text-main)]">
+                추가할 종목을 골라 주세요
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-[color:var(--text-sub)]">
+                미국 종목은 USD, 국내 종목은 KRW로 맞추고 현재가를 평균단가에 먼저 채워 드려요.
+              </p>
+            </div>
+
+            <form className="space-y-4 px-5 py-5" onSubmit={handleAddItem}>
+              <input
+                value={stockSearch}
+                onChange={(event) => setStockSearch(event.target.value)}
+                className="mobile-field w-full rounded-2xl border px-4 py-3 outline-none placeholder:text-slate-400 focus:border-sky-400/40"
+                placeholder="종목 이름이나 티커로 찾아보세요."
+              />
+
+              {stockSearchQuery.data?.content?.length ? (
+                <div className="space-y-2">
+                  {stockSearchQuery.data.content.slice(0, 5).map((stock) => {
+                    const isSelected = selectedAddStock?.symbol === stock.symbol;
+
+                    return (
+                      <button
+                        key={`${stock.market}-${stock.symbol}`}
+                        type="button"
+                        onClick={() => {
+                          void handleSelectAddStock(stock);
+                        }}
+                        className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                          isSelected ? 'mobile-chip-active' : 'mobile-soft-card'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <p className="font-bold text-[color:var(--text-main)]">
+                            {stock.nameKr || stock.nameEn || stock.symbol}
+                          </p>
+                          <p className="text-sm text-[color:var(--text-sub)]">{stock.symbol}</p>
+                        </div>
+                        <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-[color:var(--text-sub)]">
+                          {stock.market}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : stockSearch.trim() ? (
+                <p className="text-sm text-[color:var(--text-sub)]">검색 결과가 없어요.</p>
+              ) : null}
+
+              {selectedAddStock ? (
+                <div className="mobile-soft-card rounded-[24px] border px-4 py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-bold text-[color:var(--text-main)]">
+                        {selectedAddStock.nameKr || selectedAddStock.nameEn || selectedAddStock.symbol}
+                      </p>
+                      <p className="mt-1 text-sm text-[color:var(--text-sub)]">
+                        {selectedAddStock.symbol} · {selectedAddStock.market}
+                      </p>
+                    </div>
+                    <span className="mobile-chip-idle whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold">
+                      {addItemForm.currency}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-3 gap-3">
+                    <div>
+                      <p className="text-xs text-[color:var(--text-sub)]">현재가</p>
+                      <p className="mt-1 font-semibold text-[color:var(--text-main)]">
+                        {loadingAddPriceSymbol === selectedAddStock.symbol ? '불러오는 중...' : selectedAddPriceLabel}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[color:var(--text-sub)]">평균단가 초기값</p>
+                      <p className="mt-1 font-semibold text-[color:var(--text-main)]">
+                        {addItemForm.averagePrice
+                          ? formatCurrency(Number(addItemForm.averagePrice), addItemForm.currency)
+                          : '-'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[color:var(--text-sub)]">통화</p>
+                      <p className="mt-1 font-semibold text-[color:var(--text-main)]">{addItemForm.currency}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mobile-soft-card rounded-[24px] border px-4 py-4 text-sm leading-6 text-[color:var(--text-sub)]">
+                  종목을 고르면 현재가를 평균단가로 먼저 채워 드려요.
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-[color:var(--text-sub)]">수량</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={addItemForm.quantity}
+                    onChange={(event) =>
+                      setAddItemForm((current) => ({ ...current, quantity: event.target.value }))
+                    }
+                    className="mobile-field mt-2 w-full rounded-2xl border px-4 py-3 outline-none placeholder:text-slate-400 focus:border-sky-400/40"
+                    placeholder="수량"
+                  />
+                  {renderQuickAdjustButtons('quantity', handleAdjustAddItem)}
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-[color:var(--text-sub)]">평균단가</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={addItemForm.averagePrice}
+                    onChange={(event) =>
+                      setAddItemForm((current) => ({ ...current, averagePrice: event.target.value }))
+                    }
+                    className="mobile-field mt-2 w-full rounded-2xl border px-4 py-3 outline-none placeholder:text-slate-400 focus:border-sky-400/40"
+                    placeholder="평균단가"
+                  />
+                  {renderQuickAdjustButtons('averagePrice', handleAdjustAddItem)}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-[color:var(--text-sub)]">통화</label>
+                <select
+                  value={addItemForm.currency}
+                  onChange={(event) =>
+                    setAddItemForm((current) => ({ ...current, currency: event.target.value }))
+                  }
+                  className="mobile-field mt-2 w-full rounded-2xl border px-4 py-3 outline-none focus:border-sky-400/40"
+                >
+                  <option value="KRW">KRW</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={handleCloseAddItemSheet}
+                  className="mobile-chip-idle rounded-2xl border px-4 py-3 font-semibold"
+                >
+                  닫기
+                </button>
+                <button
+                  type="submit"
+                  disabled={addItemMutation.isPending || !selectedAddStock}
+                  className="rounded-2xl bg-sky-500 px-4 py-3 font-semibold text-[color:var(--text-main)] disabled:opacity-60"
+                >
+                  {addItemMutation.isPending ? '추가 중...' : '포트폴리오에 담기'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {editingItem ? (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/60 px-4 pb-4 pt-10 backdrop-blur-sm">
+          <div className="mobile-soft-card mx-auto w-full max-w-md overflow-hidden rounded-[32px] border shadow-card">
+            <div className="border-b border-[color:var(--soft-panel-border)] px-5 py-5">
+              <p className="text-sm font-semibold text-[color:var(--brand-accent)]">{isEditingCash ? '현금 수정' : '종목 수정'}</p>
+              <h3 className="mt-2 text-xl font-black tracking-tight text-[color:var(--text-main)]">
+                {editingItem.nameKr || editingItem.nameEn || editingItem.symbol}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-[color:var(--text-sub)]">
+                {isEditingCash ? `${editingItem.symbol} 현금 자산` : `${editingItem.symbol} · ${editingItem.market}`}
+              </p>
+            </div>
+
+            <form className="space-y-4 px-5 py-5" onSubmit={handleSaveEditedItem}>
+              {isEditingCash ? (
+                <>
+                  <div>
+                    <label className="text-xs font-semibold text-[color:var(--text-sub)]">보유 금액</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editItemForm.averagePrice}
+                      onChange={(event) =>
+                        setEditItemForm((current) => ({ ...current, quantity: '1', averagePrice: event.target.value }))
+                      }
+                      className="mobile-field mt-2 w-full rounded-2xl border px-4 py-3 outline-none placeholder:text-slate-400 focus:border-sky-400/40"
+                      placeholder="보유 현금"
+                    />
+                    {renderCashAdjustButtons(editItemForm.currency, handleAdjustEditCashAmount)}
+                    <p className="mt-2 text-xs text-[color:var(--text-sub)]">총 보유 현금 기준으로 저장돼요.</p>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-[color:var(--text-sub)]">통화</label>
+                    <div className="mobile-field mt-2 flex w-full items-center rounded-2xl border px-4 py-3 text-sm font-semibold text-[color:var(--text-main)]">
+                      {editItemForm.currency}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-[color:var(--text-sub)]">수량</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={editItemForm.quantity}
+                        onChange={(event) =>
+                          setEditItemForm((current) => ({ ...current, quantity: event.target.value }))
+                        }
+                        className="mobile-field mt-2 w-full rounded-2xl border px-4 py-3 outline-none placeholder:text-slate-400 focus:border-sky-400/40"
+                        placeholder="수량"
+                      />
+                      {renderQuickAdjustButtons('quantity', handleAdjustEditItem)}
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-[color:var(--text-sub)]">평균단가</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={editItemForm.averagePrice}
+                        onChange={(event) =>
+                          setEditItemForm((current) => ({ ...current, averagePrice: event.target.value }))
+                        }
+                        className="mobile-field mt-2 w-full rounded-2xl border px-4 py-3 outline-none placeholder:text-slate-400 focus:border-sky-400/40"
+                        placeholder="평균단가"
+                      />
+                      {renderQuickAdjustButtons('averagePrice', handleAdjustEditItem)}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-[color:var(--text-sub)]">통화</label>
+                    <select
+                      value={editItemForm.currency}
+                      onChange={(event) =>
+                        setEditItemForm((current) => ({ ...current, currency: event.target.value }))
+                      }
+                      className="mobile-field mt-2 w-full rounded-2xl border px-4 py-3 outline-none focus:border-sky-400/40"
+                    >
+                      <option value="KRW">KRW</option>
+                      <option value="USD">USD</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={handleCloseEditItemSheet}
+                  className="mobile-chip-idle rounded-2xl border px-4 py-3 font-semibold"
+                >
+                  닫기
+                </button>
+                <button
+                  type="submit"
+                  disabled={editItemMutation.isPending}
+                  className="flex items-center justify-center gap-2 rounded-2xl bg-sky-500 px-4 py-3 font-semibold text-[color:var(--text-main)] disabled:opacity-60"
+                >
+                  <Pencil size={16} />
+                  {editItemMutation.isPending ? '수정 중...' : '수정 완료'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
       {deleteTargetId ? (
         <div className="fixed inset-0 z-50 flex items-end bg-black/60 px-4 pb-4 pt-10 backdrop-blur-sm">
