@@ -394,6 +394,35 @@ export function GroupsPage() {
   }, [groupsQuery.data, selectedGroupId]);
 
   useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    if (entryMode !== null) {
+      return;
+    }
+
+    const htmlStyle = document.documentElement.style;
+    const bodyStyle = document.body.style;
+    const prevHtmlOverflow = htmlStyle.overflow;
+    const prevBodyOverflow = bodyStyle.overflow;
+    const prevBodyTouchAction = bodyStyle.touchAction;
+    const prevBodyOverscroll = bodyStyle.overscrollBehavior;
+
+    htmlStyle.overflow = 'hidden';
+    bodyStyle.overflow = 'hidden';
+    bodyStyle.touchAction = 'none';
+    bodyStyle.overscrollBehavior = 'none';
+
+    return () => {
+      htmlStyle.overflow = prevHtmlOverflow;
+      bodyStyle.overflow = prevBodyOverflow;
+      bodyStyle.touchAction = prevBodyTouchAction;
+      bodyStyle.overscrollBehavior = prevBodyOverscroll;
+    };
+  }, [entryMode]);
+
+  useEffect(() => {
     setSelectedBoardIndex(0);
     setDetailMemberId(null);
   }, [selectedGroupId]);
@@ -574,7 +603,13 @@ export function GroupsPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div
+      className={
+        entryMode === null
+          ? 'flex h-[calc(100dvh-11.5rem)] flex-col overflow-hidden'
+          : 'space-y-5'
+      }
+    >
       {entryMode === null ? (
         <EntryModeSelector
           eyebrow="Group Entry"

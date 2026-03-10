@@ -21,7 +21,7 @@ export function EntryModeSelector(props: {
   onSelect: (mode: EntryMode) => void;
 }) {
   return (
-    <section className="mobile-hero-card relative overflow-hidden rounded-[32px] border p-5 shadow-card">
+    <section className="mobile-hero-card relative h-full overflow-hidden rounded-[32px] border p-5 shadow-card">
       <div className="pointer-events-none absolute -left-8 top-0 h-28 w-28 rounded-full bg-blue-500/10 blur-3xl" />
       <div className="pointer-events-none absolute -right-10 bottom-2 h-32 w-32 rounded-full bg-emerald-400/10 blur-3xl" />
       <div className="relative">
@@ -44,7 +44,7 @@ export function EntryModeSelector(props: {
               type="button"
               onClick={() => props.onSelect(option.mode)}
               className={cn(
-                'group relative overflow-hidden rounded-[28px] border p-4 text-left transition hover:-translate-y-0.5',
+                'group relative min-h-[292px] overflow-hidden rounded-[28px] border p-5 text-left transition hover:-translate-y-0.5',
                 option.mode === 'view'
                   ? 'border-sky-300/25 bg-[linear-gradient(180deg,rgba(14,116,144,0.22),rgba(12,74,110,0.12),var(--soft-panel-bg))] hover:border-sky-300/45'
                   : 'border-rose-300/25 bg-[linear-gradient(180deg,rgba(190,24,93,0.18),rgba(136,19,55,0.08),var(--soft-panel-bg))] hover:border-rose-300/40',
