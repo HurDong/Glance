@@ -1,27 +1,72 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  BellDot,
+  BellRing,
+  Check,
+  CheckCheck,
+  MessageSquareQuote,
+  UserPlus,
+  WalletCards,
+} from 'lucide-react';
+import {
   getNotifications,
   getUnreadNotificationCount,
   markAllNotificationsAsRead,
   markNotificationAsRead,
 } from '@/api/notifications';
 import { EmptyState } from '@/components/common/EmptyState';
-import { SectionCard } from '@/components/common/SectionCard';
 import { formatRelativeTime } from '@/lib/format';
 import { useToastStore } from '@/stores/toastStore';
 
-function formatTypeLabel(type: string) {
+type NotificationTone = {
+  label: string;
+  icon: typeof BellRing;
+  badgeClassName: string;
+  iconClassName: string;
+};
+
+function getNotificationTone(type: string): NotificationTone {
   switch (type) {
     case 'GROUP_INVITE':
-      return '그룹 초대';
+      return {
+        label: '그룹 초대',
+        icon: UserPlus,
+        badgeClassName:
+          'border-violet-400/30 bg-violet-500/12 text-violet-700 dark:text-violet-200',
+        iconClassName: 'text-violet-600 dark:text-violet-300',
+      };
     case 'GROUP_JOIN':
-      return '그룹 참여';
+      return {
+        label: '그룹 참여',
+        icon: BellDot,
+        badgeClassName:
+          'border-emerald-400/30 bg-emerald-500/12 text-emerald-700 dark:text-emerald-200',
+        iconClassName: 'text-emerald-600 dark:text-emerald-300',
+      };
     case 'GROUP_SHARE':
-      return '포트폴리오 공유';
+      return {
+        label: '포트폴리오 공유',
+        icon: WalletCards,
+        badgeClassName:
+          'border-sky-400/30 bg-sky-500/12 text-sky-700 dark:text-sky-200',
+        iconClassName: 'text-sky-600 dark:text-sky-300',
+      };
     case 'COMMENT':
-      return '댓글';
+      return {
+        label: '댓글',
+        icon: MessageSquareQuote,
+        badgeClassName:
+          'border-amber-400/30 bg-amber-500/12 text-amber-700 dark:text-amber-100',
+        iconClassName: 'text-amber-600 dark:text-amber-300',
+      };
     default:
-      return type.replace(/_/g, ' ');
+      return {
+        label: type.replace(/_/g, ' '),
+        icon: BellRing,
+        badgeClassName:
+          'border-[color:var(--soft-panel-border)] bg-[color:var(--soft-panel-bg)] text-[color:var(--text-main)]',
+        iconClassName: 'text-[color:var(--text-main)]',
+      };
   }
 }
 
@@ -64,89 +109,158 @@ export function NotificationsPage() {
     },
   });
 
+  const notifications = notificationsQuery.data ?? [];
+  const unreadCount = unreadQuery.data ?? 0;
+  const readCount = Math.max(0, notifications.length - unreadCount);
+
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.28),transparent_28%),linear-gradient(145deg,#020617_0%,#111827_58%,#1e293b_100%)] px-6 py-6 shadow-card">
+      <section className="mobile-hero-card overflow-hidden rounded-[32px] border px-5 py-4 shadow-card">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-slate-300">놓치지 말아야 할 소식</p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-50">
-              {unreadQuery.data || 0}개
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[color:var(--brand-accent)]">
+              Notification Center
+            </p>
+            <h2 className="mt-2 text-3xl font-black tracking-tight text-[color:var(--text-main)]">
+              알림 {unreadCount}개
             </h2>
-            <p className="mt-2 text-sm text-slate-300">아직 읽지 않은 알림이 남아 있어요.</p>
+            <p className="mt-2 text-sm leading-6 text-[color:var(--text-sub)]">
+              주요 알림과 읽음 상태를 한곳에서 확인합니다.
+            </p>
           </div>
+
+          <div className="mobile-icon-surface flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] border">
+            <BellRing size={20} />
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-2.5">
+          <div className="mobile-soft-card rounded-[20px] border px-3 py-2.5">
+            <p className="text-[11px] text-[color:var(--text-sub)]">새 알림</p>
+            <p className="mt-1 text-lg font-black text-[color:var(--text-main)]">{unreadCount}</p>
+          </div>
+          <div className="mobile-soft-card rounded-[20px] border px-3 py-2.5">
+            <p className="text-[11px] text-[color:var(--text-sub)]">읽음 완료</p>
+            <p className="mt-1 text-lg font-black text-[color:var(--text-main)]">{readCount}</p>
+          </div>
+          <div className="mobile-soft-card rounded-[20px] border px-3 py-2.5">
+            <p className="text-[11px] text-[color:var(--text-sub)]">전체</p>
+            <p className="mt-1 text-lg font-black text-[color:var(--text-main)]">
+              {notifications.length}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3">
           <button
             type="button"
             onClick={() => markAllMutation.mutate()}
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-white/10"
+            disabled={markAllMutation.isPending || unreadCount === 0}
+            className="flex w-full items-center justify-center gap-2 rounded-[18px] bg-[color:var(--brand-solid)] px-5 py-3.5 text-[15px] font-semibold text-white shadow-[0_16px_30px_rgba(37,99,235,0.22)] transition disabled:opacity-40"
           >
-            모두 읽음
+            <CheckCheck size={18} />
+            모두 읽음 처리
           </button>
-        </div>
-
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-4 backdrop-blur">
-            <p className="text-xs text-slate-400">전체 알림</p>
-            <p className="mt-2 text-2xl font-bold text-slate-50">{notificationsQuery.data?.length || 0}</p>
-          </div>
-          <div className="rounded-[22px] border border-white/10 bg-white/5 px-4 py-4 backdrop-blur">
-            <p className="text-xs text-slate-400">읽지 않음</p>
-            <p className="mt-2 text-2xl font-bold text-slate-50">{unreadQuery.data || 0}</p>
-          </div>
         </div>
       </section>
 
-      <SectionCard title="알림 목록" description="최근에 받은 순서대로 정리해 두었어요.">
-        {notificationsQuery.data && notificationsQuery.data.length > 0 ? (
-          <div className="space-y-3">
-            {notificationsQuery.data.map((notification) => (
-              <div
-                key={notification.id}
-                className={`rounded-[22px] border px-4 py-4 ${
-                  notification.isRead
-                    ? 'border-white/10 bg-slate-900/65'
-                    : 'border-blue-400/30 bg-blue-500/10 shadow-[0_0_0_1px_rgba(96,165,250,0.12)]'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      {!notification.isRead ? (
-                        <span className="h-2.5 w-2.5 rounded-full bg-blue-400" />
-                      ) : null}
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-200">
-                        {formatTypeLabel(notification.type)}
-                      </p>
-                    </div>
-                    <p className="mt-2 font-bold text-slate-50">{notification.content}</p>
-                    <p className="mt-2 text-sm text-slate-400">
-                      보낸 사람 {notification.senderNickname || '시스템'}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {formatRelativeTime(notification.createdAt)}
-                    </p>
-                  </div>
-
-                  {!notification.isRead ? (
-                    <button
-                      type="button"
-                      onClick={() => markOneMutation.mutate(notification.id)}
-                      className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-100 transition hover:bg-white/10"
-                    >
-                      읽음
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            ))}
+      {notifications.length > 0 ? (
+        <section className="space-y-3">
+          <div className="px-1">
+            <h3 className="text-lg font-black tracking-tight text-[color:var(--text-main)]">
+              알림 목록
+            </h3>
+            <p className="mt-1 text-sm text-[color:var(--text-sub)]">
+              최근 수신 알림을 시간순으로 확인할 수 있습니다.
+            </p>
           </div>
-        ) : (
-          <EmptyState
-            title="아직 알림이 없어요"
-            description="새로운 소식이 생기면 여기에서 바로 확인할 수 있어요."
-          />
-        )}
-      </SectionCard>
+
+          <div className="space-y-3">
+            {notifications.map((notification) => {
+              const tone = getNotificationTone(notification.type);
+              const Icon = tone.icon;
+
+              return (
+                <article
+                  key={notification.id}
+                  className={`rounded-[28px] border px-4 py-4 shadow-card transition ${
+                    notification.isRead
+                      ? 'mobile-soft-card opacity-60'
+                      : 'mobile-hero-card border-blue-400/30 shadow-[0_22px_40px_rgba(37,99,235,0.14)]'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] border ${
+                        notification.isRead
+                          ? 'border-[color:var(--soft-panel-border)] bg-[color:var(--soft-panel-bg)]'
+                          : 'border-blue-400/30 bg-blue-500/14'
+                      }`}
+                    >
+                      <Icon
+                        size={18}
+                        className={
+                          notification.isRead ? 'text-[color:var(--text-sub)]' : tone.iconClassName
+                        }
+                      />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          <span
+                            className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${tone.badgeClassName}`}
+                          >
+                            {tone.label}
+                          </span>
+                          {!notification.isRead ? (
+                            <span className="rounded-full bg-blue-500 px-2 py-1 text-[10px] font-bold text-white">
+                              NEW
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <span className="shrink-0 pl-3 text-[11px] font-medium text-[color:var(--text-sub)]">
+                          {formatRelativeTime(notification.createdAt)}
+                        </span>
+                      </div>
+
+                      <p
+                        className={`mt-3 text-[15px] font-bold leading-6 break-words ${
+                          notification.isRead
+                            ? 'text-[color:var(--text-sub)]'
+                            : 'text-[color:var(--text-main)]'
+                        }`}
+                      >
+                        {notification.content}
+                      </p>
+
+                      {!notification.isRead ? (
+                        <button
+                          type="button"
+                          onClick={() => markOneMutation.mutate(notification.id)}
+                          disabled={markOneMutation.isPending}
+                          className="mobile-notification-action mt-4 flex min-h-[3.5rem] w-full items-center justify-center gap-2 rounded-[20px] border px-4 py-3 text-sm font-semibold transition hover:border-[color:var(--brand-solid)] hover:brightness-[1.03] disabled:opacity-50"
+                        >
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[color:var(--nav-hover-bg)]">
+                            <Check size={14} />
+                          </span>
+                          읽음 처리
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ) : (
+        <EmptyState
+          title="아직 알림이 없어요"
+          description="새로운 소식이 생기면 이 화면에서 바로 확인할 수 있어요."
+        />
+      )}
     </div>
   );
 }
