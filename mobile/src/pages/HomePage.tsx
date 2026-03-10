@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Layers3, Star, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -6,9 +7,14 @@ import { getMyPortfolios, getPrimaryPortfolio } from '@/api/portfolio';
 import { getInterestStocks, getMarketIndices } from '@/api/stocks';
 import { EmptyState } from '@/components/common/EmptyState';
 import { SectionCard } from '@/components/common/SectionCard';
+import { useStockWebSocket } from '@/hooks/useStockWebSocket';
 import { formatCurrency, formatNumber, formatSignedText } from '@/lib/format';
+import { useStockStore } from '@/stores/useStockStore';
 
 export function HomePage() {
+  const { subscribe } = useStockWebSocket();
+  const livePrices = useStockStore((state) => state.prices);
+
   const indicesQuery = useQuery({
     queryKey: ['market-indices'],
     queryFn: getMarketIndices,
@@ -60,6 +66,24 @@ export function HomePage() {
 
   const portfolio = primaryPortfolioQuery.data;
 
+  const liveSymbols = useMemo(() => {
+    const symbolSet = new Set<string>();
+
+    portfolio?.items.forEach((item) => {
+      symbolSet.add(item.symbol);
+    });
+
+    interestQuery.data?.forEach((item) => {
+      symbolSet.add(item.symbol);
+    });
+
+    return Array.from(symbolSet);
+  }, [portfolio, interestQuery.data]);
+
+  useEffect(() => {
+    liveSymbols.forEach((symbol) => subscribe(symbol));
+  }, [liveSymbols, subscribe]);
+
   return (
     <div className="space-y-5">
       <SectionCard title="시장 흐름" description="지금 빠르게 체크할 지수만 먼저 모아봤어요.">
@@ -69,10 +93,7 @@ export function HomePage() {
               const isNegative = String(item.changePercent).startsWith('-');
 
               return (
-                <div
-                  key={item.symbol}
-                  className="mobile-soft-card rounded-[24px] border p-4"
-                >
+                <div key={item.symbol} className="mobile-soft-card rounded-[24px] border p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-sub)]">
                     {item.symbol}
                   </p>
@@ -115,30 +136,40 @@ export function HomePage() {
             </div>
 
             <div className="space-y-2">
-              {portfolio.items.slice(0, 4).map((item) => (
-                <div
-                  key={item.id}
-                  className="mobile-soft-card flex items-center justify-between rounded-[22px] border px-4 py-3"
-                >
-                  <div>
-                    <p className="font-semibold text-[color:var(--text-main)]">
-                      {item.nameKr || item.nameEn || item.symbol}
-                    </p>
-                    <p className="text-sm text-[color:var(--text-sub)]">
-                      {item.symbol} · {formatNumber(item.quantity)}주
-                    </p>
+              {portfolio.items.slice(0, 4).map((item) => {
+                const livePrice = livePrices[item.symbol]?.price;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="mobile-soft-card flex items-center justify-between rounded-[22px] border px-4 py-3"
+                  >
+                    <div>
+                      <p className="font-semibold text-[color:var(--text-main)]">
+                        {item.nameKr || item.nameEn || item.symbol}
+                      </p>
+                      <p className="text-sm text-[color:var(--text-sub)]">
+                        {item.symbol} · {formatNumber(item.quantity)}주
+                      </p>
+                    </div>
+                    <div className="ml-3 shrink-0 text-right">
+                      <p className="text-[11px] text-[color:var(--text-sub)]">현재가</p>
+                      <p className="mt-1 text-sm font-semibold text-[color:var(--text-main)]">
+                        {livePrice || '-'}
+                      </p>
+                      <p className="mt-1 text-[11px] text-[color:var(--text-sub)]">
+                        평균 {formatCurrency(item.averagePrice, item.currency)}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm font-semibold text-[color:var(--text-main)]">
-                    {formatCurrency(item.averagePrice, item.currency)}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ) : (
           <EmptyState
             title="대표 포트폴리오가 아직 없어요"
-            description="포트폴리오를 만들면 자산 흐름과 관심 종목을 이 화면에서 바로 이어서 볼 수 있어요."
+            description="포트폴리오를 만들면 자산 흐름과 관심 종목을 홈 화면에서 바로 이어서 볼 수 있어요."
           />
         )}
       </SectionCard>
@@ -158,24 +189,33 @@ export function HomePage() {
       >
         {interestQuery.data && interestQuery.data.length > 0 ? (
           <div className="space-y-2">
-            {interestQuery.data.slice(0, 5).map((item) => (
-              <div
-                key={item.id}
-                className="mobile-soft-card flex items-center justify-between rounded-[22px] border px-4 py-3"
-              >
-                <div>
-                  <p className="font-semibold text-[color:var(--text-main)]">
-                    {item.nameKr || item.nameEn || item.symbol}
-                  </p>
-                  <p className="text-sm text-[color:var(--text-sub)]">
-                    {item.symbol} · {item.market}
-                  </p>
+            {interestQuery.data.slice(0, 5).map((item) => {
+              const livePrice = livePrices[item.symbol]?.price;
+
+              return (
+                <div
+                  key={item.id}
+                  className="mobile-soft-card flex items-center justify-between rounded-[22px] border px-4 py-3"
+                >
+                  <div>
+                    <p className="font-semibold text-[color:var(--text-main)]">
+                      {item.nameKr || item.nameEn || item.symbol}
+                    </p>
+                    <p className="text-sm text-[color:var(--text-sub)]">
+                      {item.symbol} · {item.market}
+                    </p>
+                  </div>
+                  <div className="ml-3 flex shrink-0 items-center gap-3">
+                    <p className="min-w-[72px] text-right text-sm font-semibold text-[color:var(--text-main)]">
+                      {livePrice || '-'}
+                    </p>
+                    <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-400/12 text-amber-600 dark:text-amber-300">
+                      <Star size={16} className="fill-current" />
+                    </span>
+                  </div>
                 </div>
-                <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-400/12 text-amber-600 dark:text-amber-300">
-                  <Star size={16} className="fill-current" />
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <EmptyState

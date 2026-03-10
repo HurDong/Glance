@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Star } from 'lucide-react';
 import { Link, useLocation, useParams } from 'react-router-dom';
@@ -12,7 +12,9 @@ import {
 import { EmptyState } from '@/components/common/EmptyState';
 import { LineChart, type ChartRange } from '@/components/common/LineChart';
 import { SectionCard } from '@/components/common/SectionCard';
+import { useStockWebSocket } from '@/hooks/useStockWebSocket';
 import { formatSignedText } from '@/lib/format';
+import { useStockStore } from '@/stores/useStockStore';
 import { useToastStore } from '@/stores/toastStore';
 
 export function StockDetailPage() {
@@ -20,9 +22,11 @@ export function StockDetailPage() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const pushToast = useToastStore((state) => state.push);
+  const { subscribe } = useStockWebSocket();
   const symbol = params.symbol || '';
   const state = (location.state as { name?: string; market?: string } | null) || {};
   const [chartRange, setChartRange] = useState<ChartRange>('1d');
+  const livePriceData = useStockStore((store) => (symbol ? store.prices[symbol] : undefined));
 
   const priceQuery = useQuery({
     queryKey: ['stock-price', symbol],
@@ -50,6 +54,17 @@ export function StockDetailPage() {
   const chartCurrency = useMemo(() => {
     return state.market === 'KOSPI' || state.market === 'KOSDAQ' ? 'KRW' : 'USD';
   }, [state.market]);
+
+  const currentPrice = livePriceData?.price ?? priceQuery.data?.price;
+  const currentChangeRate = livePriceData?.changeRate ?? priceQuery.data?.changeRate;
+
+  useEffect(() => {
+    if (!symbol) {
+      return;
+    }
+
+    subscribe(symbol);
+  }, [symbol, subscribe]);
 
   const interestMutation = useMutation({
     mutationFn: async () => {
@@ -118,17 +133,17 @@ export function StockDetailPage() {
           <div className="mobile-soft-card rounded-[24px] border px-4 py-4">
             <p className="text-xs text-[color:var(--text-sub)]">현재가</p>
             <p className="mt-2 text-2xl font-bold text-[color:var(--text-main)]">
-              {priceQuery.data?.price || '-'}
+              {currentPrice || '-'}
             </p>
           </div>
           <div className="mobile-soft-card rounded-[24px] border px-4 py-4">
             <p className="text-xs text-[color:var(--text-sub)]">등락률</p>
             <p
               className={`mt-2 text-2xl font-bold ${
-                String(priceQuery.data?.changeRate).startsWith('-') ? 'text-blue-600' : 'text-rose-500'
+                String(currentChangeRate).startsWith('-') ? 'text-blue-600' : 'text-rose-500'
               }`}
             >
-              {priceQuery.data?.changeRate ? `${formatSignedText(priceQuery.data.changeRate)}%` : '-'}
+              {currentChangeRate ? `${formatSignedText(currentChangeRate)}%` : '-'}
             </p>
           </div>
         </div>
@@ -140,8 +155,8 @@ export function StockDetailPage() {
           range={chartRange}
           onRangeChange={setChartRange}
           currency={chartCurrency}
-          currentPrice={priceQuery.data?.price}
-          changeRate={priceQuery.data?.changeRate}
+          currentPrice={currentPrice}
+          changeRate={currentChangeRate}
           isLoading={chartQuery.isLoading}
           errorMessage={chartQuery.isError ? '차트 데이터를 다시 불러와 주세요.' : null}
         />

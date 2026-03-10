@@ -18,6 +18,8 @@
     "@capacitor/ios": "^6.2.1",
     "@tanstack/react-query": "^5.90.20",
     "axios": "^1.13.5",
+    "@stomp/stompjs": "^7.3.0",
+    "sockjs-client": "^1.6.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.563.0",
