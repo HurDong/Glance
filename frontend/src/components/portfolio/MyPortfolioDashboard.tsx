@@ -168,7 +168,7 @@ const PremiumStepper = ({
                 type="button"
                 disabled={disabled}
                 onClick={() => onAdd(-step)}
-                className="w-10 h-full flex items-center justify-center rounded-lg hover:bg-white/5 text-muted-foreground/80 hover:text-foreground transition-all disabled:opacity-20 active:scale-90"
+                className="w-10 h-full flex items-center justify-center rounded-lg hover:bg-accent text-muted-foreground/80 hover:text-foreground transition-all disabled:opacity-20 active:scale-90"
             >
                 <Minus size={18} />
             </button>
@@ -528,7 +528,7 @@ export const MyPortfolioDashboard: React.FC = () => {
 
             {/* Empty State completely */}
             {portfolios.length === 0 ? (
-                <div className="flex flex-col items-center justify-center min-h-[50vh] bg-card/30 backdrop-blur-xl border border-white/10 rounded-3xl p-12 text-center">
+                <div className="flex flex-col items-center justify-center min-h-[50vh] surface-panel rounded-3xl p-12 text-center">
                     <div className="w-48 h-48 mb-8 opacity-80">
                         {/* Beautiful 3D-like icon representation using standard SVG illustration style */}
                         <svg viewBox="0 0 200 200" className="w-full h-full text-indigo-500/20 fill-current">
@@ -558,8 +558,8 @@ export const MyPortfolioDashboard: React.FC = () => {
                                 onClick={() => { setActivePortfolioId(p.id); navigate(`/portfolio/${p.id}`); }}
                                 className={`px-5 py-3 font-semibold rounded-2xl whitespace-nowrap transition-all duration-300 border backdrop-blur-md flex items-center gap-2 ${
                                     activePortfolioId === p.id 
-                                    ? 'bg-primary border-primary text-primary-foreground shadow-[0_4px_20px_rgba(36,99,235,0.3)]' 
-                                    : 'bg-card/50 border-border/50 text-muted-foreground hover:bg-card hover:text-foreground'
+                                    ? 'bg-primary text-primary-foreground border border-primary shadow-[0_10px_24px_rgba(37,99,235,0.28)]' 
+                                    : 'bg-card/90 border-border/70 text-muted-foreground hover:bg-accent/80 hover:text-foreground shadow-sm'
                                 }`}
                             >
                                 {p.isPrimary && <Star size={13} className="fill-yellow-400 text-yellow-400 shrink-0" />}
@@ -574,11 +574,11 @@ export const MyPortfolioDashboard: React.FC = () => {
                             {/* Main Summary Card & Chart (Left Col) */}
                             <div className="lg:col-span-1 space-y-6">
                                 {/* Summary Card */}
-                                <div className="bg-card/60 backdrop-blur-2xl border border-white/5 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
+                                <div className="surface-panel rounded-3xl p-6 relative overflow-hidden group">
                                     <div className="absolute top-0 right-0 p-4 flex gap-2">
                                         <button 
                                             onClick={() => setHideDetails(!hideDetails)}
-                                            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-white/10 rounded-md transition-colors"
+                                            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
                                             title={hideDetails ? "금액 숨김 해제" : "금액 숨기기"}
                                         >
                                             {hideDetails ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -640,7 +640,7 @@ export const MyPortfolioDashboard: React.FC = () => {
                                 </div>
 
                                 {/* Asset Allocation Chart Card */}
-                                <div className="bg-card/40 backdrop-blur-2xl border border-white/5 rounded-3xl p-6 shadow-xl">
+                                <div className="surface-panel rounded-3xl p-6">
                                     <h3 className="font-bold mb-4 flex items-center gap-2">
                                         <PieChart size={18} className="text-primary"/> 
                                         자산 비중
@@ -708,21 +708,21 @@ export const MyPortfolioDashboard: React.FC = () => {
 
                             {/* Holdings List (Right Col) */}
                             <div className="lg:col-span-3">
-                                <div className="bg-card/40 backdrop-blur-2xl border border-white/5 rounded-3xl shadow-xl overflow-hidden h-full flex flex-col">
+                                <div className="surface-panel rounded-3xl overflow-hidden h-full flex flex-col">
                                     <div className="p-6 border-b border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                         <h3 className="text-xl font-bold flex items-center gap-2">
-                                            보유 종목 <span className="bg-black/5 dark:bg-white/10 text-muted-foreground text-sm py-0.5 px-2.5 rounded-full font-medium">{activePortfolio.items?.length || 0}</span>
+                                            보유 종목 <span className="bg-muted text-muted-foreground text-sm py-0.5 px-2.5 rounded-full font-medium border border-border/60">{activePortfolio.items?.length || 0}</span>
                                         </h3>
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => setIsAddCashModalOpen(true)}
-                                                className="px-4 py-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white font-bold rounded-xl flex items-center gap-2 transition-all justify-center whitespace-nowrap text-sm border border-emerald-500/20"
+                                                className="px-4 py-2.5 bg-emerald-500/12 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white font-bold rounded-xl flex items-center gap-2 transition-all justify-center whitespace-nowrap text-sm border border-emerald-500/25 shadow-sm"
                                             >
                                                 💰 현금 추가
                                             </button>
                                             <button 
                                                 onClick={() => setIsAddStockModalOpen(true)}
-                                                className="px-5 py-2.5 bg-primary/10 text-primary hover:bg-primary hover:text-white font-bold rounded-xl flex items-center gap-2 transition-all justify-center whitespace-nowrap"
+                                                className="px-5 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold rounded-xl flex items-center gap-2 transition-all justify-center whitespace-nowrap shadow-sm"
                                             >
                                                 <Plus size={18} />
                                                 종목 추가하기
@@ -760,7 +760,7 @@ export const MyPortfolioDashboard: React.FC = () => {
                                                         .map((item) => {
                                                             const isCash = item.market === 'CASH';
                                                             return (
-                                                        <tr key={item.id} className={isCash ? 'hover:bg-accent/40 transition-colors group bg-emerald-500/5' : 'hover:bg-accent/40 transition-colors group'}>
+                                                        <tr key={item.id} className={isCash ? 'hover:bg-accent/70 transition-colors group bg-emerald-500/8' : 'hover:bg-accent/70 transition-colors group'}>
                                                             <td className="px-6 py-4 whitespace-nowrap">
                                                                 <div className="flex items-center gap-3">
                                                                     {isCash ? (
@@ -777,7 +777,7 @@ export const MyPortfolioDashboard: React.FC = () => {
                                                                     <div>
                                                                         <div className="font-bold text-foreground text-sm flex items-center gap-1.5">
                                                                             {isCash ? (item.symbol === 'KRW' ? '원화 현금' : '달러 현금') : item.nameKr}
-                                                                            {isCash && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">현금</span>}
+                                                                            {isCash && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/12 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">현금</span>}
                                                                         </div>
                                                                         <div className="text-xs text-muted-foreground font-mono mt-0.5">{item.symbol}</div>
                                                                     </div>

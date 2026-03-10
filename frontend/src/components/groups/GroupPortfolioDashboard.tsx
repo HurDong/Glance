@@ -532,7 +532,7 @@ export const GroupPortfolioDashboard: React.FC = () => {
                 </div>
 
                 {/* Empty State Illustration Center */}
-                <div className="flex flex-col items-center justify-center min-h-[50vh] bg-card/30 backdrop-blur-xl border border-white/10 rounded-3xl p-12 text-center">
+                <div className="flex flex-col items-center justify-center min-h-[50vh] surface-panel rounded-3xl p-12 text-center">
                     <div className="w-48 h-48 mb-8 opacity-80">
                         <svg viewBox="0 0 200 200" className="w-full h-full text-indigo-500/20 fill-current">
                             <path d="M166.7 58.3v100c0 4.6-3.7 8.3-8.3 8.3H41.7c-4.6 0-8.3-3.7-8.3-8.3v-100c0-4.6 3.7-8.3 8.3-8.3h116.7c4.5 0 8.3 3.8 8.3 8.3z" fill="currentColor"/>
@@ -620,22 +620,22 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                         className={clsx(
                                             "flex-shrink-0 lg:flex-shrink-auto flex flex-col lg:flex-row items-center lg:items-center gap-3 p-3 lg:p-4 rounded-2xl cursor-pointer transition-all border duration-300",
                                             isSelected 
-                                                ? "bg-primary/10 border-primary shadow-sm" 
-                                                : "bg-card border-border/60 hover:border-primary/40 hover:bg-muted/50 text-muted-foreground hover:text-foreground hover:shadow-sm"
+                                                ? "bg-primary text-primary-foreground border border-primary shadow-[0_10px_24px_rgba(37,99,235,0.26)]" 
+                                                : "bg-card/90 border-border/70 hover:border-primary/30 hover:bg-accent/80 text-muted-foreground hover:text-foreground hover:shadow-sm"
                                         )}
                                     >
                                         <div className={clsx(
                                             "w-12 h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center font-black text-lg lg:text-xl shadow-inner transition-colors shrink-0 outline outline-2 outline-offset-2",
-                                            isSelected ? "bg-gradient-to-br from-primary to-indigo-600 text-white outline-primary/30" : "bg-muted text-muted-foreground outline-transparent"
+                                            isSelected ? "bg-white/20 text-white outline-primary/20" : "bg-muted text-muted-foreground outline-transparent"
                                         )}>
                                             {group.name.charAt(0)}
                                         </div>
                                         <div className="flex flex-col items-center lg:items-start min-w-0 flex-1 w-full pr-1">
                                             <div className={clsx(
                                                 "text-sm lg:text-base font-bold truncate w-full text-center lg:text-left transition-colors",
-                                                isSelected ? "text-primary" : "text-foreground"
+                                                isSelected ? "text-primary-foreground" : "text-foreground"
                                             )}>{group.name}</div>
-                                            <div className="hidden lg:block text-xs font-medium text-muted-foreground mt-1 bg-background/50 px-2 py-0.5 rounded-full inline-flex border border-border/50">
+                                            <div className={clsx("hidden lg:block text-xs font-medium mt-1 px-2 py-0.5 rounded-full inline-flex border", isSelected ? "bg-white/15 text-white/85 border-white/15" : "bg-background/50 text-muted-foreground border-border/50")}>
                                                 <Users size={10} className="mr-1 inline align-baseline" />
                                                 멤버 {group.members.length}명
                                             </div>
@@ -650,7 +650,7 @@ export const GroupPortfolioDashboard: React.FC = () => {
                     {selectedGroupForFeed && (
                         <div className="flex-1 w-full min-w-0 flex flex-col gap-4">
                             {/* Selected Group Header */}
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 md:p-5 bg-card/40 backdrop-blur-xl border border-border/60 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] pb-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 md:p-5 surface-panel rounded-3xl pb-4">
                                 <div className="flex-1 min-w-0 pr-4">
                                     <h2 className="text-xl md:text-2xl font-bold text-foreground truncate w-full">
                                         {selectedGroupForFeed.name}
@@ -713,7 +713,7 @@ export const GroupPortfolioDashboard: React.FC = () => {
 
                                     if (feedItems.length === 0) {
                                         return (
-                                            <div className="col-span-full py-24 flex flex-col items-center justify-center bg-card/30 border border-dashed border-border/80 rounded-3xl text-center w-full">
+                                            <div className="col-span-full py-24 flex flex-col items-center justify-center surface-soft border-dashed rounded-3xl text-center w-full">
                                                 <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground/50">
                                                     <Share2 size={32} />
                                                 </div>
@@ -721,7 +721,7 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                                 <p className="text-sm text-muted-foreground mb-6">내 포트폴리오를 먼저 공유해서 그룹 피드를 채워보세요.</p>
                                                 <button 
                                                     onClick={() => handleOpenShareModal(selectedGroupForFeed.id)}
-                                                    className="px-5 py-2.5 bg-card border border-border/80 shadow-sm text-foreground text-sm font-bold rounded-xl hover:bg-muted/80 transition-colors"
+                                                    className="px-5 py-2.5 bg-card border border-border/80 shadow-sm text-foreground text-sm font-bold rounded-xl hover:bg-accent transition-colors"
                                                 >
                                                     포트폴리오 공유하기
                                                 </button>
@@ -743,9 +743,9 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                             const remainingStocks = sortedItems.slice(1);
 
                                             return (
-                                            <div key={feedMember.id} className="bg-card/90 backdrop-blur-md border border-border/60 rounded-[20px] p-4 shadow-sm hover:shadow-xl hover:border-primary/40 transition-all group relative flex flex-col h-full">
+                                            <div key={feedMember.id} className="surface-panel rounded-[20px] p-4 hover:shadow-xl hover:border-primary/30 transition-all group relative flex flex-col h-full">
                                                 {/* Ambient Background Glow */}
-                                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-[60px] pointer-events-none -z-10 group-hover:bg-primary/10 transition-colors overflow-hidden rounded-tr-[20px]"></div>
+                                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/8 rounded-full blur-[60px] pointer-events-none -z-10 group-hover:bg-primary/12 transition-colors overflow-hidden rounded-tr-[20px]"></div>
                                                 
                                                 {/* Social Header (Compact) */}
                                                 <div className="flex items-center gap-2.5 mb-3 relative z-10">
@@ -772,10 +772,10 @@ export const GroupPortfolioDashboard: React.FC = () => {
 
                                                 {/* The Hook (Hero Stock) */}
                                                 {heroStock && (
-                                                    <div className="mb-4 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent border border-indigo-500/20 rounded-2xl p-4 relative overflow-hidden z-10 shadow-inner group/hero shrink-0">
+                                                    <div className="mb-4 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/15 rounded-2xl p-4 relative overflow-hidden z-10 shadow-inner group/hero shrink-0">
                                                         <div className="flex justify-between items-start mb-3 relative z-10">
-                                                            <div className="flex items-center gap-1.5 text-indigo-500 dark:text-indigo-400 font-extrabold text-[10px] tracking-widest uppercase bg-indigo-500/10 px-2.5 py-1 rounded-full border border-indigo-500/20 shadow-sm">
-                                                                <Rocket size={14} className="text-indigo-500 dark:text-indigo-400" /> TOP PICK
+                                                            <div className="flex items-center gap-1.5 text-primary font-extrabold text-[10px] tracking-widest uppercase bg-primary/10 px-2.5 py-1 rounded-full border border-primary/20 shadow-sm">
+                                                                <Rocket size={14} className="text-primary" /> TOP PICK
                                                             </div>
                                                         </div>
                                                         <div className="flex items-end justify-between relative z-10 w-full">
@@ -800,7 +800,7 @@ export const GroupPortfolioDashboard: React.FC = () => {
                                                             </div>
                                                             <div className="flex flex-col items-end shrink-0">
                                                                 {isPrivate ? (
-                                                                    <div className="mb-2 text-[10px] font-bold text-muted-foreground bg-card/80 border border-border/60 px-2.5 py-1 rounded-full flex items-center gap-1 backdrop-blur-sm shadow-sm">
+                                                                    <div className="mb-2 text-[10px] font-bold text-muted-foreground bg-muted/85 border border-border/70 px-2.5 py-1 rounded-full flex items-center gap-1 backdrop-blur-sm shadow-sm">
                                                                         <Lock size={10} /> 비공개 종목
                                                                     </div>
                                                                 ) : (
@@ -883,9 +883,9 @@ export const GroupPortfolioDashboard: React.FC = () => {
                         <h3 className="text-lg font-bold mb-4">공유할 포트폴리오 선택</h3>
                         <div className="overflow-y-auto flex-1 space-y-2 mb-6 hide-scrollbar max-h-60">
                             {portfolios.map(p => (
-                                <div key={p.id} onClick={() => setSelectedPortfolioId(p.id)} className={clsx("p-4 rounded-xl cursor-pointer transition-all flex justify-between items-center border", selectedPortfolioId === p.id ? "bg-primary/10 border-primary" : "bg-card hover:bg-muted border-transparent")}>
+                                <div key={p.id} onClick={() => setSelectedPortfolioId(p.id)} className={clsx("p-4 rounded-xl cursor-pointer transition-all flex justify-between items-center border", selectedPortfolioId === p.id ? "bg-primary text-primary-foreground border-primary shadow-sm" : "bg-card hover:bg-accent border-border/60")}>
                                     <div className="font-bold text-sm">{p.name}</div>
-                                    <div className="text-xs font-semibold px-2 py-1 bg-background rounded-full">{p.items.length}개 종목</div>
+                                    <div className="text-xs font-semibold px-2 py-1 bg-background/80 rounded-full border border-border/60">{p.items.length}개 종목</div>
                                 </div>
                             ))}
                         </div>

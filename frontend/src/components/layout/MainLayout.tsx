@@ -115,7 +115,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, onT
       {/* Sidebar */}
       <aside 
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-card/60 backdrop-blur-2xl border-r border-white/5 transition-transform duration-300 lg:relative lg:translate-x-0 shadow-[4px_0_24px_rgba(0,0,0,0.2)]",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-card/88 backdrop-blur-2xl border-r border-border/70 transition-transform duration-300 lg:relative lg:translate-x-0 shadow-[4px_0_24px_rgba(15,23,42,0.12)]",
           !isSidebarOpen && "-translate-x-full lg:hidden"
         )}
       >
@@ -140,18 +140,18 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, onT
                 className={cn(
                   "w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 group",
                   activeTab === item.id
-                    ? "bg-primary/15 text-primary font-semibold shadow-sm border border-primary/20" 
-                    : "hover:bg-white/5 text-muted-foreground hover:text-foreground hover:translate-x-1"
+                    ? "bg-primary text-primary-foreground font-semibold shadow-[0_10px_24px_rgba(37,99,235,0.28)] border border-primary" 
+                    : "hover:bg-accent text-muted-foreground hover:text-foreground hover:translate-x-1"
                 )}
               >
-                <item.icon size={20} className={cn("transition-colors duration-300", activeTab === item.id ? "text-primary" : "group-hover:text-foreground")} />
+                <item.icon size={20} className={cn("transition-colors duration-300", activeTab === item.id ? "text-primary-foreground" : "group-hover:text-foreground")} />
                 <span>{item.label}</span>
               </button>
             ))}
           </nav>
 
-          <div className="p-4 border-t border-white/5">
-            <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 hover:translate-x-1 transition-all group">
+          <div className="p-4 border-t border-border/70">
+            <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent hover:translate-x-1 transition-all group">
               <Settings size={20} className="group-hover:rotate-90 transition-transform duration-500" />
               <span className="font-medium">설정</span>
             </button>
@@ -162,7 +162,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, onT
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="h-16 flex items-center justify-between px-6 bg-background/60 backdrop-blur-xl border-b border-white/5 sticky top-0 z-40">
+        <header className="h-16 flex items-center justify-between px-6 bg-background/85 backdrop-blur-xl border-b border-border/70 sticky top-0 z-40">
           <div className="flex items-center space-x-4 gap-2">
             <button 
               onClick={toggleSidebar} 
@@ -176,7 +176,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, onT
               <input 
                 type="text" 
                 placeholder="종목명, 키워드, 사용자 검색..." 
-                className="w-full bg-white/5 border border-white/10 rounded-full py-2.5 pl-11 pr-4 text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all duration-300 placeholder:text-muted-foreground/60"
+                className="w-full bg-card/90 border border-border/70 rounded-full py-2.5 pl-11 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all duration-300 placeholder:text-muted-foreground/70 shadow-sm"
               />
             </div>
           </div>
@@ -184,7 +184,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, onT
           <div className="flex items-center space-x-4">
             <button 
               onClick={toggleTheme}
-              className="p-2 hover:bg-white/10 rounded-full text-muted-foreground hover:text-foreground transition-all duration-300 hover:rotate-12"
+              className="p-2 hover:bg-accent rounded-full text-muted-foreground hover:text-foreground transition-all duration-300 hover:rotate-12"
             >
               {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
             </button>
