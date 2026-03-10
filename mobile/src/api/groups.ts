@@ -1,5 +1,5 @@
 import { apiClient, unwrap } from '@/api/client';
-import type { Group, GroupFeed } from '@/types/api';
+import type { Group, GroupFeed, ReactionType } from '@/types/api';
 
 export async function getMyGroups() {
   return unwrap<Group[]>(apiClient.get('/groups'));
@@ -19,4 +19,12 @@ export async function getGroupFeed(groupId: number) {
 
 export async function sharePortfolio(groupId: number, portfolioId: number) {
   return unwrap<void>(apiClient.post(`/groups/${groupId}/share`, { portfolioId }));
+}
+
+export async function toggleReaction(membershipId: number, type: ReactionType) {
+  return unwrap<void>(
+    apiClient.post(`/groups/reactions/${membershipId}`, null, {
+      params: { type },
+    }),
+  );
 }

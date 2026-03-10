@@ -119,6 +119,14 @@ export interface PortfolioItemRequest {
   currency: string;
 }
 
+export type ReactionType = 'GOOD' | 'METOO' | 'WATCH' | 'PASS';
+
+export interface ReactionCount {
+  type: ReactionType;
+  count: number;
+  reactedByMe: boolean;
+}
+
 export interface GroupOwner {
   email: string;
   nickname: string;
@@ -131,6 +139,7 @@ export interface GroupMember {
   sharedPortfolioName?: string | null;
   sharedPortfolioIsPublic?: boolean | null;
   sharedPortfolioItems?: PortfolioItem[] | null;
+  reactions?: ReactionCount[] | null;
   status: string;
   joinedAt: string;
 }

@@ -11,7 +11,7 @@ import {
   updatePortfolio,
   updatePortfolioItem,
 } from '@/api/portfolio';
-import { getStockPrice, getStocks } from '@/api/stocks';
+import { getMarketIndices, getStockPrice, getStocks } from '@/api/stocks';
 import { EmptyState } from '@/components/common/EmptyState';
 import { EntryModeSelector, EntryModeTabs, type EntryMode } from '@/components/common/EntryModeSelector';
 import { SectionCard } from '@/components/common/SectionCard';
@@ -46,7 +46,7 @@ const EMPTY_ITEM_FORM: ItemFormState = {
 };
 
 const QUICK_ADJUST_STEPS = [-100, -10, -1, 1, 10, 100] as const;
-const USD_TO_KRW_RATE = 1_350;
+const usdToKrwRate_FALLBACK = 1_350;
 const PORTFOLIO_ALLOCATION_COLORS = [
   '#2563eb',
   '#0f766e',
@@ -152,6 +152,10 @@ function getCashAssetAmount(item: Pick<PortfolioItem, 'quantity' | 'averagePrice
   return Math.round(getPortfolioItemBaseValue(item) * 100) / 100;
 }
 
+function getPortfolioItemCostBasis(item: Pick<PortfolioItem, 'quantity' | 'averagePrice'>) {
+  return getPortfolioItemBaseValue(item);
+}
+
 function formatCompactKrw(value: number) {
   const abs = Math.abs(value);
 
@@ -168,6 +172,19 @@ function formatCompactKrw(value: number) {
   }
 
   return formatCurrency(value, 'KRW');
+}
+
+function parseUsdKrwRate(indices: { symbol: string; name: string; price: string; type?: string }[] | undefined) {
+  const exchangeRate = indices?.find(
+    (index) =>
+      index.symbol?.includes('USD_KRW') ||
+      index.symbol === 'OANDA:USD_KRW' ||
+      index.name?.includes('환율') ||
+      index.type === 'FOREX',
+  );
+
+  const parsed = Number(exchangeRate?.price?.replace(/,/g, '').trim());
+  return Number.isFinite(parsed) ? parsed : usdToKrwRate_FALLBACK;
 }
 
 function getPortfolioItemDisplayName(item: Pick<PortfolioItem, 'symbol' | 'market' | 'nameKr' | 'nameEn'>) {
@@ -214,6 +231,18 @@ export function PortfolioPage() {
     queryFn: () => getStocks({ query: deferredSearch, page: 0, size: 8 }),
     enabled: isAddItemSheetOpen && deferredSearch.trim().length > 0,
   });
+
+  const marketIndicesQuery = useQuery({
+    queryKey: ['market-indices'],
+    queryFn: getMarketIndices,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
+
+  const usdToKrwRate = useMemo(
+    () => parseUsdKrwRate(marketIndicesQuery.data),
+    [marketIndicesQuery.data],
+  );
 
   const sortedPortfolios = useMemo(
     () =>
@@ -293,7 +322,7 @@ export function PortfolioPage() {
 
   function getPortfolioItemDisplayEstimatedValue(item: PortfolioItem) {
     const displayValue = getPortfolioItemDisplayValue(item);
-    return item.currency === 'USD' ? displayValue * USD_TO_KRW_RATE : displayValue;
+    return item.currency === 'USD' ? displayValue * usdToKrwRate : displayValue;
   }
 
   const portfolioSymbols = useMemo(
@@ -326,16 +355,33 @@ export function PortfolioPage() {
  
   const portfolioSummary = useMemo(() => {
     if (!selectedPortfolio) {
-      return { totalItems: 0, totalValue: 0 };
+      return { totalItems: 0, totalValue: 0, totalCost: 0, totalProfitLoss: 0, totalProfitRate: 0 };
     }
 
-    return displayedPortfolioItems.reduce(
-      (acc, item) => ({
-        totalItems: acc.totalItems + item.quantity,
-        totalValue: acc.totalValue + getPortfolioItemDisplayEstimatedValue(item),
-      }),
-      { totalItems: 0, totalValue: 0 },
+    const summary = displayedPortfolioItems.reduce(
+      (acc, item) => {
+        const displayValue = getPortfolioItemDisplayEstimatedValue(item);
+        const costBasis = item.currency === 'USD'
+          ? getPortfolioItemCostBasis(item) * usdToKrwRate
+          : getPortfolioItemCostBasis(item);
+
+        return {
+          totalItems: acc.totalItems + item.quantity,
+          totalValue: acc.totalValue + displayValue,
+          totalCost: acc.totalCost + costBasis,
+        };
+      },
+      { totalItems: 0, totalValue: 0, totalCost: 0 },
     );
+
+    const totalProfitLoss = summary.totalValue - summary.totalCost;
+    const totalProfitRate = summary.totalCost > 0 ? (totalProfitLoss / summary.totalCost) * 100 : 0;
+
+    return {
+      ...summary,
+      totalProfitLoss,
+      totalProfitRate,
+    };
   }, [displayedPortfolioItems, selectedPortfolio, isViewMode, livePrices]);
 
   const portfolioAllocation = useMemo(() => {
@@ -892,6 +938,31 @@ export function PortfolioPage() {
           </div>
         </div>
 
+        {!showManageAction ? (
+          <div className="mobile-soft-card mt-3 rounded-[18px] border px-3 py-3">
+            <p className="text-xs text-[color:var(--text-sub)]">평가 손익</p>
+            <div className="mt-1 flex items-center justify-between gap-3">
+              <p
+                className={`text-sm font-bold ${
+                  portfolioSummary.totalProfitLoss < 0 ? 'text-emerald-500' : 'text-rose-500'
+                }`}
+              >
+                {formatCurrency(portfolioSummary.totalProfitLoss, 'KRW')}
+              </p>
+              <span
+                className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                  portfolioSummary.totalProfitLoss < 0
+                    ? 'bg-emerald-500/12 text-emerald-600'
+                    : 'bg-rose-500/12 text-rose-500'
+                }`}
+              >
+                {portfolioSummary.totalProfitRate >= 0 ? '+' : ''}
+                {portfolioSummary.totalProfitRate.toFixed(2)}%
+              </span>
+            </div>
+          </div>
+        ) : null}
+
         {showManageAction ? (
           <div className="mobile-soft-card mt-3 rounded-[18px] border px-3 py-3 text-sm text-[color:var(--text-main)]/80">
             {selectedPortfolio.isPublic
@@ -1008,6 +1079,10 @@ export function PortfolioPage() {
               : showManageAction
                 ? item.averagePrice
                 : getPortfolioItemDisplayUnitPrice(item);
+            const currentValue = getPortfolioItemDisplayValue(item);
+            const costBasis = getPortfolioItemCostBasis(item);
+            const profitLoss = isCash ? 0 : currentValue - costBasis;
+            const profitRate = !isCash && costBasis > 0 ? (profitLoss / costBasis) * 100 : 0;
 
             return (
               <div
@@ -1033,6 +1108,24 @@ export function PortfolioPage() {
                     <p className="mt-1 text-sm font-semibold text-[color:var(--text-main)]">
                       {formatCurrency(priceValue, item.currency)}
                     </p>
+                    {!showManageAction && !isCash ? (
+                      <div className="mt-1 space-y-1">
+                        <p
+                          className={`text-[11px] font-semibold ${
+                            profitLoss < 0 ? 'text-emerald-500' : 'text-rose-500'
+                          }`}
+                        >
+                          손익 {formatCurrency(profitLoss, item.currency)}
+                        </p>
+                        <p
+                          className={`text-[11px] font-semibold ${
+                            profitLoss < 0 ? 'text-emerald-500' : 'text-rose-500'
+                          }`}
+                        >
+                          수익률 {profitRate >= 0 ? '+' : ''}{profitRate.toFixed(2)}%
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                   {showManageAction ? (
                     <>

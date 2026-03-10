@@ -11,15 +11,25 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import { createGroup, getGroupFeed, getMyGroups, joinGroupByCode, sharePortfolio } from '@/api/groups';
+import {
+  createGroup,
+  getGroupFeed,
+  getMyGroups,
+  joinGroupByCode,
+  sharePortfolio,
+  toggleReaction,
+} from '@/api/groups';
 import { getMyPortfolios } from '@/api/portfolio';
+import { getMarketIndices } from '@/api/stocks';
 import { EmptyState } from '@/components/common/EmptyState';
 import { EntryModeSelector, EntryModeTabs, type EntryMode } from '@/components/common/EntryModeSelector';
 import { SectionCard } from '@/components/common/SectionCard';
+import { useStockWebSocket } from '@/hooks/useStockWebSocket';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { useAuthStore } from '@/stores/authStore';
+import { useStockStore } from '@/stores/useStockStore';
 import { useToastStore } from '@/stores/toastStore';
-import type { GroupMember, PortfolioItem } from '@/types/api';
+import type { GroupMember, PortfolioItem, ReactionCount, ReactionType } from '@/types/api';
 
 const ALLOCATION_COLORS = [
   'from-sky-400 to-blue-500',
@@ -32,31 +42,154 @@ const ALLOCATION_COLORS = [
   'from-lime-400 to-green-500',
 ];
 
+const REACTION_OPTIONS: Array<{
+  type: ReactionType;
+  emoji: string;
+  label: string;
+  activeClassName: string;
+}> = [
+  {
+    type: 'GOOD',
+    emoji: '👍',
+    label: '잘 샀다',
+    activeClassName: 'border-amber-400 bg-amber-500 text-white shadow-[0_14px_30px_rgba(245,158,11,0.28)]',
+  },
+  {
+    type: 'METOO',
+    emoji: '🙋',
+    label: '나도 관심',
+    activeClassName: 'border-rose-400 bg-rose-500 text-white shadow-[0_14px_30px_rgba(244,63,94,0.28)]',
+  },
+  {
+    type: 'WATCH',
+    emoji: '👀',
+    label: '관망중',
+    activeClassName: 'border-sky-400 bg-sky-500 text-white shadow-[0_14px_30px_rgba(14,165,233,0.28)]',
+  },
+  {
+    type: 'PASS',
+    emoji: '😅',
+    label: '패스',
+    activeClassName: 'border-slate-400 bg-slate-500 text-white shadow-[0_14px_30px_rgba(71,85,105,0.28)]',
+  },
+];
+
 type AllocationItem = {
   item: PortfolioItem;
   value: number;
   weight: number;
 };
 
+type LivePriceMap = Record<string, { price?: string }>;
+
+const USD_TO_KRW_RATE_FALLBACK = 1_350;
+
 function getPortfolioTitle(item: PortfolioItem) {
   return item.nameKr || item.nameEn || item.symbol;
 }
 
-function getPortfolioValue(items: PortfolioItem[]) {
-  return items.reduce((sum, item) => sum + item.quantity * item.averagePrice, 0);
+function isCashAsset(item: Pick<PortfolioItem, 'symbol' | 'market'>) {
+  return item.market === 'CASH' || item.symbol === 'KRW' || item.symbol === 'USD';
 }
 
-function getAllocation(items: PortfolioItem[]) {
-  const totalValue = getPortfolioValue(items);
+function parsePriceValue(rawValue: string | undefined, fallback: number) {
+  if (!rawValue) {
+    return fallback;
+  }
+
+  const parsed = Number(String(rawValue).replace(/,/g, '').trim());
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function parseUsdKrwRate(indices: { symbol: string; name: string; price: string; type?: string }[] | undefined) {
+  const exchangeRate = indices?.find(
+    (index) =>
+      index.symbol?.includes('USD_KRW') ||
+      index.symbol === 'OANDA:USD_KRW' ||
+      index.name?.includes('환율') ||
+      index.type === 'FOREX',
+  );
+
+  const parsed = Number(exchangeRate?.price?.replace(/,/g, '').trim());
+  return Number.isFinite(parsed) ? parsed : USD_TO_KRW_RATE_FALLBACK;
+}
+
+function getCurrentUnitPrice(item: PortfolioItem, livePrices?: LivePriceMap) {
+  if (isCashAsset(item)) {
+    return item.averagePrice;
+  }
+
+  return parsePriceValue(livePrices?.[item.symbol]?.price, item.averagePrice);
+}
+
+function getEstimatedValue(item: PortfolioItem, livePrices?: LivePriceMap, usdToKrwRate = USD_TO_KRW_RATE_FALLBACK) {
+  const baseValue = isCashAsset(item)
+    ? item.quantity * item.averagePrice
+    : item.quantity * getCurrentUnitPrice(item, livePrices);
+
+  return item.currency === 'USD' ? baseValue * usdToKrwRate : baseValue;
+}
+
+function getPortfolioValue(items: PortfolioItem[], livePrices?: LivePriceMap, usdToKrwRate = USD_TO_KRW_RATE_FALLBACK) {
+  return items.reduce((sum, item) => sum + getEstimatedValue(item, livePrices, usdToKrwRate), 0);
+}
+
+function getAllocation(items: PortfolioItem[], livePrices?: LivePriceMap, usdToKrwRate = USD_TO_KRW_RATE_FALLBACK) {
+  const totalValue = getPortfolioValue(items, livePrices, usdToKrwRate);
 
   return [...items]
     .map((item) => {
-      const value = item.quantity * item.averagePrice;
+      const value = getEstimatedValue(item, livePrices, usdToKrwRate);
       const weight = totalValue <= 0 ? 0 : (value * 100) / totalValue;
 
       return { item, value, weight };
     })
     .sort((a, b) => b.value - a.value);
+}
+
+function formatCompactKrw(value: number) {
+  const abs = Math.abs(value);
+
+  if (abs >= 1_0000_0000_0000) {
+    return `₩${(value / 1_0000_0000_0000).toFixed(1)}조`;
+  }
+
+  if (abs >= 1_0000_0000) {
+    return `₩${(value / 1_0000_0000).toFixed(1)}억`;
+  }
+
+  if (abs >= 1_0000) {
+    return `₩${(value / 1_0000).toFixed(1)}만`;
+  }
+
+  return formatCurrency(value, 'KRW');
+}
+
+function getPortfolioPerformance(
+  items: PortfolioItem[],
+  livePrices?: LivePriceMap,
+  usdToKrwRate = USD_TO_KRW_RATE_FALLBACK,
+) {
+  return items.reduce(
+    (acc, item) => {
+      if (isCashAsset(item)) {
+        return {
+          ...acc,
+          totalValue: acc.totalValue + getEstimatedValue(item, livePrices, usdToKrwRate),
+          totalCost: acc.totalCost + getEstimatedValue(item),
+        };
+      }
+
+      const currentValue = getEstimatedValue(item, livePrices, usdToKrwRate);
+      const costBasis = getEstimatedValue(item);
+
+      return {
+        totalValue: acc.totalValue + currentValue,
+        totalCost: acc.totalCost + costBasis,
+      };
+    },
+    { totalValue: 0, totalCost: 0 },
+  );
 }
 
 function getConcentrationLabel(items: AllocationItem[]) {
@@ -91,16 +224,135 @@ function isPrivateSharedPortfolio(member: GroupMember) {
   return member.sharedPortfolioIsPublic === false;
 }
 
+function normalizeReactions(reactions?: ReactionCount[] | null) {
+  return REACTION_OPTIONS.map((option) => {
+    const matched = reactions?.find((reaction) => reaction.type === option.type);
+
+    return {
+      type: option.type,
+      count: matched?.count ?? 0,
+      reactedByMe: matched?.reactedByMe ?? false,
+    };
+  });
+}
+
+function ReactionButtons(props: {
+  membershipId: number;
+  initialReactions?: ReactionCount[] | null;
+}) {
+  const queryClient = useQueryClient();
+  const pushToast = useToastStore((state) => state.push);
+  const [reactions, setReactions] = useState(() => normalizeReactions(props.initialReactions));
+  const [pendingType, setPendingType] = useState<ReactionType | null>(null);
+
+  useEffect(() => {
+    setReactions(normalizeReactions(props.initialReactions));
+  }, [props.initialReactions]);
+
+  async function handleToggle(type: ReactionType) {
+    if (pendingType) {
+      return;
+    }
+
+    const previousReactions = reactions;
+    const nextReactions = reactions.map((reaction) => {
+      if (reaction.type !== type) {
+        return reaction;
+      }
+
+      const reactedByMe = !reaction.reactedByMe;
+      return {
+        ...reaction,
+        reactedByMe,
+        count: Math.max(0, reaction.count + (reactedByMe ? 1 : -1)),
+      };
+    });
+
+    setReactions(nextReactions);
+    setPendingType(type);
+
+    try {
+      await toggleReaction(props.membershipId, type);
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+    } catch (error) {
+      console.error(error);
+      setReactions(previousReactions);
+      pushToast('반응을 반영하지 못했어요.', 'error');
+    } finally {
+      setPendingType(null);
+    }
+  }
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold text-[color:var(--text-main)]">한마디 반응</p>
+          <p className="mt-1 text-xs text-[color:var(--text-sub)]">보드를 보면서 바로 감상을 남겨보세요.</p>
+        </div>
+        <span className="rounded-full border border-[color:var(--soft-panel-border)] bg-[color:var(--soft-panel-bg)] px-3 py-1 text-[11px] font-semibold text-[color:var(--text-sub)]">
+          탭해서 반응
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {REACTION_OPTIONS.map((option) => {
+          const reaction = reactions.find((item) => item.type === option.type);
+          const isActive = reaction?.reactedByMe;
+          const isPending = pendingType === option.type;
+
+          return (
+            <button
+              key={option.type}
+              type="button"
+              onClick={() => void handleToggle(option.type)}
+              disabled={pendingType !== null}
+              className={`rounded-[20px] border px-3 py-3 text-left transition ${
+                isActive
+                  ? option.activeClassName
+                  : 'mobile-soft-card text-[color:var(--text-main)] hover:bg-[color:var(--nav-hover-bg)]'
+              } ${isPending ? 'opacity-70' : ''}`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="text-lg leading-none">{option.emoji}</span>
+                  <span className={`truncate text-sm font-semibold ${isActive ? 'text-white' : 'text-[color:var(--text-main)]'}`}>
+                    {option.label}
+                  </span>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                    isActive
+                      ? 'bg-white/20 text-white'
+                      : 'bg-[color:var(--soft-panel-bg)] text-[color:var(--text-sub)]'
+                  }`}
+                >
+                  {reaction?.count ?? 0}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function SharedBoardCard(props: {
   member: GroupMember;
   current: number;
   total: number;
+  livePrices: LivePriceMap;
+  usdToKrwRate: number;
   onOpenDetail: () => void;
 }) {
   const items = props.member.sharedPortfolioItems ?? [];
-  const allocation = getAllocation(items);
-  const totalValue = getPortfolioValue(items);
+  const allocation = getAllocation(items, props.livePrices, props.usdToKrwRate);
+  const totalValue = getPortfolioValue(items, props.livePrices, props.usdToKrwRate);
   const topThreeWeight = allocation.slice(0, 3).reduce((sum, item) => sum + item.weight, 0);
+  const performance = getPortfolioPerformance(items, props.livePrices, props.usdToKrwRate);
+  const profitLoss = performance.totalValue - performance.totalCost;
+  const profitRate = performance.totalCost > 0 ? (profitLoss / performance.totalCost) * 100 : 0;
   const isPrivate = isPrivateSharedPortfolio(props.member);
   const remainingWeight = Math.max(
     0,
@@ -135,7 +387,7 @@ function SharedBoardCard(props: {
         <div className="mobile-soft-card rounded-[22px] border px-3 py-3">
           <p className="text-[11px] text-[color:var(--text-sub)]">총 평가금액</p>
           <p className="mt-1 text-sm font-bold text-[color:var(--text-main)]">
-            {isPrivate ? '비중만 공개' : formatCurrency(totalValue, allocation[0]?.item.currency || 'KRW')}
+            {isPrivate ? '비중만 공개' : formatCompactKrw(totalValue)}
           </p>
         </div>
         <div className="mobile-soft-card rounded-[22px] border px-3 py-3">
@@ -147,6 +399,35 @@ function SharedBoardCard(props: {
           <p className="mt-1 text-sm font-bold text-[color:var(--text-main)]">{topThreeWeight.toFixed(1)}%</p>
         </div>
       </div>
+
+      {!isPrivate ? (
+        <div className="mobile-soft-card mt-3 rounded-[24px] border px-4 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-sub)]">
+                수익률
+              </p>
+              <p
+                className={`mt-2 text-xl font-black ${
+                  profitLoss < 0 ? 'text-emerald-500' : 'text-rose-500'
+                }`}
+              >
+                {profitRate >= 0 ? '+' : ''}{profitRate.toFixed(2)}%
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[11px] text-[color:var(--text-sub)]">평가손익</p>
+              <p
+                className={`mt-1 text-sm font-bold ${
+                  profitLoss < 0 ? 'text-emerald-500' : 'text-rose-500'
+                }`}
+              >
+                {formatCurrency(profitLoss, 'KRW')}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mobile-soft-card mt-4 rounded-[26px] border px-4 py-4">
         <div className="flex items-start justify-between gap-4">
@@ -224,6 +505,8 @@ function SharedBoardCard(props: {
             </button>
           ) : null}
         </div>
+
+        <ReactionButtons membershipId={props.member.id} initialReactions={props.member.reactions} />
       </div>
     </div>
   );
@@ -231,12 +514,17 @@ function SharedBoardCard(props: {
 
 function PortfolioDetailSheet(props: {
   member: GroupMember;
+  livePrices: LivePriceMap;
+  usdToKrwRate: number;
   onClose: () => void;
 }) {
   const items = props.member.sharedPortfolioItems ?? [];
-  const allocation = getAllocation(items);
-  const totalValue = getPortfolioValue(items);
+  const allocation = getAllocation(items, props.livePrices, props.usdToKrwRate);
+  const totalValue = getPortfolioValue(items, props.livePrices, props.usdToKrwRate);
   const topThreeWeight = allocation.slice(0, 3).reduce((sum, item) => sum + item.weight, 0);
+  const performance = getPortfolioPerformance(items, props.livePrices, props.usdToKrwRate);
+  const profitLoss = performance.totalValue - performance.totalCost;
+  const profitRate = performance.totalCost > 0 ? (profitLoss / performance.totalCost) * 100 : 0;
   const isPrivate = isPrivateSharedPortfolio(props.member);
 
   return (
@@ -267,7 +555,7 @@ function PortfolioDetailSheet(props: {
             <div className="mobile-soft-card rounded-[22px] border px-3 py-3">
               <p className="text-[11px] text-[color:var(--text-sub)]">총 평가금액</p>
               <p className="mt-1 text-sm font-bold text-[color:var(--text-main)]">
-                {isPrivate ? '비중만 공개' : formatCurrency(totalValue, allocation[0]?.item.currency || 'KRW')}
+                {isPrivate ? '비중만 공개' : formatCompactKrw(totalValue)}
               </p>
             </div>
             <div className="mobile-soft-card rounded-[22px] border px-3 py-3">
@@ -279,6 +567,33 @@ function PortfolioDetailSheet(props: {
               <p className="mt-1 text-sm font-bold text-[color:var(--text-main)]">{topThreeWeight.toFixed(1)}%</p>
             </div>
           </div>
+
+          {!isPrivate ? (
+            <div className="mobile-soft-card rounded-[24px] border px-4 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-[color:var(--text-main)]">실시간 수익률</p>
+                  <p
+                    className={`mt-1 text-2xl font-black ${
+                      profitLoss < 0 ? 'text-emerald-500' : 'text-rose-500'
+                    }`}
+                  >
+                    {profitRate >= 0 ? '+' : ''}{profitRate.toFixed(2)}%
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-[color:var(--text-sub)]">평가손익</p>
+                  <p
+                    className={`mt-1 text-sm font-bold ${
+                      profitLoss < 0 ? 'text-emerald-500' : 'text-rose-500'
+                    }`}
+                  >
+                    {formatCurrency(profitLoss, 'KRW')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <div className="mobile-soft-card rounded-[24px] border px-4 py-4">
             <div className="flex items-center justify-between gap-3">
@@ -356,6 +671,8 @@ export function GroupsPage() {
   const queryClient = useQueryClient();
   const pushToast = useToastStore((state) => state.push);
   const user = useAuthStore((state) => state.user);
+  const { subscribe } = useStockWebSocket();
+  const livePrices = useStockStore((state) => state.prices);
   const [entryMode, setEntryMode] = useState<EntryMode | null>(null);
   const [createForm, setCreateForm] = useState({ name: '', description: '' });
   const [joinCode, setJoinCode] = useState('');
@@ -386,6 +703,18 @@ export function GroupsPage() {
     queryFn: () => getGroupFeed(selectedGroupId as number),
     enabled: selectedGroupId !== null,
   });
+
+  const marketIndicesQuery = useQuery({
+    queryKey: ['market-indices'],
+    queryFn: getMarketIndices,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
+
+  const usdToKrwRate = useMemo(
+    () => parseUsdKrwRate(marketIndicesQuery.data),
+    [marketIndicesQuery.data],
+  );
 
   useEffect(() => {
     if (!selectedGroupId && groupsQuery.data?.length) {
@@ -454,6 +783,22 @@ export function GroupsPage() {
           member.sharedPortfolioItems.length > 0,
       ) ?? [],
     [selectedGroup],
+  );
+
+  const groupSymbols = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          sharedMembers.flatMap((member) =>
+            member.sharedPortfolioIsPublic === false
+              ? []
+              : (member.sharedPortfolioItems ?? [])
+                  .filter((item) => !isCashAsset(item))
+                  .map((item) => item.symbol),
+          ),
+        ),
+      ),
+    [sharedMembers],
   );
 
   const currentBoard = sharedMembers[selectedBoardIndex] ?? null;
@@ -543,6 +888,14 @@ export function GroupsPage() {
       pushToast(`초대 코드: ${selectedGroup.inviteCode}`, 'info');
     }
   }
+
+  useEffect(() => {
+    if (entryMode !== 'view') {
+      return;
+    }
+
+    groupSymbols.forEach((symbol) => subscribe(symbol));
+  }, [entryMode, groupSymbols, subscribe]);
 
   function renderGroupChips() {
     return (
@@ -842,6 +1195,8 @@ export function GroupsPage() {
                           member={currentBoard}
                           current={selectedBoardIndex + 1}
                           total={sharedMembers.length}
+                          livePrices={livePrices}
+                          usdToKrwRate={usdToKrwRate}
                           onOpenDetail={() => setDetailMemberId(currentBoard.id)}
                         />
                       </div>
@@ -912,7 +1267,12 @@ export function GroupsPage() {
       )}
 
       {detailMember ? (
-        <PortfolioDetailSheet member={detailMember} onClose={() => setDetailMemberId(null)} />
+        <PortfolioDetailSheet
+          member={detailMember}
+          livePrices={livePrices}
+          usdToKrwRate={usdToKrwRate}
+          onClose={() => setDetailMemberId(null)}
+        />
       ) : null}
     </div>
   );
