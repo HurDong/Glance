@@ -71,13 +71,13 @@ export function HomePage() {
               return (
                 <div
                   key={item.symbol}
-                  className="rounded-[24px] border border-white/10 bg-white/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                  className="mobile-soft-card rounded-[24px] border p-4"
                 >
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-sub)]">
                     {item.symbol}
                   </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-100">{item.name}</p>
-                  <p className="mt-3 text-xl font-bold text-white">{item.price}</p>
+                  <p className="mt-2 text-sm font-semibold text-[color:var(--text-main)]">{item.name}</p>
+                  <p className="mt-3 text-xl font-bold text-[color:var(--text-main)]">{item.price}</p>
                   <p
                     className={`mt-1 text-sm font-semibold ${
                       isNegative ? 'text-emerald-400' : 'text-rose-400'
@@ -100,15 +100,15 @@ export function HomePage() {
       <SectionCard title="대표 포트폴리오" description="가장 자주 보는 자산만 먼저 이어서 보여드릴게요.">
         {portfolio ? (
           <div className="space-y-3">
-            <div className="rounded-[26px] border border-blue-400/10 bg-[linear-gradient(160deg,rgba(59,130,246,0.18),rgba(15,23,42,0.18))] px-4 py-4">
+            <div className="mobile-hero-card rounded-[26px] border px-4 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-lg font-bold text-white">{portfolio.name}</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-300">
+                  <p className="text-lg font-bold text-[color:var(--text-main)]">{portfolio.name}</p>
+                  <p className="mt-1 text-sm leading-6 text-[color:var(--text-sub)]">
                     {portfolio.description || '대표 자산 흐름을 빠르게 보기 좋게 준비해뒀어요.'}
                   </p>
                 </div>
-                <span className="shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-slate-100">
+                <span className="shrink-0 whitespace-nowrap rounded-full border border-[color:var(--soft-panel-border)] bg-[color:var(--soft-panel-bg)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--text-main)]">
                   {portfolio.isPublic ? '공개' : '비공개'}
                 </span>
               </div>
@@ -118,17 +118,17 @@ export function HomePage() {
               {portfolio.items.slice(0, 4).map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between rounded-[22px] border border-white/10 bg-white/[0.03] px-4 py-3"
+                  className="mobile-soft-card flex items-center justify-between rounded-[22px] border px-4 py-3"
                 >
                   <div>
-                    <p className="font-semibold text-slate-100">
+                    <p className="font-semibold text-[color:var(--text-main)]">
                       {item.nameKr || item.nameEn || item.symbol}
                     </p>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-[color:var(--text-sub)]">
                       {item.symbol} · {formatNumber(item.quantity)}주
                     </p>
                   </div>
-                  <p className="text-sm font-semibold text-slate-200">
+                  <p className="text-sm font-semibold text-[color:var(--text-main)]">
                     {formatCurrency(item.averagePrice, item.currency)}
                   </p>
                 </div>
@@ -149,7 +149,7 @@ export function HomePage() {
         action={
           <Link
             to="/explore"
-            className="inline-flex h-10 shrink-0 items-center gap-1 whitespace-nowrap rounded-2xl border border-blue-400/20 bg-blue-500/12 px-3 text-sm font-semibold text-blue-200"
+            className="inline-flex h-10 shrink-0 items-center gap-1 whitespace-nowrap rounded-2xl border border-[color:var(--soft-panel-border)] bg-[color:var(--soft-panel-bg)] px-3 text-sm font-semibold text-[color:var(--brand-solid)]"
           >
             더보기
             <ArrowRight size={15} />
@@ -161,17 +161,17 @@ export function HomePage() {
             {interestQuery.data.slice(0, 5).map((item) => (
               <div
                 key={item.id}
-                className="flex items-center justify-between rounded-[22px] border border-white/10 bg-white/[0.03] px-4 py-3"
+                className="mobile-soft-card flex items-center justify-between rounded-[22px] border px-4 py-3"
               >
                 <div>
-                  <p className="font-semibold text-slate-100">
+                  <p className="font-semibold text-[color:var(--text-main)]">
                     {item.nameKr || item.nameEn || item.symbol}
                   </p>
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-[color:var(--text-sub)]">
                     {item.symbol} · {item.market}
                   </p>
                 </div>
-                <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-400/12 text-amber-300">
+                <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-400/12 text-amber-600 dark:text-amber-300">
                   <Star size={16} className="fill-current" />
                 </span>
               </div>
@@ -189,17 +189,17 @@ export function HomePage() {
         <SectionCard
           title="포트폴리오"
           description="내 자산 묶음"
-          action={<Layers3 size={18} className="text-blue-300" />}
+          action={<Layers3 size={18} className="text-[color:var(--brand-solid)]" />}
         >
-          <p className="text-2xl font-bold text-white">{portfoliosQuery.data?.length || 0}</p>
+          <p className="text-2xl font-bold text-[color:var(--text-main)]">{portfoliosQuery.data?.length || 0}</p>
         </SectionCard>
 
         <SectionCard
           title="그룹"
           description="함께 보는 공간"
-          action={<Users size={18} className="text-slate-200" />}
+          action={<Users size={18} className="text-[color:var(--text-sub)]" />}
         >
-          <p className="text-2xl font-bold text-white">{groupsQuery.data?.length || 0}</p>
+          <p className="text-2xl font-bold text-[color:var(--text-main)]">{groupsQuery.data?.length || 0}</p>
         </SectionCard>
       </div>
     </div>

@@ -17,12 +17,23 @@
   --shell-button-hover: rgba(255, 255, 255, 0.08);
 
   --nav-bg: rgba(2, 6, 23, 0.82);
-  --nav-active-bg: rgba(59, 130, 246, 0.18);
-  --nav-active-text: #bae6fd;
+  --nav-active-bg: rgba(59, 130, 246, 0.2);
+  --nav-active-text: #eff6ff;
   --nav-inactive-text: #94a3b8;
-  --nav-hover-bg: rgba(255, 255, 255, 0.05);
+  --nav-hover-bg: rgba(255, 255, 255, 0.06);
 
   --card-bg: rgba(2, 6, 23, 0.58);
+  --hero-bg: linear-gradient(145deg, rgba(15, 23, 42, 0.96) 0%, rgba(17, 24, 39, 0.94) 45%, rgba(15, 38, 84, 0.9) 100%);
+  --hero-border: rgba(255, 255, 255, 0.1);
+  --soft-panel-bg: rgba(255, 255, 255, 0.04);
+  --soft-panel-border: rgba(255, 255, 255, 0.1);
+  --field-bg: rgba(2, 6, 23, 0.72);
+  --chip-active-bg: rgba(59, 130, 246, 0.18);
+  --chip-active-border: rgba(96, 165, 250, 0.34);
+  --chip-active-text: #e0f2fe;
+  --chip-idle-bg: rgba(255, 255, 255, 0.05);
+  --chip-idle-border: rgba(255, 255, 255, 0.1);
+  --chip-idle-text: #94a3b8;
   --card-border: rgba(255, 255, 255, 0.1);
   --empty-bg: rgba(15, 23, 42, 0.65);
   --toast-info-bg: rgba(2, 6, 23, 0.88);
@@ -55,12 +66,23 @@ html[data-theme='light'] {
   --shell-button-hover: rgba(226, 232, 240, 0.95);
 
   --nav-bg: rgba(255, 255, 255, 0.9);
-  --nav-active-bg: rgba(37, 99, 235, 0.12);
-  --nav-active-text: #1d4ed8;
-  --nav-inactive-text: #64748b;
-  --nav-hover-bg: rgba(226, 232, 240, 0.75);
+  --nav-active-bg: rgba(37, 99, 235, 0.94);
+  --nav-active-text: #eff6ff;
+  --nav-inactive-text: #5b6b82;
+  --nav-hover-bg: rgba(226, 232, 240, 0.9);
 
-  --card-bg: rgba(255, 255, 255, 0.78);
+  --card-bg: rgba(255, 255, 255, 0.82);
+  --hero-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.96) 0%, rgba(239, 246, 255, 0.96) 48%, rgba(219, 234, 254, 0.92) 100%);
+  --hero-border: rgba(148, 163, 184, 0.22);
+  --soft-panel-bg: rgba(255, 255, 255, 0.78);
+  --soft-panel-border: rgba(148, 163, 184, 0.22);
+  --field-bg: rgba(255, 255, 255, 0.96);
+  --chip-active-bg: rgba(37, 99, 235, 0.96);
+  --chip-active-border: rgba(37, 99, 235, 0.96);
+  --chip-active-text: #eff6ff;
+  --chip-idle-bg: rgba(255, 255, 255, 0.82);
+  --chip-idle-border: rgba(148, 163, 184, 0.22);
+  --chip-idle-text: #526277;
   --card-border: rgba(148, 163, 184, 0.2);
   --empty-bg: rgba(248, 250, 252, 0.92);
   --toast-info-bg: rgba(255, 255, 255, 0.96);
@@ -130,4 +152,41 @@ a {
 
 html[data-theme='light'] ::selection {
   color: #eff6ff;
+}
+
+@layer utilities {
+  .mobile-hero-card {
+    background: var(--hero-bg);
+    border-color: var(--hero-border);
+  }
+
+  .mobile-soft-card {
+    background: var(--soft-panel-bg);
+    border-color: var(--soft-panel-border);
+  }
+
+  .mobile-chip-active {
+    background: var(--chip-active-bg);
+    border-color: var(--chip-active-border);
+    color: var(--chip-active-text);
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
+  }
+
+  .mobile-chip-idle {
+    background: var(--chip-idle-bg);
+    border-color: var(--chip-idle-border);
+    color: var(--chip-idle-text);
+  }
+
+  .mobile-field {
+    background: var(--field-bg);
+    border-color: var(--soft-panel-border);
+    color: var(--text-main);
+  }
+
+  .mobile-icon-surface {
+    background: var(--soft-panel-bg);
+    border-color: var(--soft-panel-border);
+    color: var(--text-main);
+  }
 }

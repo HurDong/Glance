@@ -129,9 +129,9 @@ export function AppShell() {
               end={item.end}
               className={({ isActive }) =>
                 cn(
-                  'flex min-w-0 flex-col items-center gap-1 rounded-[22px] px-1.5 py-3 text-[10px] font-semibold transition',
+                  'flex min-w-0 flex-col items-center gap-1 rounded-[22px] px-1.5 py-3 text-[10px] font-semibold transition shadow-sm',
                   isActive
-                    ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-active-text)]'
+                    ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-active-text)] shadow-[0_10px_22px_rgba(37,99,235,0.22)]'
                     : 'text-[color:var(--nav-inactive-text)] hover:bg-[color:var(--nav-hover-bg)] hover:text-[color:var(--text-main)]',
                 )
               }

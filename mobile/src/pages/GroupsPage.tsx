@@ -75,7 +75,7 @@ function getConcentrationLabel(items: AllocationItem[]) {
 
 function AllocationBar(props: { items: AllocationItem[] }) {
   return (
-    <div className="flex h-3 overflow-hidden rounded-full bg-white/10">
+    <div className="flex h-3 overflow-hidden rounded-full bg-[color:var(--soft-panel-border)]">
       {props.items.map((allocation, index) => (
         <div
           key={allocation.item.id}
@@ -108,61 +108,61 @@ function SharedBoardCard(props: {
   );
 
   return (
-    <div className="overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(160deg,rgba(2,6,23,0.98),rgba(15,23,42,0.97),rgba(30,41,59,0.97))] p-5 shadow-card">
+    <div className="mobile-hero-card overflow-hidden rounded-[32px] border p-5 shadow-card">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-blue-200/80">{props.member.member.nickname}</p>
-          <h3 className="mt-2 truncate text-2xl font-black tracking-tight text-white">
+          <p className="text-sm font-semibold text-[color:var(--brand-accent)]">{props.member.member.nickname}</p>
+          <h3 className="mt-2 truncate text-2xl font-black tracking-tight text-[color:var(--text-main)]">
             {props.member.sharedPortfolioName}
           </h3>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-[color:var(--text-sub)]">
             어떤 종목에 얼마만큼 실었는지 비중으로 바로 볼 수 있어요.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {isPrivate ? (
-            <span className="whitespace-nowrap rounded-full border border-amber-200/20 bg-amber-400/12 px-3 py-1 text-[10px] font-semibold text-amber-100">
+            <span className="whitespace-nowrap rounded-full border border-amber-200/20 bg-amber-400/12 px-3 py-1 text-[10px] font-semibold text-amber-700 dark:text-amber-100">
               비공개
             </span>
           ) : null}
-          <span className="whitespace-nowrap rounded-full border border-blue-200/20 bg-blue-400/12 px-3 py-1 text-[10px] font-semibold text-blue-100">
+          <span className="whitespace-nowrap rounded-full border border-blue-200/20 bg-blue-400/12 px-3 py-1 text-[10px] font-semibold text-[color:var(--brand-solid)]">
             {props.current} / {props.total}
           </span>
         </div>
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-3">
-        <div className="rounded-[22px] border border-white/10 bg-white/[0.05] px-3 py-3">
-          <p className="text-[11px] text-slate-400">총 평가금액</p>
-          <p className="mt-1 text-sm font-bold text-white">
+        <div className="mobile-soft-card rounded-[22px] border px-3 py-3">
+          <p className="text-[11px] text-[color:var(--text-sub)]">총 평가금액</p>
+          <p className="mt-1 text-sm font-bold text-[color:var(--text-main)]">
             {isPrivate ? '비중만 공개' : formatCurrency(totalValue, allocation[0]?.item.currency || 'KRW')}
           </p>
         </div>
-        <div className="rounded-[22px] border border-white/10 bg-white/[0.05] px-3 py-3">
-          <p className="text-[11px] text-slate-400">보유 종목</p>
-          <p className="mt-1 text-sm font-bold text-white">{allocation.length}개</p>
+        <div className="mobile-soft-card rounded-[22px] border px-3 py-3">
+          <p className="text-[11px] text-[color:var(--text-sub)]">보유 종목</p>
+          <p className="mt-1 text-sm font-bold text-[color:var(--text-main)]">{allocation.length}개</p>
         </div>
-        <div className="rounded-[22px] border border-white/10 bg-white/[0.05] px-3 py-3">
-          <p className="text-[11px] text-slate-400">상위 3개</p>
-          <p className="mt-1 text-sm font-bold text-white">{topThreeWeight.toFixed(1)}%</p>
+        <div className="mobile-soft-card rounded-[22px] border px-3 py-3">
+          <p className="text-[11px] text-[color:var(--text-sub)]">상위 3개</p>
+          <p className="mt-1 text-sm font-bold text-[color:var(--text-main)]">{topThreeWeight.toFixed(1)}%</p>
         </div>
       </div>
 
-      <div className="mt-4 rounded-[26px] border border-white/10 bg-white/[0.04] px-4 py-4">
+      <div className="mobile-soft-card mt-4 rounded-[26px] border px-4 py-4">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-sub)]">
               allocation map
             </p>
-            <p className="mt-2 text-lg font-bold text-white">{getConcentrationLabel(allocation)}</p>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-2 text-lg font-bold text-[color:var(--text-main)]">{getConcentrationLabel(allocation)}</p>
+            <p className="mt-1 text-sm text-[color:var(--text-sub)]">
               구성 비율이 큰 순서대로 흐름을 볼 수 있어요.
             </p>
           </div>
           <button
             type="button"
             onClick={props.onOpenDetail}
-            className="shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.06] px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/[0.1]"
+            className="mobile-chip-idle shrink-0 whitespace-nowrap rounded-full border px-3 py-2 text-xs font-semibold transition hover:bg-[color:var(--nav-hover-bg)]"
           >
             전체 구성 보기
           </button>
@@ -173,7 +173,7 @@ function SharedBoardCard(props: {
         </div>
 
         {isPrivate ? (
-          <div className="mt-3 rounded-[18px] border border-amber-300/15 bg-amber-400/10 px-3 py-3 text-sm text-amber-100">
+          <div className="mt-3 rounded-[18px] border border-amber-300/15 bg-amber-400/10 px-3 py-3 text-sm text-amber-700 dark:text-amber-100">
             비중과 종목만 공개돼요. 금액, 수량, 평단가는 숨겨집니다.
           </div>
         ) : null}
@@ -182,7 +182,7 @@ function SharedBoardCard(props: {
           {allocation.slice(0, 5).map((allocationItem, index) => (
             <div
               key={allocationItem.item.id}
-              className="rounded-[20px] border border-white/8 bg-white/[0.03] px-3 py-3"
+              className="mobile-soft-card rounded-[20px] border px-3 py-3"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
@@ -190,17 +190,17 @@ function SharedBoardCard(props: {
                     <span
                       className={`h-2.5 w-2.5 shrink-0 rounded-full bg-gradient-to-r ${ALLOCATION_COLORS[index % ALLOCATION_COLORS.length]}`}
                     />
-                    <p className="truncate font-semibold text-white">
+                    <p className="truncate font-semibold text-[color:var(--text-main)]">
                       {getPortfolioTitle(allocationItem.item)}
                     </p>
                   </div>
-                  <p className="mt-1 truncate text-xs text-slate-400">
+                  <p className="mt-1 truncate text-xs text-[color:var(--text-sub)]">
                     {allocationItem.item.market} · {allocationItem.item.symbol}
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="text-sm font-bold text-white">{allocationItem.weight.toFixed(1)}%</p>
-                  <p className="mt-1 text-xs text-slate-400">
+                  <p className="text-sm font-bold text-[color:var(--text-main)]">{allocationItem.weight.toFixed(1)}%</p>
+                  <p className="mt-1 text-xs text-[color:var(--text-sub)]">
                     {isPrivate ? '금액 비공개' : formatCurrency(allocationItem.value, allocationItem.item.currency)}
                   </p>
                 </div>
@@ -212,15 +212,15 @@ function SharedBoardCard(props: {
             <button
               type="button"
               onClick={props.onOpenDetail}
-              className="flex w-full items-center justify-between rounded-[20px] border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-left transition hover:bg-white/[0.05]"
+              className="mobile-soft-card flex w-full items-center justify-between rounded-[20px] border border-dashed px-4 py-3 text-left transition hover:bg-[color:var(--nav-hover-bg)]"
             >
               <div>
-                <p className="font-semibold text-white">나머지 종목 더 보기</p>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="font-semibold text-[color:var(--text-main)]">나머지 종목 더 보기</p>
+                <p className="mt-1 text-xs text-[color:var(--text-sub)]">
                   {allocation.length - 5}개 종목 · {remainingWeight.toFixed(1)}%
                 </p>
               </div>
-              <BarChart3 size={18} className="text-blue-200" />
+              <BarChart3 size={18} className="text-[color:var(--brand-solid)]" />
             </button>
           ) : null}
         </div>
@@ -241,21 +241,21 @@ function PortfolioDetailSheet(props: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/60 px-4 pb-4 pt-10 backdrop-blur-sm">
-      <div className="mx-auto max-h-full w-full max-w-md overflow-hidden rounded-[32px] border border-white/10 bg-slate-950/95 shadow-card">
-        <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-5">
+      <div className="mobile-soft-card mx-auto max-h-full w-full max-w-md overflow-hidden rounded-[32px] border shadow-card">
+        <div className="flex items-start justify-between gap-4 border-b border-[color:var(--soft-panel-border)] px-5 py-5">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-blue-200/90">{props.member.member.nickname}</p>
-            <h3 className="mt-2 truncate text-xl font-black tracking-tight text-white">
+            <p className="text-sm font-semibold text-[color:var(--brand-accent)]">{props.member.member.nickname}</p>
+            <h3 className="mt-2 truncate text-xl font-black tracking-tight text-[color:var(--text-main)]">
               {props.member.sharedPortfolioName}
             </h3>
-            <p className="mt-2 text-sm leading-6 text-slate-400">
+            <p className="mt-2 text-sm leading-6 text-[color:var(--text-sub)]">
               비중 중심으로 전체 구성을 자세히 볼 수 있어요.
             </p>
           </div>
           <button
             type="button"
             onClick={props.onClose}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white"
+            className="mobile-icon-surface flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border"
             aria-label="상세 닫기"
           >
             <X size={16} />
@@ -264,35 +264,35 @@ function PortfolioDetailSheet(props: {
 
         <div className="max-h-[70vh] space-y-5 overflow-y-auto px-5 py-5">
           <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-[22px] border border-white/10 bg-white/[0.05] px-3 py-3">
-              <p className="text-[11px] text-slate-400">총 평가금액</p>
-              <p className="mt-1 text-sm font-bold text-white">
+            <div className="mobile-soft-card rounded-[22px] border px-3 py-3">
+              <p className="text-[11px] text-[color:var(--text-sub)]">총 평가금액</p>
+              <p className="mt-1 text-sm font-bold text-[color:var(--text-main)]">
                 {isPrivate ? '비중만 공개' : formatCurrency(totalValue, allocation[0]?.item.currency || 'KRW')}
               </p>
             </div>
-            <div className="rounded-[22px] border border-white/10 bg-white/[0.05] px-3 py-3">
-              <p className="text-[11px] text-slate-400">보유 종목</p>
-              <p className="mt-1 text-sm font-bold text-white">{allocation.length}개</p>
+            <div className="mobile-soft-card rounded-[22px] border px-3 py-3">
+              <p className="text-[11px] text-[color:var(--text-sub)]">보유 종목</p>
+              <p className="mt-1 text-sm font-bold text-[color:var(--text-main)]">{allocation.length}개</p>
             </div>
-            <div className="rounded-[22px] border border-white/10 bg-white/[0.05] px-3 py-3">
-              <p className="text-[11px] text-slate-400">상위 3개</p>
-              <p className="mt-1 text-sm font-bold text-white">{topThreeWeight.toFixed(1)}%</p>
+            <div className="mobile-soft-card rounded-[22px] border px-3 py-3">
+              <p className="text-[11px] text-[color:var(--text-sub)]">상위 3개</p>
+              <p className="mt-1 text-sm font-bold text-[color:var(--text-main)]">{topThreeWeight.toFixed(1)}%</p>
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-4">
+          <div className="mobile-soft-card rounded-[24px] border px-4 py-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-bold text-white">전체 비중</p>
-                <p className="mt-1 text-xs text-slate-400">종목별 자산 비중을 한 번에 봅니다.</p>
+                <p className="text-sm font-bold text-[color:var(--text-main)]">전체 비중</p>
+                <p className="mt-1 text-xs text-[color:var(--text-sub)]">종목별 자산 비중을 한 번에 봅니다.</p>
               </div>
-              <BarChart3 size={18} className="text-blue-200" />
+              <BarChart3 size={18} className="text-[color:var(--brand-solid)]" />
             </div>
             <div className="mt-4">
               <AllocationBar items={allocation} />
             </div>
             {isPrivate ? (
-              <div className="mt-3 rounded-[18px] border border-amber-300/15 bg-amber-400/10 px-3 py-3 text-sm text-amber-100">
+              <div className="mt-3 rounded-[18px] border border-amber-300/15 bg-amber-400/10 px-3 py-3 text-sm text-amber-700 dark:text-amber-100">
                 비중과 종목만 공개돼요. 금액, 수량, 평단가는 숨겨집니다.
               </div>
             ) : null}
@@ -302,7 +302,7 @@ function PortfolioDetailSheet(props: {
             {allocation.map((allocationItem, index) => (
               <div
                 key={allocationItem.item.id}
-                className="rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-4"
+                className="mobile-soft-card rounded-[24px] border px-4 py-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -310,25 +310,25 @@ function PortfolioDetailSheet(props: {
                       <span
                         className={`h-2.5 w-2.5 shrink-0 rounded-full bg-gradient-to-r ${ALLOCATION_COLORS[index % ALLOCATION_COLORS.length]}`}
                       />
-                      <p className="truncate font-bold text-white">
+                      <p className="truncate font-bold text-[color:var(--text-main)]">
                         {getPortfolioTitle(allocationItem.item)}
                       </p>
                     </div>
-                    <p className="mt-1 text-sm text-slate-400">
+                    <p className="mt-1 text-sm text-[color:var(--text-sub)]">
                       {allocationItem.item.market} · {allocationItem.item.symbol}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="text-base font-black text-white">
+                    <p className="text-base font-black text-[color:var(--text-main)]">
                       {allocationItem.weight.toFixed(1)}%
                     </p>
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p className="mt-1 text-xs text-[color:var(--text-sub)]">
                       {isPrivate ? '금액 비공개' : formatCurrency(allocationItem.value, allocationItem.item.currency)}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-white/10">
+                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[color:var(--soft-panel-border)]">
                   <div
                     className={`h-full rounded-full bg-gradient-to-r ${ALLOCATION_COLORS[index % ALLOCATION_COLORS.length]}`}
                     style={{ width: `${Math.max(allocationItem.weight, 4)}%` }}
@@ -336,7 +336,7 @@ function PortfolioDetailSheet(props: {
                 </div>
 
                 {isPrivate ? null : (
-                  <div className="mt-3 flex items-center justify-between gap-3 text-xs text-slate-400">
+                  <div className="mt-3 flex items-center justify-between gap-3 text-xs text-[color:var(--text-sub)]">
                     <span>보유 수량 {allocationItem.item.quantity.toLocaleString()}</span>
                     <span>
                       평균단가 {formatCurrency(allocationItem.item.averagePrice, allocationItem.item.currency)}
@@ -525,8 +525,8 @@ export function GroupsPage() {
             onClick={() => setSelectedGroupId(group.id)}
             className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition ${
               selectedGroupId === group.id
-                ? 'border-blue-400/30 bg-blue-500/15 text-blue-100'
-                : 'border-white/10 bg-white/[0.04] text-slate-400'
+                ? 'border-blue-500 bg-blue-600 text-white shadow-[0_16px_30px_rgba(37,99,235,0.28)] dark:border-blue-400/30 dark:bg-blue-500 dark:text-white dark:shadow-none'
+                : 'mobile-chip-idle'
             }`}
           >
             {group.name}
@@ -606,36 +606,36 @@ export function GroupsPage() {
         <>
           <EntryModeTabs activeMode={entryMode} onChange={setEntryMode} />
 
-          <section className="overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(155deg,rgba(2,6,23,0.98),rgba(15,23,42,0.96),rgba(30,41,59,0.96))] px-5 py-5 shadow-card">
+          <section className="mobile-hero-card overflow-hidden rounded-[32px] border px-5 py-5 shadow-card">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-blue-200/80">그룹</p>
-                <h2 className="mt-2 text-2xl font-bold tracking-tight text-white">
+                <p className="text-sm font-medium text-[color:var(--brand-accent)]">그룹</p>
+                <h2 className="mt-2 text-2xl font-bold tracking-tight text-[color:var(--text-main)]">
                   {entryMode === 'view' ? '참여 중인 그룹을 둘러보세요' : '바로 관리해 보세요'}
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
+                <p className="mt-2 text-sm leading-6 text-[color:var(--text-sub)]">
                   {entryMode === 'view'
                     ? '같은 그룹 안에서 누가 어떤 비중으로 투자하는지 한눈에 볼 수 있어요.'
                     : '새 그룹을 만들고 참여하고 내 포트폴리오를 바로 공유할 수 있어요.'}
                 </p>
               </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-blue-100">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:var(--soft-panel-border)] bg-[color:var(--soft-panel-bg)] text-[color:var(--brand-solid)]">
                 <Sparkles size={18} />
               </div>
             </div>
 
             <div className="mt-5 grid grid-cols-3 gap-3">
-              <div className="rounded-[20px] border border-white/10 bg-white/10 px-3 py-3">
-                <p className="text-[11px] text-slate-400">내 그룹</p>
-                <p className="mt-1 text-sm font-bold text-white">{groupsQuery.data?.length || 0}</p>
+              <div className="mobile-soft-card rounded-[20px] border px-3 py-3">
+                <p className="text-[11px] text-[color:var(--text-sub)]">내 그룹</p>
+                <p className="mt-1 text-sm font-bold text-[color:var(--text-main)]">{groupsQuery.data?.length || 0}</p>
               </div>
-              <div className="rounded-[20px] border border-white/10 bg-white/10 px-3 py-3">
-                <p className="text-[11px] text-slate-400">공유 보드</p>
-                <p className="mt-1 text-sm font-bold text-white">{sharedMembers.length}</p>
+              <div className="mobile-soft-card rounded-[20px] border px-3 py-3">
+                <p className="text-[11px] text-[color:var(--text-sub)]">공유 보드</p>
+                <p className="mt-1 text-sm font-bold text-[color:var(--text-main)]">{sharedMembers.length}</p>
               </div>
-              <div className="rounded-[20px] border border-white/10 bg-white/10 px-3 py-3">
-                <p className="text-[11px] text-slate-400">최근 활동</p>
-                <p className="mt-1 text-sm font-bold text-white">{feedQuery.data?.length || 0}</p>
+              <div className="mobile-soft-card rounded-[20px] border px-3 py-3">
+                <p className="text-[11px] text-[color:var(--text-sub)]">최근 활동</p>
+                <p className="mt-1 text-sm font-bold text-[color:var(--text-main)]">{feedQuery.data?.length || 0}</p>
               </div>
             </div>
           </section>
@@ -651,7 +651,7 @@ export function GroupsPage() {
                       onChange={(event) =>
                         setCreateForm((current) => ({ ...current, name: event.target.value }))
                       }
-                      className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400/30"
+                      className="mobile-field w-full rounded-2xl border px-4 py-3 outline-none placeholder:text-[color:var(--text-sub)] focus:border-blue-400/30"
                       placeholder="그룹 이름"
                     />
                     <textarea
@@ -662,12 +662,12 @@ export function GroupsPage() {
                           description: event.target.value,
                         }))
                       }
-                      className="h-24 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400/30"
+                      className="mobile-field h-24 w-full rounded-2xl border px-4 py-3 outline-none placeholder:text-[color:var(--text-sub)] focus:border-blue-400/30"
                       placeholder="이 그룹에서 어떤 포트폴리오를 보게 될지 적어 주세요."
                     />
                     <button
                       type="submit"
-                      className="w-full rounded-2xl bg-blue-500 px-4 py-3 font-semibold text-white transition hover:bg-blue-400"
+                      className="w-full rounded-2xl bg-blue-500 px-4 py-3 font-semibold text-[color:var(--text-main)] transition hover:bg-blue-400"
                     >
                       그룹 만들기
                     </button>
@@ -680,12 +680,12 @@ export function GroupsPage() {
                       required
                       value={joinCode}
                       onChange={(event) => setJoinCode(event.target.value)}
-                      className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-blue-400/30"
+                      className="mobile-field w-full rounded-2xl border px-4 py-3 outline-none placeholder:text-[color:var(--text-sub)] focus:border-blue-400/30"
                       placeholder="초대 코드 입력"
                     />
                     <button
                       type="submit"
-                      className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 font-semibold text-white transition hover:bg-white/[0.1]"
+                      className="mobile-chip-idle w-full rounded-2xl border px-4 py-3 font-semibold transition hover:bg-[color:var(--nav-hover-bg)]"
                     >
                       참여하기
                     </button>
@@ -700,7 +700,7 @@ export function GroupsPage() {
                   <SectionCard
                     title="내 포트폴리오 공유"
                     description="그룹 보드에 올릴 포트폴리오를 골라 바로 공유해 보세요."
-                    action={<Sparkles size={18} className="text-blue-300" />}
+                    action={<Sparkles size={18} className="text-[color:var(--brand-solid)]" />}
                   >
                     <div className="space-y-2">
                       {portfoliosQuery.data?.map((portfolio) => (
@@ -710,24 +710,24 @@ export function GroupsPage() {
                           onClick={() => setSelectedPortfolioId(portfolio.id)}
                           className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left ${
                             selectedPortfolioId === portfolio.id
-                              ? 'border-blue-400/20 bg-blue-500/10'
+                              ? 'border-blue-500 bg-blue-600 text-white shadow-[0_16px_30px_rgba(37,99,235,0.28)] dark:border-blue-400/30 dark:bg-blue-500 dark:text-white dark:shadow-none'
                               : mySharedPortfolioId === portfolio.id
-                                ? 'border-emerald-400/20 bg-emerald-500/10'
-                                : 'border-white/10 bg-white/[0.04]'
+                                ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200'
+                                : 'mobile-chip-idle'
                           }`}
                         >
                           <div className="min-w-0">
-                            <p className="font-bold text-white">{portfolio.name}</p>
-                            <p className="text-sm text-slate-400">{portfolio.items.length}개 자산</p>
+                            <p className={`font-bold ${selectedPortfolioId === portfolio.id ? 'text-white' : 'text-[color:var(--text-main)]'}`}>{portfolio.name}</p>
+                            <p className={`text-sm ${selectedPortfolioId === portfolio.id ? 'text-blue-50/90' : 'text-[color:var(--text-sub)]'}`}>{portfolio.items.length}개 자산</p>
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
                             {mySharedPortfolioId === portfolio.id ? (
-                              <span className="whitespace-nowrap rounded-full bg-emerald-400/12 px-2.5 py-1 text-[11px] font-semibold text-emerald-200">
+                              <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${selectedPortfolioId === portfolio.id ? 'bg-white/18 text-white' : 'bg-emerald-400/12 text-emerald-700 dark:text-emerald-200'}`}>
                                 현재 공유 중
                               </span>
                             ) : null}
                             {selectedPortfolioId === portfolio.id ? (
-                              <span className="whitespace-nowrap text-xs font-semibold text-blue-200">
+                              <span className="whitespace-nowrap rounded-full bg-white/18 px-2.5 py-1 text-[11px] font-semibold text-white">
                                 선택됨
                               </span>
                             ) : null}
@@ -740,7 +740,7 @@ export function GroupsPage() {
                       type="button"
                       onClick={() => shareMutation.mutate()}
                       disabled={!selectedPortfolioId}
-                      className="mt-3 w-full whitespace-nowrap rounded-2xl bg-blue-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40"
+                      className="mt-3 w-full whitespace-nowrap rounded-2xl bg-blue-500 px-4 py-3 text-sm font-semibold text-[color:var(--text-main)] disabled:opacity-40"
                     >
                       선택한 포트폴리오 공유
                     </button>
@@ -759,17 +759,17 @@ export function GroupsPage() {
 
               {selectedGroup ? (
                 <>
-                  <div className="flex items-center justify-between rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3">
+                  <div className="mobile-soft-card flex items-center justify-between rounded-[24px] border px-4 py-3">
                     <div className="min-w-0">
-                      <p className="truncate text-lg font-bold text-white">{selectedGroup.name}</p>
-                      <p className="mt-1 text-sm text-slate-400">
+                      <p className="truncate text-lg font-bold text-[color:var(--text-main)]">{selectedGroup.name}</p>
+                      <p className="mt-1 text-sm text-[color:var(--text-sub)]">
                         {selectedGroup.description || '포트폴리오 구성을 같이 보는 그룹이에요.'}
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={handleCopyInviteCode}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white"
+                      className="mobile-icon-surface flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border"
                     >
                       <Copy size={16} />
                     </button>
@@ -779,8 +779,8 @@ export function GroupsPage() {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-sm font-bold text-white">포트폴리오 보드</p>
-                          <p className="text-sm text-slate-400">
+                          <p className="text-sm font-bold text-[color:var(--text-main)]">포트폴리오 보드</p>
+                          <p className="text-sm text-[color:var(--text-sub)]">
                             누가 어떤 종목에 비중을 실었는지 좌우로 넘겨 보세요.
                           </p>
                         </div>
@@ -788,14 +788,14 @@ export function GroupsPage() {
                           <button
                             type="button"
                             onClick={showPreviousBoard}
-                            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white"
+                            className="mobile-icon-surface flex h-10 w-10 items-center justify-center rounded-2xl border"
                           >
                             <ArrowLeft size={16} />
                           </button>
                           <button
                             type="button"
                             onClick={showNextBoard}
-                            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white"
+                            className="mobile-icon-surface flex h-10 w-10 items-center justify-center rounded-2xl border"
                           >
                             <ArrowRight size={16} />
                           </button>
@@ -818,7 +818,7 @@ export function GroupsPage() {
                             type="button"
                             onClick={() => setSelectedBoardIndex(index)}
                             className={`h-2.5 rounded-full transition ${
-                              index === selectedBoardIndex ? 'w-8 bg-blue-400' : 'w-2.5 bg-white/20'
+                              index === selectedBoardIndex ? 'w-8 bg-[color:var(--brand-solid)]' : 'w-2.5 bg-[color:var(--soft-panel-border)]'
                             }`}
                             aria-label={`${member.member.nickname} 포트폴리오 보기`}
                           />
@@ -842,18 +842,18 @@ export function GroupsPage() {
                         {feedQuery.data.map((feed) => (
                           <div
                             key={feed.id}
-                            className="rounded-[20px] border border-white/10 bg-white/[0.04] px-4 py-4"
+                            className="mobile-soft-card rounded-[20px] border px-4 py-4"
                           >
                             <div className="flex items-center justify-between gap-3">
-                              <p className="font-bold text-white">{feed.nickname}</p>
-                              <span className="text-xs font-semibold text-slate-400">
+                              <p className="font-bold text-[color:var(--text-main)]">{feed.nickname}</p>
+                              <span className="text-xs font-semibold text-[color:var(--text-sub)]">
                                 {formatRelativeTime(feed.createdAt)}
                               </span>
                             </div>
-                            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-blue-200">
+                            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--brand-solid)]">
                               {feed.actionType}
                             </p>
-                            <p className="mt-2 text-sm leading-6 text-slate-300">{feed.content}</p>
+                            <p className="mt-2 text-sm leading-6 text-[color:var(--text-sub)]">{feed.content}</p>
                           </div>
                         ))}
                       </div>
